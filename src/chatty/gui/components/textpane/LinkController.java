@@ -116,6 +116,15 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
      */
     @Override
     public void mousePressed(MouseEvent e) {
+        if (e.getClickCount() == 1 && SwingUtilities.isMiddleMouseButton(e)) {
+            User user = getUser(e);
+            if (user != null) {
+                for (UserListener listener : userListener) {
+                    listener.userClicked(user, getMsgId(e), getAutoModMsgId(e), e);
+                }
+                return;
+            }
+        }
         
         if (e.getClickCount() == 1 && SwingUtilities.isLeftMouseButton(e)) {
             String url = getUrl(e);
