@@ -20,5 +20,6 @@ public interface UserListener {
     public void userClicked(User user, String messageId, String autoModMsgId, MouseEvent e);
     public void emoteClicked(Emoticon emote, MouseEvent e);
     public void usericonClicked(Usericon usericon, MouseEvent e);
+    public void imageClicked(String url);
 
 }

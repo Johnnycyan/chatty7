@@ -1187,6 +1187,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         @Override
         public void usericonClicked(Usericon usericon, MouseEvent e) {
         }
+
+        @Override
+        public void imageClicked(String url) {
+        }
         
     }
     

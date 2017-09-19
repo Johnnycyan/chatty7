@@ -117,6 +117,14 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
     @Override
     public void mousePressed(MouseEvent e) {
         if (e.getClickCount() == 1 && SwingUtilities.isMiddleMouseButton(e)) {
+            String url = getUrl(e);
+            if (url != null) {
+                for (UserListener listener : userListener) {
+                    listener.imageClicked(url);
+                }
+                return;
+            }
+
             User user = getUser(e);
             if (user != null) {
                 for (UserListener listener : userListener) {

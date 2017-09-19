@@ -1932,6 +1932,10 @@ public class MainGui extends JFrame implements Runnable {
                 UrlOpener.openUrlPrompt(MainGui.this, usericon.metaUrl);
             }
         }
+
+        public void imageClicked(String url) {
+            ImageDialog.showImageDialog(getActiveWindow(), url);
+        }
     }
     
     private class MyNotificationActionListener implements NotificationActionListener<String> {
