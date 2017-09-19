@@ -42,6 +42,7 @@ import chatty.gui.components.ModerationLog;
 import chatty.gui.components.NewsDialog;
 import chatty.gui.components.srl.SRL;
 import chatty.gui.components.SearchDialog;
+import chatty.gui.components.ImageDialog;
 import chatty.gui.components.StreamChat;
 import chatty.gui.components.UpdateMessage;
 import chatty.gui.components.menus.CommandActionEvent;
@@ -1258,6 +1259,7 @@ public class MainGui extends JFrame implements Runnable {
     
 
     private class MyLinkLabelListener implements LinkLabelListener {
+
         @Override
         public void linkClicked(String type, String ref) {
             if (type.equals("help")) {
@@ -1900,7 +1902,7 @@ public class MainGui extends JFrame implements Runnable {
         
         @Override
         public void userClicked(User user, String msgId, String autoModMsgId, MouseEvent e) {
-            if (e != null || SwingUtilities.isMiddleMouseButton(e)) {
+            if (e != null && SwingUtilities.isMiddleMouseButton(e)) {
                 channels.getActiveChannel().insertText(user.getDisplayNick() + ", ", true);
                 return;
             }
