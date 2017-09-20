@@ -134,6 +134,10 @@ public class ImageDialog extends JDialog {
     }
 
     private Image getScaledImage(Image srcImg, int w, int h){
+        if (w <= 0 || h <= 0) {
+            dispose();
+            return srcImg;
+        }
         BufferedImage resizedImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = resizedImg.createGraphics();
 
