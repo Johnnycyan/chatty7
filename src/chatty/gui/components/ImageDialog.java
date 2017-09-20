@@ -65,6 +65,7 @@ public class ImageDialog extends JDialog {
         setResizable(true);
         setMinimumSize(new Dimension(100, 100));
         setLayout(new GridBagLayout());
+        getContentPane().setBackground(new Color(35, 35, 35));
  
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
