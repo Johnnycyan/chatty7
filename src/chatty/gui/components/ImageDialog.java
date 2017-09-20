@@ -68,17 +68,17 @@ public class ImageDialog extends JDialog {
 
         gbc.weightx = 1.0;
 
+        int titleHeight = 35;
+
         try {
             ImageIcon icon = new ImageIcon(new URL(url));
-            if (icon.getIconWidth() > icon.getIconHeight()) {
-                if (icon.getIconWidth() > owner.getBounds().width) {
-                    int hh = Math.round((float)owner.getBounds().width / icon.getIconWidth() * icon.getIconHeight());
-                    icon.setImage(getScaledImage(icon.getImage(), owner.getBounds().width, hh));
-                }
+            if (icon.getIconWidth() > icon.getIconHeight() && icon.getIconWidth() > owner.getBounds().width) {
+                int hh = Math.round((float)owner.getBounds().width / icon.getIconWidth() * icon.getIconHeight()) - titleHeight;
+                icon.setImage(getScaledImage(icon.getImage(), owner.getBounds().width - titleHeight, hh));
             } else {
                 if (icon.getIconHeight() > owner.getBounds().height) {
-                    int hh = Math.round((float)owner.getBounds().height / icon.getIconHeight() * icon.getIconWidth());
-                    icon.setImage(getScaledImage(icon.getImage(), hh, owner.getBounds().height));
+                    int hh = Math.round((float)owner.getBounds().height / icon.getIconHeight() * icon.getIconWidth()) - titleHeight;
+                    icon.setImage(getScaledImage(icon.getImage(), hh, owner.getBounds().height - titleHeight));
                 }
             }
             JLabel thumb = new JLabel();
