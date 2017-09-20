@@ -35,6 +35,9 @@ import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.Dimension;
 
 /**
  * Dialog to see image in the chat.
@@ -42,6 +45,9 @@ import javax.swing.SwingUtilities;
  * @author 23rd
  */
 public class ImageDialog extends JDialog {
+
+    private ImageIcon iconOrigin;
+    private ImageIcon icon;
 
     public static void showImageDialog(Window owner, String url) {
         if (url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".bmp")) {
@@ -56,22 +62,22 @@ public class ImageDialog extends JDialog {
     public ImageDialog(final Window owner, String url) {
         super(owner);
         setTitle(url);
-        setResizable(false);
+        setResizable(true);
+        setMinimumSize(new Dimension(100, 100));
         setLayout(new GridBagLayout());
  
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
-
-        gbc.gridwidth = GridBagConstraints.RELATIVE;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        gbc.weightx = 1.0;
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(5,5,5,5);
+        gbc.anchor = GridBagConstraints.WEST;
 
         int titleHeight = 35;
 
         try {
-            ImageIcon icon = new ImageIcon(new URL(url));
+            iconOrigin = new ImageIcon(new URL(url));
+            icon = new ImageIcon(iconOrigin.getImage());
             if (icon.getIconWidth() > icon.getIconHeight() && icon.getIconWidth() > owner.getBounds().width) {
                 int hh = Math.round((float)owner.getBounds().width / icon.getIconWidth() * icon.getIconHeight()) - titleHeight;
                 icon.setImage(getScaledImage(icon.getImage(), owner.getBounds().width - titleHeight, hh));
@@ -87,6 +93,18 @@ public class ImageDialog extends JDialog {
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
+
+        addComponentListener(new ComponentAdapter() {
+            public void componentResized(ComponentEvent e) {
+                if (getBounds().height > getBounds().width) {
+                    int hh = Math.round((float)getBounds().width / iconOrigin.getIconWidth() * iconOrigin.getIconHeight()) - titleHeight;
+                    icon.setImage(getScaledImage(iconOrigin.getImage(), getBounds().width - titleHeight, hh));
+                } else {
+                    int hh = Math.round((float)getBounds().height / iconOrigin.getIconHeight() * iconOrigin.getIconWidth()) - titleHeight;
+                    icon.setImage(getScaledImage(iconOrigin.getImage(), hh, getBounds().height - titleHeight));
+                }
+            }
+        });
 
         pack();
         setVisible(true);
