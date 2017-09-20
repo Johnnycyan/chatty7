@@ -38,6 +38,7 @@ import javax.swing.SwingUtilities;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.Dimension;
+import java.awt.Rectangle;
 
 /**
  * Dialog to see image in the chat.
@@ -74,20 +75,12 @@ public class ImageDialog extends JDialog {
         gbc.insets = new Insets(5,5,5,5);
         gbc.anchor = GridBagConstraints.WEST;
 
-        int titleHeight = 35;
-
         try {
             iconOrigin = new ImageIcon(new URL(url));
             icon = new ImageIcon(iconOrigin.getImage());
-            if (icon.getIconWidth() > icon.getIconHeight() && icon.getIconWidth() > owner.getBounds().width) {
-                int hh = Math.round((float)owner.getBounds().width / icon.getIconWidth() * icon.getIconHeight()) - titleHeight;
-                icon.setImage(getScaledImage(icon.getImage(), owner.getBounds().width - titleHeight, hh));
-            } else {
-                if (icon.getIconHeight() > owner.getBounds().height) {
-                    int hh = Math.round((float)owner.getBounds().height / icon.getIconHeight() * icon.getIconWidth()) - titleHeight;
-                    icon.setImage(getScaledImage(icon.getImage(), hh, owner.getBounds().height - titleHeight));
-                }
-            }
+            Dimension dimension = getScaledDimension(iconOrigin, owner.getBounds());
+            icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+
             JLabel thumb = new JLabel();
             thumb.setIcon(icon);
             add(thumb, gbc);
@@ -97,13 +90,8 @@ public class ImageDialog extends JDialog {
 
         addComponentListener(new ComponentAdapter() {
             public void componentResized(ComponentEvent e) {
-                if (getBounds().height > getBounds().width) {
-                    int hh = Math.round((float)getBounds().width / iconOrigin.getIconWidth() * iconOrigin.getIconHeight()) - titleHeight;
-                    icon.setImage(getScaledImage(iconOrigin.getImage(), getBounds().width - titleHeight, hh));
-                } else {
-                    int hh = Math.round((float)getBounds().height / iconOrigin.getIconHeight() * iconOrigin.getIconWidth()) - titleHeight;
-                    icon.setImage(getScaledImage(iconOrigin.getImage(), hh, getBounds().height - titleHeight));
-                }
+                Dimension dimension = getScaledDimension(iconOrigin, getBounds());
+                icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
             }
         });
 
@@ -120,6 +108,28 @@ public class ImageDialog extends JDialog {
         g2.dispose();
 
         return resizedImg;
+    }
+
+    public Dimension getScaledDimension(ImageIcon img, Rectangle boundary) {
+        int titleHeight = 35;
+        int original_width = img.getIconWidth();
+        int original_height = img.getIconHeight();
+        int bound_width = boundary.width - 10;
+        int bound_height = boundary.height - titleHeight;
+        int new_width = original_width;
+        int new_height = original_height;
+
+        if (original_width > bound_width) {
+            new_width = bound_width;
+            new_height = (new_width * original_height) / original_width;
+        }
+
+        if (new_height > bound_height) {
+            new_height = bound_height;
+            new_width = (new_height * original_width) / original_height;
+        }
+
+        return new Dimension(new_width, new_height);
     }
     
 }
