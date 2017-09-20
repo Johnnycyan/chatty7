@@ -115,30 +115,36 @@ public class ImageDialog extends JDialog {
 
         addMouseListener(new MouseAdapter() {
             public void mousePressed (MouseEvent e) {
-                String ext = "jpg";
-                int typeInt = BufferedImage.TYPE_INT_RGB;
-                if (type.equals("image/png")) {
-                    typeInt = BufferedImage.TYPE_INT_ARGB;
-                    ext = "png";
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    dispose();
                 }
 
-                BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), typeInt);
-                Graphics g = bi.createGraphics();
-                iconOrigin.paintIcon(null, g, 0,0);
-                g.dispose();
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    String ext = "jpg";
+                    int typeInt = BufferedImage.TYPE_INT_RGB;
+                    if (type.equals("image/png")) {
+                        typeInt = BufferedImage.TYPE_INT_ARGB;
+                        ext = "png";
+                    }
 
-                JFileChooser chooser = new JFileChooser();
-                FileNameExtensionFilter filter = new FileNameExtensionFilter("JPG & PNG Images", "jpg", "png");
-                chooser.setFileFilter(filter);
-                int returnVal = chooser.showSaveDialog(owner);
-                if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    try {
-                        File f = chooser.getSelectedFile();
-                        
-                        String test = f.getAbsolutePath() + "." + ext;
-                        ImageIO.write(bi, ext, new File(test));
-                    } catch(IOException ex) {
-                        ex.printStackTrace();
+                    BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), typeInt);
+                    Graphics g = bi.createGraphics();
+                    iconOrigin.paintIcon(null, g, 0,0);
+                    g.dispose();
+
+                    JFileChooser chooser = new JFileChooser();
+                    FileNameExtensionFilter filter = new FileNameExtensionFilter("JPG & PNG Images", "jpg", "png");
+                    chooser.setFileFilter(filter);
+                    int returnVal = chooser.showSaveDialog(owner);
+                    if (returnVal == JFileChooser.APPROVE_OPTION) {
+                        try {
+                            File f = chooser.getSelectedFile();
+                            
+                            String test = f.getAbsolutePath() + "." + ext;
+                            ImageIO.write(bi, ext, new File(test));
+                        } catch(IOException ex) {
+                            ex.printStackTrace();
+                        }
                     }
                 }
             }
