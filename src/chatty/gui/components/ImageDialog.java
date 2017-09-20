@@ -26,6 +26,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.awt.RenderingHints;
 import java.awt.Image;
 import java.awt.Graphics2D;
@@ -83,7 +84,14 @@ public class ImageDialog extends JDialog {
         gbc.anchor = GridBagConstraints.WEST;
 
         try {
-            iconOrigin = new ImageIcon(new URL(url));
+            URL thisurl = new URL(url);
+            URLConnection connection = thisurl.openConnection();
+            connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36");
+            Image image = null;
+            image = ImageIO.read(connection.getInputStream());
+
+
+            iconOrigin = new ImageIcon(image);
             icon = new ImageIcon(iconOrigin.getImage());
             Dimension dimension = getScaledDimension(iconOrigin, owner.getBounds());
             icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
@@ -93,6 +101,8 @@ public class ImageDialog extends JDialog {
             add(thumb, gbc);
         } catch (MalformedURLException e) {
             e.printStackTrace();
+        } catch (IOException exx) {
+            exx.printStackTrace();
         }
 
         addComponentListener(new ComponentAdapter() {
