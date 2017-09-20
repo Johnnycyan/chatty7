@@ -182,6 +182,7 @@ public class MainMenu extends JMenuBar {
         setIcon(helpItem, "help-browser.png");
         help.addSeparator();
         addItem(help,"news","Announcements");
+        addItem(help,"","Fork by @Zik_.");
         
         
         add(main);
