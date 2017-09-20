@@ -29,7 +29,7 @@ import java.net.URL;
 import java.awt.RenderingHints;
 import java.awt.Image;
 import java.awt.Graphics2D;
-import java.awt.image.BufferedImage;
+import java.awt.Graphics;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -37,8 +37,15 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseEvent ;
+import java.awt.event.MouseAdapter;
 import java.awt.Dimension;
 import java.awt.Rectangle;
+
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.io.File;
+
 
 /**
  * Dialog to see image in the chat.
@@ -92,6 +99,33 @@ public class ImageDialog extends JDialog {
             public void componentResized(ComponentEvent e) {
                 Dimension dimension = getScaledDimension(iconOrigin, getBounds());
                 icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+            }
+        });
+
+        addMouseListener(new MouseAdapter() {
+            public void mousePressed (MouseEvent e) {
+                BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+                Graphics g = bi.createGraphics();
+                iconOrigin.paintIcon(null, g, 0,0);
+                g.dispose();
+
+                JFileChooser chooser = new JFileChooser();
+                FileNameExtensionFilter filter = new FileNameExtensionFilter("JPG & PNG Images", "jpg", "png");
+                chooser.setFileFilter(filter);
+                int returnVal = chooser.showSaveDialog(owner);
+                if (returnVal == JFileChooser.APPROVE_OPTION) {
+                    try {
+                        File f = chooser.getSelectedFile();
+                        String ext = "jpg";
+                        if (url.endsWith(".png")) {
+                            ext = "png";
+                        }
+                        String test = f.getAbsolutePath() + "." + ext;
+                        ImageIO.write(bi, ext, new File(test));
+                    } catch(IOException ex) {
+                        ex.printStackTrace();
+                    }
+                }
             }
         });
 
