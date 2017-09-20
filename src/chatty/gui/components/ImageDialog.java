@@ -46,6 +46,7 @@ import java.awt.Rectangle;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
+import java.net.HttpURLConnection;
 
 
 /**
@@ -59,16 +60,17 @@ public class ImageDialog extends JDialog {
     private ImageIcon icon;
 
     public static void showImageDialog(Window owner, String url) {
-        if (url.endsWith(".jpg") || url.endsWith(".jpeg") || url.endsWith(".png") || url.endsWith(".bmp")) {
+        String type = getURLType(url);
+        if (type.indexOf("image/") >= 0) {
             ImageDialog dialog;
-            dialog = new ImageDialog(owner, url);
+            dialog = new ImageDialog(owner, url, type);
             dialog.setLocationRelativeTo(owner);
             GuiUtil.installEscapeCloseOperation(dialog);
             dialog.setVisible(true);
         }
     }
         
-    public ImageDialog(final Window owner, String url) {
+    public ImageDialog(final Window owner, String url, String type) {
         super(owner);
         setTitle(url);
         setResizable(true);
@@ -115,7 +117,7 @@ public class ImageDialog extends JDialog {
             public void mousePressed (MouseEvent e) {
                 String ext = "jpg";
                 int typeInt = BufferedImage.TYPE_INT_RGB;
-                if (url.endsWith(".png")) {
+                if (type.equals("image/png")) {
                     typeInt = BufferedImage.TYPE_INT_ARGB;
                     ext = "png";
                 }
@@ -144,6 +146,18 @@ public class ImageDialog extends JDialog {
 
         pack();
         setVisible(true);
+    }
+
+    private static String getURLType(String url) {
+        try {
+          HttpURLConnection.setFollowRedirects(false);
+          HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+          con.setRequestMethod("HEAD");
+          return con.getHeaderFields().get("Content-Type").get(0);
+        } catch (Exception e) {
+           e.printStackTrace();
+           return "";
+        }
     }
 
     private Image getScaledImage(Image srcImg, int w, int h){
