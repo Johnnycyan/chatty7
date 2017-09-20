@@ -90,7 +90,6 @@ public class ImageDialog extends JDialog {
             Image image = null;
             image = ImageIO.read(connection.getInputStream());
 
-
             iconOrigin = new ImageIcon(image);
             icon = new ImageIcon(iconOrigin.getImage());
             Dimension dimension = getScaledDimension(iconOrigin, owner.getBounds());
@@ -114,7 +113,14 @@ public class ImageDialog extends JDialog {
 
         addMouseListener(new MouseAdapter() {
             public void mousePressed (MouseEvent e) {
-                BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+                String ext = "jpg";
+                int typeInt = BufferedImage.TYPE_INT_RGB;
+                if (url.endsWith(".png")) {
+                    typeInt = BufferedImage.TYPE_INT_ARGB;
+                    ext = "png";
+                }
+
+                BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), typeInt);
                 Graphics g = bi.createGraphics();
                 iconOrigin.paintIcon(null, g, 0,0);
                 g.dispose();
@@ -126,10 +132,7 @@ public class ImageDialog extends JDialog {
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
                     try {
                         File f = chooser.getSelectedFile();
-                        String ext = "jpg";
-                        if (url.endsWith(".png")) {
-                            ext = "png";
-                        }
+                        
                         String test = f.getAbsolutePath() + "." + ext;
                         ImageIO.write(bi, ext, new File(test));
                     } catch(IOException ex) {
