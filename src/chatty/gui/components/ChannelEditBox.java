@@ -30,10 +30,15 @@ public class ChannelEditBox extends JTextField implements KeyListener,
     
     // Auto completion
     private final AutoCompletion autoCompletion;
+
+    private final EditBoxPopup editBoxPopup;
     
     public ChannelEditBox(int size) {
         super(size);
         autoCompletion = new AutoCompletion(this);
+
+        editBoxPopup = new EditBoxPopup(this);
+
         this.addKeyListener(this);
         this.addActionListener(this);
         this.setFocusTraversalKeysEnabled(false);
@@ -113,7 +118,6 @@ public class ChannelEditBox extends JTextField implements KeyListener,
         // Set caret to position after inserted text
         setCaretPosition(pos+text.length());
     }
-    
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -122,7 +126,9 @@ public class ChannelEditBox extends JTextField implements KeyListener,
 
     @Override
     public void keyPressed(KeyEvent e) {
-        
+        if (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_RIGHT) {
+            editBoxPopup.updateCaretSymbolPosition();
+        }
         if (e.getKeyCode() == KeyEvent.VK_UP) {
             historyBack();
         }
@@ -148,6 +154,13 @@ public class ChannelEditBox extends JTextField implements KeyListener,
             }
         } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
             autoCompletion.cancelAutoCompletion();
+            editBoxPopup.hideInfoWindow();
+        } else if (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_RIGHT) {
+            editBoxPopup.updateCaretSymbolPosition();
+        } else {
+            if (getText().length() > EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP) { 
+                editBoxPopup.showInfoWindow(this.getText(), true);
+            }
         }
     }
     
@@ -231,19 +244,25 @@ public class ChannelEditBox extends JTextField implements KeyListener,
 
     @Override
     public void insertUpdate(DocumentEvent e) {
+        
         historyTextEdited = true;
         //hideCompletionInfoWindow();
     }
 
     @Override
     public void removeUpdate(DocumentEvent e) {
+        if (getText().length() < 100) { 
+            editBoxPopup.hideInfoWindow();
+        }
         historyTextEdited = true;
-        //hideCompletionInfoWindow();
     }
 
     @Override
     public void changedUpdate(DocumentEvent e) {
-        //hideCompletionInfoWindow();
+        setText(e.getDocument().getLength() + " " +  this.getWidth());
+        if (e.getDocument().getLength() > this.getWidth() - 50) { 
+            editBoxPopup.showInfoWindow("<html><table style='table-layout:fixed;width:" + this.getWidth() / 2 + "px;'><tr><th>" + this.getText() + "</th></tr></table></html>", true);
+        }
     }
     
     public void setCompletionServer(AutoCompletionServer server) {
