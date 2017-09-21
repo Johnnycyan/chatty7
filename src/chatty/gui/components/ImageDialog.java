@@ -172,7 +172,11 @@ public class ImageDialog extends JDialog {
           HttpURLConnection.setFollowRedirects(false);
           HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
           con.setRequestMethod("HEAD");
-          return con.getHeaderFields().get("Content-Type").get(0);
+          if (con.getResponseCode() == 200) {
+            return con.getHeaderFields().get("Content-Type").get(0);
+          } else {
+            return "image/jpg";
+          }
         } catch (Exception e) {
            e.printStackTrace();
            return "";
