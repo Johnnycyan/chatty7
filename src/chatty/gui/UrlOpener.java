@@ -1,6 +1,7 @@
 
 package chatty.gui;
 
+import chatty.Chatty;
 import chatty.util.MiscUtil;
 import chatty.util.ProcessManager;
 import java.awt.Component;
@@ -101,6 +102,13 @@ public class UrlOpener {
             LOGGER.warning("Invalid URI format: " + ex);
             return false;
         }
+
+        if (url.indexOf("youtu") >= 0 && !Chatty.PLAYER_PATH.equals("")) {
+            ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
+            return true;
+        }
+
+
         if (Desktop.isDesktopSupported()
                 && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)
                 && !customCommandEnabled) {

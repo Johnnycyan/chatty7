@@ -91,6 +91,12 @@ public class Chatty {
      * If true, use the current working directory to save settings etc.
      */
     private static boolean useCurrentDirectory = false;
+
+    /**
+     * If path is setted, then links from Youtube will open in external videoplayer.
+     * @author 23rd
+     */
+    public static String PLAYER_PATH = "";
     
     /**
      * Parse the commandline arguments and start the actual chat client.
@@ -116,6 +122,10 @@ public class Chatty {
         
         if (parsedArgs.containsKey("cd")) {
             useCurrentDirectory = true;
+        }
+
+        if (parsedArgs.containsKey("player")) {
+            PLAYER_PATH = parsedArgs.get("player");
         }
 
         final TwitchClient client = new TwitchClient(parsedArgs);
