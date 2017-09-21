@@ -47,6 +47,13 @@ import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 import java.net.HttpURLConnection;
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+
+import java.awt.datatransfer.*;
+import java.awt.image.*;
+import java.io.*;
 
 
 /**
@@ -119,19 +126,25 @@ public class ImageDialog extends JDialog {
                     dispose();
                 }
 
+                String ext = "jpg";
+                int typeInt = BufferedImage.TYPE_INT_RGB;
+                if (type.equals("image/png")) {
+                    typeInt = BufferedImage.TYPE_INT_ARGB;
+                    ext = "png";
+                }
+
+                BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), typeInt);
+                Graphics g = bi.createGraphics();
+                iconOrigin.paintIcon(null, g, 0,0);
+                g.dispose();
+
+                if (SwingUtilities.isMiddleMouseButton(e)) {
+                    TransferableImage trans = new TransferableImage(bi);
+                    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(trans, null);
+                }
+
+
                 if (SwingUtilities.isRightMouseButton(e)) {
-                    String ext = "jpg";
-                    int typeInt = BufferedImage.TYPE_INT_RGB;
-                    if (type.equals("image/png")) {
-                        typeInt = BufferedImage.TYPE_INT_ARGB;
-                        ext = "png";
-                    }
-
-                    BufferedImage bi = new BufferedImage(iconOrigin.getIconWidth(), iconOrigin.getIconHeight(), typeInt);
-                    Graphics g = bi.createGraphics();
-                    iconOrigin.paintIcon(null, g, 0,0);
-                    g.dispose();
-
                     JFileChooser chooser = new JFileChooser();
                     FileNameExtensionFilter filter = new FileNameExtensionFilter("JPG & PNG Images", "jpg", "png");
                     chooser.setFileFilter(filter);
@@ -201,6 +214,42 @@ public class ImageDialog extends JDialog {
         }
 
         return new Dimension(new_width, new_height);
+    }
+
+    private class TransferableImage implements Transferable {
+
+        Image i;
+
+        public TransferableImage( Image i ) {
+            this.i = i;
+        }
+
+        public Object getTransferData( DataFlavor flavor )
+        throws UnsupportedFlavorException, IOException {
+            if ( flavor.equals( DataFlavor.imageFlavor ) && i != null ) {
+                return i;
+            }
+            else {
+                throw new UnsupportedFlavorException( flavor );
+            }
+        }
+
+        public DataFlavor[] getTransferDataFlavors() {
+            DataFlavor[] flavors = new DataFlavor[ 1 ];
+            flavors[ 0 ] = DataFlavor.imageFlavor;
+            return flavors;
+        }
+
+        public boolean isDataFlavorSupported( DataFlavor flavor ) {
+            DataFlavor[] flavors = getTransferDataFlavors();
+            for ( int i = 0; i < flavors.length; i++ ) {
+                if ( flavor.equals( flavors[ i ] ) ) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
     
 }
