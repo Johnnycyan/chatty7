@@ -259,10 +259,6 @@ public class ChannelEditBox extends JTextField implements KeyListener,
 
     @Override
     public void changedUpdate(DocumentEvent e) {
-        setText(e.getDocument().getLength() + " " +  this.getWidth());
-        if (e.getDocument().getLength() > this.getWidth() - 50) { 
-            editBoxPopup.showInfoWindow("<html><table style='table-layout:fixed;width:" + this.getWidth() / 2 + "px;'><tr><th>" + this.getText() + "</th></tr></table></html>", true);
-        }
     }
     
     public void setCompletionServer(AutoCompletionServer server) {
