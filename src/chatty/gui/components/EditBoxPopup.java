@@ -169,7 +169,11 @@ public class EditBoxPopup {
         if (prevWidth > preferredSize.width && !newPosition) {
             infoWindow.setSize(prevWidth, preferredSize.height);
         } else {
-            infoWindow.setSize(preferredSize);
+            if (preferredSize.width > textField.getWidth()) {
+                infoWindow.setSize(textField.getWidth(), preferredSize.height);
+            } else {
+                infoWindow.setSize(preferredSize);
+            }
         }
 
         // If height of the window changed, need to reposition it
@@ -191,7 +195,7 @@ public class EditBoxPopup {
             SwingUtilities.convertPointToScreen(location, textField);
             infoWindow.setLocation(location);
         }
-        infoWindow.setVisible(true);
+        reshowInfoWindow();
     }
 
     /**
@@ -209,7 +213,7 @@ public class EditBoxPopup {
         contentPane.setBorder(border);
         contentPane.setBackground(HtmlColors.decode("#EEEEEE"));
         infoLabel.setFont(textField.getFont());
-        infoWindow.setOpacity(0.5f);
+        infoWindow.setOpacity(0.7f);
 
         lastHeightWindow = infoWindow.getHeight();
 
@@ -225,7 +229,7 @@ public class EditBoxPopup {
     }
 
     public void reshowInfoWindow() {
-        if (infoWindow != null && !infoWindow.isVisible()) {
+        if (infoWindow != null && !infoWindow.isVisible() && textField.getText().length() > MAX_SYMBOLS_FOR_SHOWING_POPUP) {
             infoWindow.setVisible(true);
         }
     }
