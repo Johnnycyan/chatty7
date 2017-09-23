@@ -75,7 +75,7 @@ public class ImageDialog extends JDialog {
             dialog = new ImageDialog(owner, url, type);
             dialog.setLocationRelativeTo(owner);
             GuiUtil.installEscapeCloseOperation(dialog);
-            dialog.setVisible(true);
+            //dialog.setVisible(true);
         }
     }
         
@@ -100,6 +100,9 @@ public class ImageDialog extends JDialog {
             connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36");
             Image image = null;
             image = ImageIO.read(connection.getInputStream());
+            if (image == null) {
+                return;
+            }
 
             iconOrigin = new ImageIcon(image);
             icon = new ImageIcon(iconOrigin.getImage());
