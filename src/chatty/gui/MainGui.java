@@ -1485,6 +1485,12 @@ public class MainGui extends JFrame implements Runnable {
         @Override
         public void urlMenuItemClicked(ActionEvent e, String url) {
             String cmd = e.getActionCommand();
+            if (cmd.equals("player")) {
+                livestreamerDialog.open(url, null);
+            }
+            if (cmd.equals("playerBest")) {
+                livestreamerDialog.open(url, "Best");
+            }
             if (cmd.equals("open")) {
                 UrlOpener.openUrlPrompt(MainGui.this, url);
             }

@@ -36,6 +36,8 @@ public class UrlContextMenu extends ContextMenu {
         }
         addItem("open", "Open link");
         addItem("copy", "Copy to clipboard");
+        addItem("player", "Open in player");
+        addItem("playerBest", "Open in player (Best)");
         
         Matcher m = channelFromUrl.matcher(url);
         if (m.matches()) {
