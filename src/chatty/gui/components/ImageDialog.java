@@ -66,6 +66,8 @@ public class ImageDialog extends JDialog {
     private ImageIcon iconOrigin;
     private ImageIcon icon;
 
+    private int counterResize = 0;
+
     public static void showImageDialog(Window owner, String url) {
         String type = getURLType(url);
         if (type.indexOf("image/") >= 0) {
@@ -115,8 +117,11 @@ public class ImageDialog extends JDialog {
 
         addComponentListener(new ComponentAdapter() {
             public void componentResized(ComponentEvent e) {
-                Dimension dimension = getScaledDimension(iconOrigin, getBounds());
-                icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+                counterResize++;
+                if (counterResize % 10 == 0) {
+                    Dimension dimension = getScaledDimension(iconOrigin, getBounds());
+                    icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+                }
             }
         });
 
