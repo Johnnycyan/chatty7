@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Opens the given URL in the default browser, with or without prompt.
  * 
@@ -103,9 +106,13 @@ public class UrlOpener {
             return false;
         }
 
-        if (url.indexOf("youtu") >= 0 && !Chatty.PLAYER_PATH.equals("")) {
-            ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
-            return true;
+        if (!Chatty.PLAYER_PATH.equals("")) {
+            Pattern pattern = Pattern.compile("(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/ ]{11})");
+            Matcher matcher = pattern.matcher(url);
+            if (matcher.find()) {
+                ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
+                return true;
+            }
         }
 
 
