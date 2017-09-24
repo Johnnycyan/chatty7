@@ -2,58 +2,27 @@
 package chatty.gui.components;
 
 import chatty.gui.GuiUtil;
-import chatty.gui.MainGui;
-import java.awt.Color;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.util.HashMap;
-import java.util.Map;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
-import javax.swing.Timer;
+
 import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import java.io.IOException;
+import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.image.*;
 import java.awt.image.BufferedImage;
+import java.io.*;
+import java.io.File;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.awt.RenderingHints;
-import java.awt.Image;
-import java.awt.Graphics2D;
-import java.awt.Graphics;
-
-import javax.imageio.ImageIO;
-import javax.swing.ImageIcon;
-import javax.swing.JOptionPane;
-import javax.swing.SwingUtilities;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.MouseEvent ;
-import java.awt.event.MouseAdapter;
-import java.awt.Dimension;
-import java.awt.Rectangle;
-
-import javax.swing.JFileChooser;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.io.File;
-import java.net.HttpURLConnection;
-import java.awt.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.UnsupportedFlavorException;
-
-import java.awt.datatransfer.*;
-import java.awt.image.*;
-import java.io.*;
 
 
 /**
@@ -123,7 +92,9 @@ public class ImageDialog extends JDialog {
                 counterResize++;
                 if (counterResize % 10 == 0) {
                     Dimension dimension = getScaledDimension(iconOrigin, getBounds());
-                    icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+                    if (dimension.width != iconOrigin.getIconWidth() || dimension.height != iconOrigin.getIconHeight()) {
+                        icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+                    }
                 }
             }
         });
