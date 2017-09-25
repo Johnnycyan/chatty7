@@ -107,6 +107,10 @@ public class UrlOpener {
         }
 
         if (!Chatty.PLAYER_PATH.equals("")) {
+            if (url.endsWith(".mp4") || url.endsWith(".webm")) {
+                ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
+                return true;
+            }
             Pattern pattern = Pattern.compile("(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/ ]{11})");
             Matcher matcher = pattern.matcher(url);
             if (matcher.find()) {
