@@ -15,6 +15,7 @@ import chatty.gui.components.Channel;
 import chatty.gui.components.TokenGetDialog;
 import chatty.gui.components.FavoritesDialog;
 import chatty.gui.components.JoinDialog;
+import chatty.util.*;
 import chatty.util.api.Emoticon;
 import chatty.util.api.StreamInfo;
 import chatty.util.api.TokenInfo;
@@ -58,13 +59,6 @@ import chatty.gui.notifications.Notification;
 import chatty.gui.notifications.NotificationActionListener;
 import chatty.gui.notifications.NotificationManager;
 import chatty.gui.notifications.NotificationWindowManager;
-import chatty.util.CopyMessages;
-import chatty.util.DateTime;
-import chatty.util.ImageCache;
-import chatty.util.MiscUtil;
-import chatty.util.MsgTags;
-import chatty.util.Sound;
-import chatty.util.StringUtil;
 import chatty.util.api.ChatInfo;
 import chatty.util.api.CheerEmoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
@@ -75,6 +69,7 @@ import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
+import chatty.util.commands.Parser;
 import chatty.util.hotkeys.HotkeyManager;
 import chatty.util.settings.Setting;
 import chatty.util.settings.SettingChangeListener;
@@ -2500,8 +2495,11 @@ public class MainGui extends JFrame implements Runnable {
     public void showNotification(String title, String message, Color foreground, Color background, String channel) {
         if (client.settings.getLong("nType") == NotificationSettings.NOTIFICATION_TYPE_CUSTOM) {
             notificationWindowManager.showMessage(title, message, foreground, background, channel);
-        } else {
+        } else if(client.settings.getLong("nType") == NotificationSettings.NOTIFICATION_TYPE_TRAY) {
             trayIcon.displayInfo(title, message);
+        } else {
+            GuiUtil.showCommandNotification(client.settings.getString("nCommand"),
+                    title, message, channel);
         }
     }
     
@@ -3951,7 +3949,7 @@ public class MainGui extends JFrame implements Runnable {
             client.api.getFollowedStreams(client.settings.getString("token"));
         }
     }
-
+    
     private class MySettingChangeListener implements SettingChangeListener {
         /**
          * Since this can also be called from other threads, run in EDT if

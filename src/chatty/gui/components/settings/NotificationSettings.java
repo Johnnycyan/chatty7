@@ -8,10 +8,12 @@ import chatty.gui.components.LinkLabel;
 import chatty.gui.notifications.Notification;
 import chatty.util.Sound;
 import chatty.util.settings.Settings;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -24,12 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTabbedPane;
+import javax.swing.*;
 
 /**
  *
@@ -39,7 +36,8 @@ public class NotificationSettings extends SettingsPanel {
     
     public final static long NOTIFICATION_TYPE_CUSTOM = 0;
     public final static long NOTIFICATION_TYPE_TRAY = 1;
-    
+    public final static long NOTIFICATION_TYPE_COMMAND = 2;
+
     private final LinkLabel userReadPermission;
     private final JCheckBox requestFollowedStreams;
     
@@ -49,6 +47,7 @@ public class NotificationSettings extends SettingsPanel {
     private final DurationSetting nDisplayTime;
     private final DurationSetting nMaxDisplayTime;
     private final JCheckBox userActivity;
+    private final EditorStringSetting nCommand;
     
     private final PathSetting soundsPath;
     
@@ -73,6 +72,7 @@ public class NotificationSettings extends SettingsPanel {
         Map<Long, String> nTypeOptions = new LinkedHashMap<>();
         nTypeOptions.put(NOTIFICATION_TYPE_CUSTOM, "Chatty Notifications");
         nTypeOptions.put(NOTIFICATION_TYPE_TRAY, "Tray Notifications (OS dependant)");
+        nTypeOptions.put(NOTIFICATION_TYPE_COMMAND, "Run OS Command");
         nType = new ComboLongSetting(nTypeOptions);
 
         nType.addItemListener(new ItemListener() {
@@ -95,7 +95,7 @@ public class NotificationSettings extends SettingsPanel {
         nPositionOptions.put(Long.valueOf(3), "Bottom-Right");
         nPosition = new ComboLongSetting(nPositionOptions);
         d.addLongSetting("nPosition", nPosition);
-        gbc = d.makeGbc(1, 1, 1, 1);
+        gbc = d.makeGbc(1, 1, 1, 1, GridBagConstraints.WEST);
         notificationSettings.add(nPosition, gbc);
         
         notificationSettings.add(new JLabel("Screen:"),
@@ -132,7 +132,34 @@ public class NotificationSettings extends SettingsPanel {
         d.addLongSetting("nMaxDisplayTime", nMaxDisplayTime);
         notificationSettings.add(nMaxDisplayTime,
                 d.makeGbc(3, 2, 1, 1, GridBagConstraints.WEST));
-        
+
+        notificationSettings.add(new JLabel("Command:"), d.makeGbc(0, 4, 1, 1, GridBagConstraints.EAST));
+
+        nCommand = d.addEditorStringSetting("nCommand", 20, true, "Edit command to execute:", false, ""
+                + "<html><body style='width: 300px;'>"
+                + "<p>Enter a command with parameters, which will be executed "
+                + "as a new process on your system (so please be careful with "
+                + "this). "
+                + "You can use the following replacements: "
+                + "<code>$(title), $(text), $(chan)</code></p>"
+                + "<p><em>Tip:</em> Add quotes around replacements, as they may contain spaces.</p>"
+                + "<p>For example to run 'notify-send' to show a native notification on Linux: "
+                + "<code>notify-send \"$(title)\" \"$(message)\"</code></p>"
+                + "<p>To view the output of executed commands (for example to "
+                + "debug if it doesn't work as expected) you can open &lt;Extra"
+                + " - Debug window&gt;.</p>"
+                + "<p>Use the \"Test\" button to execute the current command "
+                + "with some example data.</p>", new Editor.Tester() {
+
+            @Override
+            public String test(Window parent, Component component, int x, int y, String value) {
+                GuiUtil.showCommandNotification(value, "Example Title",
+                        "Example Message", "#example");
+                return null;
+            }
+        });
+        notificationSettings.add(nCommand, d.makeGbc(1, 4, 3, 1, GridBagConstraints.WEST));
+
         //================
         // Sound Settings
         //================
@@ -258,11 +285,14 @@ public class NotificationSettings extends SettingsPanel {
     
     private void updateSettingsState() {
         boolean enabled = nType.getSettingValue().equals(Long.valueOf(0));
+        boolean cmdEnabled = nType.getSettingValue().equals(Long.valueOf(2));
+
         nPosition.setEnabled(enabled);
         nScreen.setEnabled(enabled);
         nDisplayTime.setEnabled(enabled);
         nMaxDisplayTime.setEnabled(enabled);
         userActivity.setEnabled(enabled);
+        nCommand.setEnabled(cmdEnabled);
     }
     
     protected void setData(List<Notification> data) {
