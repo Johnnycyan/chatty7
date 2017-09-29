@@ -25,8 +25,7 @@ import javax.swing.JTextArea;
  */
 public class UpdateMessage extends JDialog {
     
-    private static final String CHANGELOG_URL = "http://chatty.github.io/changes.txt";
-    //private static final String CHANGELOG_URL = "http://127.0.0.1/twitch/changes.txt";
+    private static final String CHANGELOG_URL = "http://zik.one/chatty/changes.txt";
     
     private final JLabel version;
     private final JTextArea changelog;
@@ -61,7 +60,7 @@ public class UpdateMessage extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (e.getSource() == openWebsite) {
-                    UrlOpener.openUrlPrompt(UpdateMessage.this, Chatty.WEBSITE, true);
+                    UrlOpener.openUrlPrompt(UpdateMessage.this, Chatty.FORK_WEBSITE + "/latest", true);
                 } else if (e.getSource() == close) {
                     setVisible(false);
                 }

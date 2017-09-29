@@ -1351,6 +1351,8 @@ public class MainGui extends JFrame implements Runnable {
                 }
             } else if (cmd.equals("website")) {
                 UrlOpener.openUrlPrompt(MainGui.this, Chatty.WEBSITE, true);
+            } else if (cmd.equals("forkwebsite")) {
+                UrlOpener.openUrlPrompt(MainGui.this, Chatty.FORK_WEBSITE, true);
             } else if (cmd.equals("favoritesDialog")) {
                 openFavoritesDialogToJoin("");
             } else if (cmd.equals("unhandledException")) {

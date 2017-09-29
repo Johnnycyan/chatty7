@@ -33,8 +33,8 @@ public class Chatty {
     /**
      * The Chatty website as it can be opened in the menu.
      */
-    public static final String WEBSITE =
-            "http://chatty.github.io";
+    public static final String WEBSITE = "http://chatty.github.io";
+    public static final String FORK_WEBSITE = "http://zik.one/chatty";
     
     /**
      * The Twitch client id of this program.
@@ -65,7 +65,7 @@ public class Chatty {
     /**
      * The regular URL of the textfile where the most recent version is stored.
      */
-    public static final String VERSION_URL = "http://chatty.github.io/version.txt";
+    public static final String VERSION_URL = "http://zik.one/chatty/version.txt";
     
     /**
      * For testing purposes.
