@@ -183,6 +183,7 @@ public class MainMenu extends JMenuBar {
         help.addSeparator();
         addItem(help,"news","Announcements");
         addItem(help,"forkwebsite","Fork by @Zik_.");
+        addItem(help,"", "Chatty v" + Chatty.VERSION);
         
         
         add(main);
