@@ -562,6 +562,8 @@ public class SettingsManager {
         // Other Features
         //===============
         settings.addBoolean("youtubeTitle", true);
+        settings.addString("playerPath", "");
+        settings.addLong("maxSymbols", 100);
     }
     
     /**

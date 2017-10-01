@@ -133,14 +133,6 @@ public class Chatty {
             }
         }
 
-        if (parsedArgs.containsKey("player")) {
-            PLAYER_PATH = parsedArgs.get("player");
-        }
-
-        if (parsedArgs.containsKey("maxSymbols")) {
-            chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Integer.parseInt(parsedArgs.get("maxSymbols"));
-        }
-
         final TwitchClient client = new TwitchClient(parsedArgs);
         
         // Adding listener just in case, will do nothing if not used

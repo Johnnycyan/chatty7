@@ -869,7 +869,7 @@ public class MainGui extends JFrame implements Runnable {
         Sound.setDeviceName(client.settings.getString("soundDevice"));
 
         //FORK SETTINGS
-        YoutubeUtil.SHOW_TITLE = client.settings.getBoolean("youtubeTitle");
+        updateForkSettings();
     }
     
     private static final String[] menuBooleanSettings = new String[]{
@@ -4109,10 +4109,14 @@ public class MainGui extends JFrame implements Runnable {
                 emoticons.setIgnoredEmotes(client.settings.getList("ignoredEmotes"));
             }
             //FORK
-            else if (setting.equals("youtubeTitle")) {
-                YoutubeUtil.SHOW_TITLE = client.settings.getBoolean("youtubeTitle");
-            }
+            updateForkSettings();
         }
+    }
+
+    private void updateForkSettings() {
+        YoutubeUtil.SHOW_TITLE = client.settings.getBoolean("youtubeTitle");
+        Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
+        chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
     }
     
     private class MySettingsListener implements SettingsListener {
