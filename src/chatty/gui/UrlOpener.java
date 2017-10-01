@@ -223,7 +223,9 @@ public class UrlOpener {
             text += url + "<br />";
 
             if (YoutubeUtil.isItYoutubeUrl(url)) {
-                text += "(" + YoutubeUtil.getTitleYoutube(url) + ")<br />";
+                if (YoutubeUtil.SHOW_TITLE) {
+                    text += "(" + YoutubeUtil.getTitleYoutube(url) + ")<br />";
+                }
             }            
         }
         // Make options

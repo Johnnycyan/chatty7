@@ -556,6 +556,12 @@ public class SettingsManager {
         // Auto-Unhost
         settings.addBoolean("autoUnhost", false);
         settings.addList("autoUnhostStreams", new ArrayList(), Setting.STRING);
+
+
+        //===============
+        // Other Features
+        //===============
+        settings.addBoolean("youtubeTitle", true);
     }
     
     /**

@@ -103,6 +103,8 @@ public class SettingsDialog extends JDialog implements ActionListener {
     private static final String PANEL_NAMES = "Names";
     private static final String PANEL_MODERATION = "Moderation";
 
+    private static final String PANEL_FORK = "Fork";
+
     private String currentlyShown;
     
     private final CardLayout cardManager;
@@ -133,7 +135,8 @@ public class SettingsDialog extends JDialog implements ActionListener {
         PANEL_OTHER,
         PANEL_ADVANCED,
         PANEL_HOTKEYS,
-        PANEL_COMPLETION
+        PANEL_COMPLETION,
+        PANEL_FORK
     };
 
     public SettingsDialog(final MainGui owner, final Settings settings) {
@@ -218,6 +221,8 @@ public class SettingsDialog extends JDialog implements ActionListener {
         cards.add(new ChatSettings(this), PANEL_CHAT);
         nameSettings = new NameSettings(this);
         cards.add(nameSettings, PANEL_NAMES);
+
+        cards.add(new ForkSettings(this), PANEL_FORK);
 
         currentlyShown = PANEL_MAIN;
         selection.addListSelectionListener(new ListSelectionListener() {

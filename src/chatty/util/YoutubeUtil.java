@@ -19,6 +19,8 @@ import java.util.regex.Pattern;
  */
 public class YoutubeUtil {
 
+    public static boolean SHOW_TITLE = true;
+
     public static boolean isItYoutubeUrl(String url) {
         Pattern pattern = Pattern.compile("(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/ ]{11})");
         Matcher matcher = pattern.matcher(url);

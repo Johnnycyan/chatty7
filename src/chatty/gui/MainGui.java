@@ -867,6 +867,9 @@ public class MainGui extends JFrame implements Runnable {
         adminDialog.setStatusHistorySorting(client.settings.getString("statusHistorySorting"));
         
         Sound.setDeviceName(client.settings.getString("soundDevice"));
+
+        //FORK SETTINGS
+        YoutubeUtil.SHOW_TITLE = client.settings.getBoolean("youtubeTitle");
     }
     
     private static final String[] menuBooleanSettings = new String[]{
@@ -4104,6 +4107,10 @@ public class MainGui extends JFrame implements Runnable {
             }
             else if (setting.equals("ignoredEmotes")) {
                 emoticons.setIgnoredEmotes(client.settings.getList("ignoredEmotes"));
+            }
+            //FORK
+            else if (setting.equals("youtubeTitle")) {
+                YoutubeUtil.SHOW_TITLE = client.settings.getBoolean("youtubeTitle");
             }
         }
     }
