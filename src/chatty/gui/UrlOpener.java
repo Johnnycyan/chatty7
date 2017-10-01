@@ -4,6 +4,7 @@ package chatty.gui;
 import chatty.Chatty;
 import chatty.util.MiscUtil;
 import chatty.util.ProcessManager;
+import chatty.util.YoutubeUtil;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.io.IOException;
@@ -13,9 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Opens the given URL in the default browser, with or without prompt.
@@ -111,9 +109,8 @@ public class UrlOpener {
                 ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
                 return true;
             }
-            Pattern pattern = Pattern.compile("(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/ ]{11})");
-            Matcher matcher = pattern.matcher(url);
-            if (matcher.find()) {
+            
+            if (YoutubeUtil.isItYoutubeUrl(url)) {
                 ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
                 return true;
             }
@@ -224,6 +221,10 @@ public class UrlOpener {
         for (String url : urls) {
             url = splitUrl(url);
             text += url + "<br />";
+
+            if (YoutubeUtil.isItYoutubeUrl(url)) {
+                text += "(" + YoutubeUtil.getTitleYoutube(url) + ")<br />";
+            }            
         }
         // Make options
         String okOption = "Open URL";
