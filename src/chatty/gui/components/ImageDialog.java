@@ -23,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.lang.OutOfMemoryError;
 
 
 /**
@@ -85,6 +86,8 @@ public class ImageDialog extends JDialog {
             e.printStackTrace();
         } catch (IOException exx) {
             exx.printStackTrace();
+        } catch (OutOfMemoryError exxx) {
+            exxx.printStackTrace();
         }
 
         addComponentListener(new ComponentAdapter() {
