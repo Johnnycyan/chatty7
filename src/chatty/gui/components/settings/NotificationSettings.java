@@ -135,14 +135,19 @@ public class NotificationSettings extends SettingsPanel {
 
         notificationSettings.add(new JLabel("Command:"), d.makeGbc(0, 4, 1, 1, GridBagConstraints.EAST));
 
-        nCommand = d.addEditorStringSetting("nCommand", 20, true, "Edit command to execute:", false, ""
+        nCommand = d.addEditorStringSetting("nCommand", 20, true, "Edit command to execute (read help):", false, ""
                 + "<html><body style='width: 300px;'>"
                 + "<p>Enter a command with parameters, which will be executed "
                 + "as a new process on your system (so please be careful with "
-                + "this). "
-                + "You can use the following replacements: "
-                + "<code>$(title), $(text), $(chan)</code></p>"
-                + "<p><em>Tip:</em> Add quotes around replacements, as they may contain spaces.</p>"
+                + "this, especially considering the <code>$(message)</code> "
+                + "comes directly from Twitch Chat, so the program you call "
+                + "must be able to handle that safely).</p>"
+                + "<p>You can use the following replacements: "
+                + "<code>$(title), $(message), $(chan)</code></p>"
+                + "<p><em>Tip:</em> Add quotes around replacements, as they "
+                + "may contain spaces. Use <code>\\\"</code> to escape quotes, "
+                + "to include them as their actual character. "
+                + "Quotes in the replacements are escaped automatically.</p>"
                 + "<p>For example to run 'notify-send' to show a native notification on Linux: "
                 + "<code>notify-send \"$(title)\" \"$(message)\"</code></p>"
                 + "<p>To view the output of executed commands (for example to "
@@ -154,7 +159,8 @@ public class NotificationSettings extends SettingsPanel {
             @Override
             public String test(Window parent, Component component, int x, int y, String value) {
                 GuiUtil.showCommandNotification(value, "Example Title",
-                        "Example Message", "#example");
+                        "Example \"message\" for this test notification",
+                        "#example_channel");
                 return null;
             }
         });
