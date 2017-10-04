@@ -64,6 +64,9 @@ import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import javax.swing.SwingUtilities;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 /**
  * The main client class, responsible for managing most parts of the program.
  * 
@@ -91,7 +94,7 @@ public class TwitchClient {
     /**
      * The interval to check version in (seconds)
      */
-    private static final int CHECK_VERSION_INTERVAL = 60*60*24*1; // Temporaly reduse from 2 days to 1 day.
+    private static final int CHECK_VERSION_INTERVAL = 60*60*8; // Temporaly reduse from 2 days to 8 hours.
 
     /**
      * Holds the Settings object, which is used to store and retrieve renametings
@@ -329,7 +332,12 @@ public class TwitchClient {
         checkForVersionChange();
         // Check version, if enabled in this build
         if (Chatty.VERSION_CHECK_ENABLED) {
-            checkNewVersion();
+            //Check version every 8 hours.
+            new Timer().schedule(new TimerTask() {
+                public void run()  {
+                  checkNewVersion();
+                }
+            }, 1, CHECK_VERSION_INTERVAL * 1000);
         }
         
         // Connect or open connect dialog
