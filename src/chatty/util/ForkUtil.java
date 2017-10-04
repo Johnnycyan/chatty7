@@ -4,10 +4,8 @@ package chatty.util;
 import java.util.*;
 import java.lang.*;
 import java.io.*;
-import javax.xml.parsers.*;
 import org.w3c.dom.*;
 import java.net.URL;
-import org.xml.sax.SAXException;
 import java.net.MalformedURLException;
 
 import java.util.regex.Matcher;
@@ -43,13 +41,12 @@ public class ForkUtil {
             JSONObject json = (JSONObject) parser.parse(readUrl(taks));
             String tooltip = (String)json.get("tooltip");
             tooltip = tooltip.replaceAll("\n", "<br />");
+            tooltip = chatty.Helper.htmlspecialchars_decode(tooltip);
             return tooltip;
         } catch (org.json.simple.parser.ParseException | java.io.UnsupportedEncodingException ee) {
-
-        } catch (Exception asd) {
-
+        } catch (Exception e) {
         }
-        return "taaaaks";
+        return "";
     }
 
     private static String readUrl(String urlString) throws Exception {
