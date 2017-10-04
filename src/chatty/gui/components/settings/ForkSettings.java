@@ -22,9 +22,9 @@ public class ForkSettings extends SettingsPanel {
         // Other settings
         //---------------
         JCheckBox versionCheck = d.addSimpleBooleanSetting(
-                "youtubeTitle",
-                "Show title youtube urls.",
-                "You can see title of youtube video when you click on youtube urls.");
+                "urlTitleDescription",
+                "Show link title and description (through BetterTTV API).",
+                "You can see title and description of website when you click on any url.");
         fork.add(versionCheck,
                 d.makeGbc(0, 3, 3, 1, GridBagConstraints.WEST));
 

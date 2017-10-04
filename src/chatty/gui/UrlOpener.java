@@ -4,7 +4,7 @@ package chatty.gui;
 import chatty.Chatty;
 import chatty.util.MiscUtil;
 import chatty.util.ProcessManager;
-import chatty.util.YoutubeUtil;
+import chatty.util.ForkUtil;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.io.IOException;
@@ -110,7 +110,7 @@ public class UrlOpener {
                 return true;
             }
             
-            if (YoutubeUtil.isItYoutubeUrl(url)) {
+            if (ForkUtil.isItYoutubeUrl(url)) {
                 ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
                 return true;
             }
@@ -217,16 +217,19 @@ public class UrlOpener {
      */
     private static int showUrlsPrompt(Component parent, List<String> urls) {
         // Make text
-        String text = "<html><body style='width: 100px;'>";
+        int widthBody = 100;
+        if (ForkUtil.SHOW_TITLE) {
+            widthBody = 300;
+        }
+
+        String text = "<html><body style='width: " + widthBody + "px;'>";
         for (String url : urls) {
             url = splitUrl(url);
             text += url + "<br />";
 
-            if (YoutubeUtil.isItYoutubeUrl(url)) {
-                if (YoutubeUtil.SHOW_TITLE) {
-                    text += "(" + YoutubeUtil.getTitleYoutube(url) + ")<br />";
-                }
-            }            
+            if (ForkUtil.SHOW_TITLE) {
+                text += ForkUtil.getTooltip(url);
+            }
         }
         // Make options
         String okOption = "Open URL";

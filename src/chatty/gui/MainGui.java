@@ -4114,7 +4114,7 @@ public class MainGui extends JFrame implements Runnable {
     }
 
     private void updateForkSettings() {
-        YoutubeUtil.SHOW_TITLE = client.settings.getBoolean("youtubeTitle");
+        ForkUtil.SHOW_TITLE = client.settings.getBoolean("urlTitleDescription");
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
         chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
     }
