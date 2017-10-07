@@ -567,6 +567,8 @@ public class SettingsManager {
         settings.addString("playerPath", "");
         settings.addLong("maxSymbols", 100);
         settings.addLong("checkVersionInterval", 8);
+        settings.addString("colorNewMessage", "#C80000");
+        settings.addString("colorNewHighlightedMessage", "#FF5000");
     }
     
     /**

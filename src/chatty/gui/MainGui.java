@@ -98,8 +98,8 @@ import javax.swing.event.MenuListener;
  */
 public class MainGui extends JFrame implements Runnable { 
     
-    public static final Color COLOR_NEW_MESSAGE = new Color(200,0,0);
-    public static final Color COLOR_NEW_HIGHLIGHTED_MESSAGE = new Color(255,80,0);
+    public static Color COLOR_NEW_MESSAGE = new Color(200,0,0);
+    public static Color COLOR_NEW_HIGHLIGHTED_MESSAGE = new Color(255,80,0);
     
     public final Emoticons emoticons = new Emoticons();
     
@@ -4116,6 +4116,9 @@ public class MainGui extends JFrame implements Runnable {
     private void updateForkSettings() {
         ForkUtil.SHOW_TITLE = client.settings.getBoolean("urlTitleDescription");
         ForkUtil.REMOVE_SHARP = client.settings.getBoolean("removeSharp");
+
+        COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
+        COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));
 
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
         chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
