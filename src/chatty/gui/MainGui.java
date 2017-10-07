@@ -3352,7 +3352,7 @@ public class MainGui extends JFrame implements Runnable {
             if (!channelName.isEmpty()) {
                 boolean hideCounts = !client.settings.getBoolean("titleShowViewerCount");
                 String chanNameText = channelName;
-                if (client.isWhisperAvailable()) {
+                if (client.isWhisperAvailable() && !client.settings.getBoolean("removeWFromTitle")) {
                     chanNameText += " [W]";
                 }
                 if (!title.isEmpty()) {
@@ -3409,7 +3409,7 @@ public class MainGui extends JFrame implements Runnable {
                     }
                     title += chanState;
                 }
-            } else if (client.isWhisperAvailable()) {
+            } else if (client.isWhisperAvailable() && !client.settings.getBoolean("removeWFromTitle")) {
                 title += " [W]";
             }
 

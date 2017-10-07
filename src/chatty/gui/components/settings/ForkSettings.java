@@ -28,6 +28,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(versionCheck,
                 d.makeGbc(0, 3, 3, 1, GridBagConstraints.WEST));
 
+        JCheckBox removeW = d.addSimpleBooleanSetting(
+                "removeWFromTitle",
+                "Remove [W] from title.",
+                "[W] is just showing your whisper status. Is it really needed?");
+        fork.add(removeW,
+                d.makeGbc(0, 2, 3, 1, GridBagConstraints.WEST));
+
         fork.add(new JLabel("Path of videoplayer:"),
                 d.makeGbc(0, 7, 1, 1, GridBagConstraints.WEST));
         
