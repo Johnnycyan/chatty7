@@ -563,6 +563,7 @@ public class SettingsManager {
         //===============
         settings.addBoolean("urlTitleDescription", true);
         settings.addBoolean("removeWFromTitle", true);
+        settings.addBoolean("removeSharp", true);
         settings.addString("playerPath", "");
         settings.addLong("maxSymbols", 100);
         settings.addLong("checkVersionInterval", 8);

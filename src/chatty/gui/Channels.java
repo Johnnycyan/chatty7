@@ -21,6 +21,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import chatty.util.ForkUtil;
+
 /**
  * Managing the Channel objects in the main window and popouts, providing a
  * default channel while no other is added.
@@ -141,7 +143,7 @@ public class Channels {
      */
     public void resetChannelTab(Channel channel) {
         tabs.setForegroundForComponent(channel, null);
-        tabs.setTitleForComponent(channel, channel.getName());
+        tabs.setTitleForComponent(channel, ForkUtil.removeSharpFromTitle(channel));
         highlighted.remove(channel);
     }
     
@@ -153,7 +155,7 @@ public class Channels {
      */
     public void setChannelNewStatus(Channel channel) {
         if (getActiveTab() != channel) {
-            tabs.setTitleForComponent(channel, channel.getName()+"*");
+            tabs.setTitleForComponent(channel, ForkUtil.removeSharpFromTitle(channel) + "*");
         }
     }
     
@@ -302,6 +304,7 @@ public class Channels {
             }
         }
         channels.put(channelName, panel);
+        tabs.setTitleForComponent(panel, ForkUtil.removeSharpFromTitle(panel));
         return panel;
     }
     

@@ -17,6 +17,8 @@ import org.json.simple.parser.ParseException;
 import java.net.URLEncoder;
 import java.util.regex.*;
 
+import chatty.gui.components.Channel;
+
 /**
  * 01.10.17
  * @author 23rd
@@ -24,6 +26,14 @@ import java.util.regex.*;
 public class ForkUtil {
 
     public static boolean SHOW_TITLE = true;
+    public static boolean REMOVE_SHARP = false;
+
+    public static String removeSharpFromTitle(Channel channel) {
+        if (channel.getType() == Channel.Type.CHANNEL && REMOVE_SHARP) {
+            return channel.getName().substring(1);
+        }
+        return channel.getName();
+    }
 
     public static boolean isItYoutubeUrl(String url) {
         Pattern pattern = Pattern.compile("(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/ ]{11})");

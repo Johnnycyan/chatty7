@@ -28,6 +28,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(versionCheck,
                 d.makeGbc(0, 3, 3, 1, GridBagConstraints.WEST));
 
+        JCheckBox removeSharp = d.addSimpleBooleanSetting(
+                "removeSharp",
+                "Remove # from title and tabs.",
+                "Why you need this symbol?");
+        fork.add(removeSharp,
+                d.makeGbc(0, 1, 3, 1, GridBagConstraints.WEST));
+
         JCheckBox removeW = d.addSimpleBooleanSetting(
                 "removeWFromTitle",
                 "Remove [W] from title.",

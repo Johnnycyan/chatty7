@@ -3351,7 +3351,7 @@ public class MainGui extends JFrame implements Runnable {
             // Stream Info
             if (!channelName.isEmpty()) {
                 boolean hideCounts = !client.settings.getBoolean("titleShowViewerCount");
-                String chanNameText = channelName;
+                String chanNameText = ForkUtil.removeSharpFromTitle(channel);
                 if (client.isWhisperAvailable() && !client.settings.getBoolean("removeWFromTitle")) {
                     chanNameText += " [W]";
                 }
@@ -4115,6 +4115,8 @@ public class MainGui extends JFrame implements Runnable {
 
     private void updateForkSettings() {
         ForkUtil.SHOW_TITLE = client.settings.getBoolean("urlTitleDescription");
+        ForkUtil.REMOVE_SHARP = client.settings.getBoolean("removeSharp");
+
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
         chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
         if (client.settings.getLong("checkVersionInterval") <= 1) {
