@@ -94,7 +94,7 @@ public class TwitchClient {
     /**
      * The interval to check version in (seconds)
      */
-    private static final int CHECK_VERSION_INTERVAL = 60*60*8; // Temporaly reduse from 2 days to 8 hours.
+    public static int CHECK_VERSION_INTERVAL = 60*60*8; // Temporaly reduse from 2 days to 8 hours.
 
     /**
      * Holds the Settings object, which is used to store and retrieve renametings

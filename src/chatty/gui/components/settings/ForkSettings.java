@@ -51,6 +51,15 @@ public class ForkSettings extends SettingsPanel {
         fork.add(new JLabel(" symbols."),
                 d.makeGbc(2, 4, 1, 1, GridBagConstraints.WEST));
 
+        fork.add(new JLabel("Check new version every "),
+                d.makeGbc(0, 5, 1, 1, GridBagConstraints.WEST));
+        
+        fork.add(d.addSimpleLongSetting("checkVersionInterval", 3, true),
+                d.makeGbc(1, 5, 1, 1, GridBagConstraints.WEST));
+
+        fork.add(new JLabel(" hours."),
+                d.makeGbc(2, 5, 1, 1, GridBagConstraints.WEST));
+
         
     }
     
