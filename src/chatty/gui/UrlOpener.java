@@ -225,10 +225,15 @@ public class UrlOpener {
         String text = "<html><body style='width: " + widthBody + "px;'>";
         for (String url : urls) {
             url = splitUrl(url);
-            text += url + "<br />";
 
             if (ForkUtil.SHOW_TITLE) {
-                text += ForkUtil.getTooltip(url);
+                String tooltip = ForkUtil.getTooltip(url);
+                if (tooltip.indexOf("URL:") == -1) {
+                    text += url + "<br />";
+                }
+                text += tooltip;
+            } else {
+                text += url + "<br />";
             }
         }
         // Make options
