@@ -222,6 +222,7 @@ public class UrlOpener {
             widthBody = 300;
         }
 
+        int counterUrls = 0;
         String text = "<html><body style='width: " + widthBody + "px;'>";
         for (String url : urls) {
             url = splitUrl(url);
@@ -231,10 +232,13 @@ public class UrlOpener {
                 if (tooltip.indexOf("URL:") == -1) {
                     text += url + "<br />";
                 }
+                String newUrl = tooltip.split("URL:</b> ")[1].split("</div>")[0];
+                urls.set(counterUrls, newUrl);
                 text += tooltip;
             } else {
                 text += url + "<br />";
             }
+            counterUrls++;
         }
         // Make options
         String okOption = "Open URL";
