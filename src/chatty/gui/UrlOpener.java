@@ -231,9 +231,10 @@ public class UrlOpener {
                 String tooltip = ForkUtil.getTooltip(url);
                 if (tooltip.indexOf("URL:") == -1) {
                     text += url + "<br />";
+                } else {
+                    String newUrl = tooltip.split("URL:</b> ")[1].split("</div>")[0];
+                    urls.set(counterUrls, newUrl);
                 }
-                String newUrl = tooltip.split("URL:</b> ")[1].split("</div>")[0];
-                urls.set(counterUrls, newUrl);
                 text += tooltip;
             } else {
                 text += url + "<br />";
