@@ -128,10 +128,6 @@ public class TwitchConnection {
         return channelStates.getState(channel);
     }
     
-    public void setEmotesets(Map<Integer, String> emotesets) {
-        users.setEmotesets(emotesets);
-    }
-    
     public void setUsercolorManager(UsercolorManager m) {
         users.setUsercolorManager(m);
     }
@@ -154,6 +150,14 @@ public class TwitchConnection {
     
     public void setMaxReconnectionAttempts(long num) {
         this.maxReconnectionAttempts = num;
+    }
+    
+    public void setSpamProtection(String setting) {
+        spamProtection.setLinesPerSeconds(setting);
+    }
+    
+    public String getSpamProtectionInfo() {
+        return spamProtection.toString();
     }
     
     public User getUser(String channel, String name) {

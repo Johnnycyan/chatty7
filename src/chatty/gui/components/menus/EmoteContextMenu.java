@@ -42,20 +42,15 @@ public class EmoteContextMenu extends ContextMenu {
             addSeparator();
             if (emote.type == Emoticon.Type.FFZ) {
                 addItem("ffzlink", "FrankerFaceZ Emote", ICON_WEB);
-                if (emote.creator != null) {
-                    addItem("emoteCreator", "Emote by: "+emote.creator);
-                }
             } else if (emote.type == Emoticon.Type.BTTV) {
                 addItem("bttvlink", "BetterTTV Emote", ICON_WEB);
-                if (emote.hasStreamSet()
-                        && emote.emoteSet == Emoticon.SET_UNDEFINED
-                        && Helper.validateStream(emote.getStream())) {
-                    addItem("", emote.getStream());
-                }
             } else if (emote.type == Emoticon.Type.CUSTOM) {
                 addItem("", "Custom Emote");
             } else if (emote.type == Emoticon.Type.EMOJI) {
                 addItem("", "Emoji ("+emote.creator+")");
+            }
+            if (emote.creator != null) {
+                addItem("emoteCreator", "Emote by: " + emote.creator);
             }
             
             // Info
@@ -72,16 +67,23 @@ public class EmoteContextMenu extends ContextMenu {
             addStreamSubmenu(emote);
         }
         
+        if (emote.type == Emoticon.Type.NOT_FOUND_FAVORITE) {
+            addItem("", "Not found favorite");
+        }
+        
         // Emoteset information
         if (emote.emoteSet > Emoticon.SET_GLOBAL) {
             addSeparator();
             if (Emoticons.isTurboEmoteset(emote.emoteSet)) {
                 addItem("twitchturbolink", "Turbo Emoticon");
+            } else if (!emote.hasStreamSet() && emote.hasEmotesetInfo()) {
+                addItem("", emote.getEmotesetInfo()+" Emoticon");
             } else {
                 addItem("", "Subscriber Emoticon");
                 addStreamSubmenu(emote);
             }
-            addItem("", "Emoteset: "+emote.emoteSet);
+            addItem("", "Emoteset: "+emote.emoteSet+
+                    (emote.hasEmotesetInfo() && emote.hasStreamSet() ? " ("+emote.getEmotesetInfo()+")" : ""));
         }
         if (emote.emoteSet == Emoticon.SET_UNKNOWN) {
             addSeparator();

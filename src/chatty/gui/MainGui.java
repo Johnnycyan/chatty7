@@ -59,6 +59,7 @@ import chatty.gui.notifications.Notification;
 import chatty.gui.notifications.NotificationActionListener;
 import chatty.gui.notifications.NotificationManager;
 import chatty.gui.notifications.NotificationWindowManager;
+import chatty.util.TwitchEmotes.EmotesetInfo;
 import chatty.util.api.ChatInfo;
 import chatty.util.api.CheerEmoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
@@ -290,12 +291,12 @@ public class MainGui extends JFrame implements Runnable {
         
         // Load some stuff
         client.api.setUserId(client.settings.getString("username"), client.settings.getString("userid"));
-        client.api.requestEmoticons(false);
+        client.api.getEmotesBySets(0);
         //client.api.requestCheerEmoticons(false);
         // TEST
 //        client.api.getUserIdAsap(null, "m_tt");
 //        client.api.getCheers("m_tt", false);
-        client.twitchemotes.requestEmotesets(false);
+        client.twitchemotes.load();
         if (client.settings.getBoolean("bttvEmotes")) {
             client.bttvEmotes.requestEmotes("$global$", false);
         }
@@ -541,6 +542,15 @@ public class MainGui extends JFrame implements Runnable {
             @Override
             public void actionPerformed(ActionEvent e) {
                 openJoinDialog();
+            }
+        });
+        
+        addMenuAction("about", "Open Help", "About/Help", KeyEvent.VK_H,
+                new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                openHelp("");
             }
         });
         
@@ -848,6 +858,7 @@ public class MainGui extends JFrame implements Runnable {
         
         emoticons.setIgnoredEmotes(client.settings.getList("ignoredEmotes"));
         emoticons.loadFavoritesFromSettings(client.settings);
+        client.api.getEmotesBySets(emoticons.getFavoritesEmotesets());
         emoticons.loadCustomEmotes();
         emoticons.addEmoji(client.settings.getString("emoji"));
         emoticons.setCheerState(client.settings.getString("cheersType"));
@@ -1757,7 +1768,10 @@ public class MainGui extends JFrame implements Runnable {
                 }
             } else if (cmd.equals("showChannelEmotes")) {
                 if (firstStream != null) {
+                    // Should add the stream to be requested
                     openEmotesDialogChannelEmotes(firstStream.toLowerCase());
+                    // Request immediately in this case
+                    client.api.requestEmotesNow();
                 }
             } else if (cmd.equals("hostchannel")) {
                 if (firstStream != null && streams.size() == 1) {
@@ -3491,12 +3505,13 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
     
-    public void setEmotesets(final Map<Integer, String> emotesets) {
+    public void setEmotesets(final EmotesetInfo info) {
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
             public void run() {
-                emoticons.addEmotesetStreams(emotesets);
+                emoticons.setEmotesetInfo(info);
+                emotesDialog.update();
             }
         });
     }
