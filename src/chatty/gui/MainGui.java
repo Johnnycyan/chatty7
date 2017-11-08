@@ -4139,6 +4139,8 @@ public class MainGui extends JFrame implements Runnable {
         chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
         if (client.settings.getLong("checkVersionInterval") <= 1) {
             TwitchClient.CHECK_VERSION_INTERVAL = 60 * 60 * 1;
+        } else if (client.settings.getLong("checkVersionInterval") >= 500) {
+            TwitchClient.CHECK_VERSION_INTERVAL = 60 * 60 * 500;
         } else {
             TwitchClient.CHECK_VERSION_INTERVAL = 60 * 60 * Math.toIntExact(client.settings.getLong("checkVersionInterval"));
         }

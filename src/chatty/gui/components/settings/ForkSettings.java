@@ -64,7 +64,7 @@ public class ForkSettings extends SettingsPanel {
         fork.add(d.addSimpleLongSetting("checkVersionInterval", 3, true),
                 d.makeGbc(1, 5, 1, 1, GridBagConstraints.WEST));
 
-        fork.add(new JLabel(" hours."),
+        fork.add(new JLabel(" hours. (Max 500 hours.)"),
                 d.makeGbc(2, 5, 1, 1, GridBagConstraints.WEST));
 
         fork.add(new JLabel("Color of tab title when channel has new message:"),
