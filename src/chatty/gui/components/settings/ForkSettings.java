@@ -42,6 +42,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(removeW,
                 d.makeGbc(0, 2, 3, 1, GridBagConstraints.WEST));
 
+        JCheckBox printCheck = d.addSimpleBooleanSetting(
+                "printAboutCheckingVersion",
+                "Print about checking new version.",
+                "Print 'Checking for new version...'.");
+        fork.add(printCheck,
+                d.makeGbc(0, 10, 3, 1, GridBagConstraints.WEST));
+
         fork.add(new JLabel("Path of videoplayer:"),
                 d.makeGbc(0, 7, 1, 1, GridBagConstraints.WEST));
         

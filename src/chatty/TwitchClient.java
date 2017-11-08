@@ -411,6 +411,7 @@ public class TwitchClient {
         if (!settings.getBoolean("checkNewVersion")) {
             return;
         }
+
         /**
          * Check if enough time has passed since the last check.
          */
@@ -426,7 +427,9 @@ public class TwitchClient {
             return;
         }
         settings.setLong("versionLastChecked", System.currentTimeMillis());
-        g.printSystem("Checking for new version..");
+        if (settings.getBoolean("printAboutCheckingVersion")) {
+            g.printSystem("Checking for new version..");
+        }
         
         new Version(new VersionListener() {
 
@@ -437,12 +440,16 @@ public class TwitchClient {
                     if (!info.isEmpty()) {
                         infoText = "[" + info + "] ";
                     }
-                    g.printSystem("New version available: "+version+" "+infoText
-                            +"(Go to <Help-Website> to download)");
+                    if (settings.getBoolean("printAboutCheckingVersion")) {
+                        g.printSystem("New version available: "+version+" "+infoText
+                                +"(Go to <Help-Website> to download)");
+                    }
                     g.setUpdateAvailable(version);
                     settings.setString("updateAvailable", version);
                 } else {
-                    g.printSystem("You already have the newest version.");
+                    if (settings.getBoolean("printAboutCheckingVersion")) {
+                        g.printSystem("You already have the newest version.");
+                    }
                 }
             }
         });
