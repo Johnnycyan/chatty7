@@ -18,4 +18,4 @@ List of added features.
   * Left click — close window.
   * Middle click — copy image in clipboard.
   * Right click — save image on hard disk.  
-![2017-09-20_18-39-40](https://user-images.githubusercontent.com/4051126/31056928-e05f6cd6-a6e2-11e7-8188-e88fcb3ba2e5.gif)
+![2017-09-20_18-39-40](https://user-images.githubusercontent.com/4051126/32775289-14df885e-c940-11e7-97de-4591b501d637.gif)
