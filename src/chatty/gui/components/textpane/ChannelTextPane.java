@@ -1856,8 +1856,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 } else {
                     emoticon = emoticons.get(id);
                 }
-                boolean isIgnored = emoticon != null && main.emoticons.isEmoteIgnored(emoticon);
-                if (end < text.length() && !isIgnored) {
+                if (end < text.length()) {
                     if (emoticon == null) {
                         /**
                          * Add emote from message alone
@@ -1879,8 +1878,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                         main.emoticons.addTempEmoticon(emoticon);
                         LOGGER.info("Added emote from message: "+emoticon);
                     }
-                    addEmoticon(emoticon, start, end, ranges,
-                            rangesStyle);
+                    if (!main.emoticons.isEmoteIgnored(emoticon)) {
+                        addEmoticon(emoticon, start, end, ranges, rangesStyle);
+                    }
                 }
             }
             /**
