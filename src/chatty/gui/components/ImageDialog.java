@@ -102,7 +102,7 @@ public class ImageDialog extends JDialog {
             }
         });
 
-        addMouseListener(new MouseAdapter() {
+        getContentPane().addMouseListener(new MouseAdapter() {
             public void mousePressed (MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
                     dispose();
