@@ -104,10 +104,10 @@ public class SettingsManager {
         addDefaultHotkey("0.7.3", "dialog.toggleEmotes", "ctrl E");
         addDefaultHotkey("0.7.3", "dialog.search", "ctrl F");
         addDefaultHotkey("0.7.3", "dialog.joinChannel", "ctrl J");
-        addDefaultHotkey("0.7.3", "window.toggleUserlist", "shift F10");
-        addDefaultHotkey("0.7.3", "window.toggleInput", "ctrl F10");
-        addDefaultHotkey("0.7.3", "window.toggleCompact", "F10");
-        addDefaultHotkey("0.7.3", "window.toggleCompactMaximized", "F11");
+        addDefaultHotkeyAppWide("0.7.3", "window.toggleUserlist", "shift F10");
+        addDefaultHotkeyAppWide("0.7.3", "window.toggleInput", "ctrl F10");
+        addDefaultHotkeyAppWide("0.7.3", "window.toggleCompact", "F10");
+        addDefaultHotkeyAppWide("0.7.3", "window.toggleCompactMaximized", "F11");
         addDefaultHotkey("0.7.3", "tabs.close", "ctrl W");
         addDefaultHotkeyAppWide("0.7.3", "tabs.next", "ctrl TAB");
         addDefaultHotkeyAppWide("0.7.3", "tabs.previous", "ctrl shift TAB");
@@ -211,6 +211,7 @@ public class SettingsManager {
         settings.addList("favoriteEmotes", new ArrayList(), Setting.LIST);
         
         settings.addString("emoji", "twemoji");
+        settings.addBoolean("emojiReplace", true);
         settings.addString("cheersType", "static");
 
         settings.addBoolean("usericonsEnabled",true);
@@ -494,6 +495,7 @@ public class SettingsManager {
         settings.addBoolean("logViewerstats", true);
         settings.addBoolean("logViewercount", false);
         settings.addBoolean("logModAction", true);
+        settings.addBoolean("logIgnored", true);
         settings.addList("logWhitelist",new ArrayList(), Setting.STRING);
         settings.addList("logBlacklist",new ArrayList(), Setting.STRING);
         settings.addString("logPath", "");

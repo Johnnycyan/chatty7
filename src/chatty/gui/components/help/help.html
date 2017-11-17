@@ -5,7 +5,7 @@
         <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 <body>
-    <h1><a name="top">Chatty (Version: 0.9b2)</a></h1>
+    <h1><a name="top">Chatty (Version: 0.9b3)</a></h1>
     <table>
         <tr>
             <td valign="top">
@@ -27,7 +27,7 @@
                 
                 <strong>Chat moderation / utility</strong>
                 <ul class="menu">
-                    <li><a href="#nickCompletion">TAB Completion</a></li>
+                    <li><a href="#TAB_Completion">TAB Completion</a></li>
                     <li><a href="#inputHistory">Input History</a></li>
                     <li><a href="#userselection">User Selection Mode</a></li>
                     <li><a href="#emoticons">Emoticons/Emote Dialog</a></li>
@@ -133,7 +133,7 @@
     <ul>
         <li><kbd>PageUp/PageDown</kbd> - Scroll up or down in chat</li>
         <li><kbd>Arrow Up/Down</kbd> - Go through <a href="#inputHistory">Input History</a></li>
-        <li><kbd>TAB</kbd> - For <a href="#nickCompletion">TAB Completion</a></li>
+        <li><kbd>TAB</kbd> - For <a href="#TAB_Completion">TAB Completion</a></li>
     </ul>
     <p>The following are more default hotkeys, however these can be changed
     in the settings:</p>
@@ -527,21 +527,23 @@
         seriously.</p>
     
     <h2>
-        <a name="nickCompletion">TAB Completion</a>
+        <a name="TAB_Completion">TAB Completion</a><a name="nickCompletion"></a>
         <a href="#top" class="top">[back to menu]</a>
     </h2>
-    <p>When you type in the inputbox, you can TAB-complete different types of
-        things, by using either <kbd>TAB</kbd> or <kbd>Shift-TAB</kbd> to
-        initiate Completion, which complete different types depending on the
-        <a href="help-settings.html#Completion">Completion settings</a>.</p>
-    
-    <p>Some prefixes automatically switch to a certain type of completion
-        independant of whether you use <kbd>TAB</kbd> or <kbd>Shift-TAB</kbd>:</p>
+    <p>When typing in the inputbox, <kbd>TAB</kbd> completes usernames and
+        <kbd>Shift-TAB</kbd> completes Emoticons (by default). This can be
+        changed in the <a href="help-settings.html#Completion">Completion settings</a>.
+        Once a completion is started, <kbd>TAB</kbd>/<kbd>Shift-TAB</kbd> cycle
+        forwards/backward through the results.</p>
+
+    <p>Some prefixes always force a certain completion type
+        no matter if you use <kbd>TAB</kbd> or <kbd>Shift-TAB</kbd>:</p>
     
     <ul>
         <li>Prefixing <code>@</code> completes usernames</li>
         <li>Prefixing <code>/</code> completes command names</li>
-        <li>Prefixing <code>.</code> performs <a href="help-settings.html#Completion-custom">Custom completion</a></li>
+        <li>Prefixing <code>.</code> performs <a href="help-settings.html#TAB_Completion-custom">Custom completion</a></li>
+        <li>Prefixing <code>:</code> completes Emoji (not Twitch Emotes!)</li>
         <li>Certain commands such as <code>/ban</code> complete usernames for
             their first parameter</li>
         <li>Setting commands such as <code>/set</code> complete setting names

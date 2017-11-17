@@ -70,7 +70,6 @@ import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
-import chatty.util.commands.Parser;
 import chatty.util.hotkeys.HotkeyManager;
 import chatty.util.settings.Setting;
 import chatty.util.settings.SettingChangeListener;
@@ -101,6 +100,9 @@ public class MainGui extends JFrame implements Runnable {
     
     public static Color COLOR_NEW_MESSAGE = new Color(200,0,0);
     public static Color COLOR_NEW_HIGHLIGHTED_MESSAGE = new Color(255,80,0);
+    
+    public static final Color COLOR_NEW_MESSAGE_DARK = new Color(255,80,80);
+    public static final Color COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = new Color(255,180,40);
     
     public final Emoticons emoticons = new Emoticons();
     
@@ -769,9 +771,21 @@ public class MainGui extends JFrame implements Runnable {
         if (!isVisible()) {
             return;
         }
-        final boolean hide = menu.isVisible();
-
-        menu.setVisible(!hide);
+        final boolean hide = getJMenuBar() != null;
+        
+        //menu.setVisible(!hide);
+        if (hide) {
+            setJMenuBar(null);
+        } else {
+            setJMenuBar(menu);
+            /**
+             * Seems like adding the menubar adds the default F10 hotkey again
+             * (that opens the menu), so refresh custom hotkeys in case one of
+             * them uses F10.
+             */
+            hotkeyManager.refreshHotkeys(getRootPane());
+        }
+        revalidate();
         if (maximize) {
             if (hide) {
                 setExtendedState(MAXIMIZED_BOTH);
@@ -1160,7 +1174,11 @@ public class MainGui extends JFrame implements Runnable {
             // text input
             Channel chan = channels.getChannelFromInput(event.getSource());
             if (chan != null) {
-                client.textInput(chan.getName(), chan.getInputText());
+                if (client.settings.getBoolean("emojiReplace")) {
+                    client.textInput(chan.getName(), emoticons.emojiReplace(chan.getInputText()));
+                } else {
+                    client.textInput(chan.getName(), chan.getInputText());
+                }
             }
 
             Object source = event.getSource();
@@ -1800,6 +1818,8 @@ public class MainGui extends JFrame implements Runnable {
             String url = null;
             if (e.getActionCommand().equals("code")) {
                 channels.getActiveChannel().insertText(emote.code, true);
+            } else if (e.getActionCommand().equals("codeEmoji")) {
+                channels.getActiveChannel().insertText(emote.stringId, true);
             } else if (e.getActionCommand().equals("cheer")) {
                 url = "http://help.twitch.tv/customer/portal/articles/2449458";
             } else if (e.getActionCommand().equals("emoteImage")) {
@@ -2614,11 +2634,14 @@ public class MainGui extends JFrame implements Runnable {
                 }
                 // If channel was changed from the given one, change accordingly
                 channel = chan.getName();
-                client.chatLog.message(chan.getName(), user, text, action);
                 
                 boolean isOwnMessage = isOwnUsername(user.getName()) || (whisper && action);
                 boolean ignored = checkHighlight(user, text, ignoreChecker, "ignore", isOwnMessage)
                         || (userIgnored(user, whisper) && !isOwnMessage);
+                
+                if (!ignored || client.settings.getBoolean("logIgnored")) {
+                    client.chatLog.message(chan.getName(), user, text, action);
+                }
                 
                 boolean highlighted = false;
                 if ((client.settings.getBoolean("highlightIgnored") || !ignored)
@@ -2665,8 +2688,9 @@ public class MainGui extends JFrame implements Runnable {
                 if (ignored && (ignoreMode <= IgnoredMessages.MODE_COUNT || 
                         !showIgnoredInfo())) {
                     // Don't print message
-                    if (isOwnMessage) {
-                        printLine(channel, "Own message ignored.");
+                    if (isOwnMessage && channels.isChannel(channel)) {
+                        // Don't log to file
+                        channels.getChannel(channel).printLine("Own message ignored.");
                     }
                 } else {
                     // Print message, but determine how exactly
