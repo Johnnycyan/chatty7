@@ -1961,7 +1961,11 @@ public class MainGui extends JFrame implements Runnable {
         @Override
         public void userClicked(User user, String msgId, String autoModMsgId, MouseEvent e) {
             if (e != null && SwingUtilities.isMiddleMouseButton(e)) {
-                channels.getActiveChannel().insertText(user.getDisplayNick() + ", ", true);
+                String n = user.getName();
+                if (client.settings.getBoolean("mentionByDisplayNick")) {
+                    n = user.getDisplayNick();
+                }
+                channels.getActiveChannel().insertText(n + ", ", true);
                 return;
             }
             if (e == null || (!e.isControlDown() && !e.isAltDown())) {

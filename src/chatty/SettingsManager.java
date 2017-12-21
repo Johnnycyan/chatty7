@@ -581,6 +581,7 @@ public class SettingsManager {
         settings.addString("colorNewMessage", "#C80000");
         settings.addString("colorNewHighlightedMessage", "#FF5000");
         settings.addBoolean("printAboutCheckingVersion", true);
+        settings.addBoolean("mentionByDisplayNick", true);
     }
     
     /**

@@ -49,6 +49,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(printCheck,
                 d.makeGbc(0, 10, 3, 1, GridBagConstraints.WEST));
 
+        JCheckBox middleClickNick = d.addSimpleBooleanSetting(
+                "mentionByDisplayNick",
+                "Mention user with displayed nick.",
+                "For asian symbols.");
+        fork.add(middleClickNick,
+                d.makeGbc(0, 11, 3, 1, GridBagConstraints.WEST));
+
         fork.add(new JLabel("Path of videoplayer:"),
                 d.makeGbc(0, 7, 1, 1, GridBagConstraints.WEST));
         
