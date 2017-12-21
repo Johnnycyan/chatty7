@@ -184,6 +184,7 @@ public class SettingsManager {
         settings.addString("font","Consolas");
         settings.addLong("fontSize",14);
         settings.addString("inputFont", "Dialog 14");
+        settings.addString("userlistFont", "Dialog Bold 12");
         settings.addLong("lineSpacing", 2);
         settings.addLong("paragraphSpacing", 6);
         settings.addString("timestamp","[HH:mm]");
@@ -240,6 +241,10 @@ public class SettingsManager {
         settings.addString("searchResultColor2", "#FFFF80");
         settings.addBoolean("colorCorrection", true);
         settings.addList("colorPresets", new ArrayList<>(), Setting.LIST);
+        
+        // Message Colors
+        settings.addBoolean("msgColorsEnabled", false);
+        settings.addList("msgColors", new LinkedList(), Setting.STRING);
         
         // Usercolors
         settings.addBoolean("customUsercolors", false);

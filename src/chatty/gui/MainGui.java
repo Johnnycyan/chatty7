@@ -28,9 +28,11 @@ import chatty.Helper;
 import chatty.User;
 import chatty.Irc;
 import chatty.gui.components.admin.StatusHistory;
-import chatty.UsercolorItem;
+import chatty.gui.colors.UsercolorItem;
 import chatty.util.api.usericons.Usericon;
 import chatty.WhisperManager;
+import chatty.gui.colors.MsgColorItem;
+import chatty.gui.colors.MsgColorManager;
 import chatty.gui.components.AddressbookDialog;
 import chatty.gui.components.AutoModDialog;
 import chatty.gui.components.ChatRulesDialog;
@@ -101,6 +103,8 @@ public class MainGui extends JFrame implements Runnable {
     public static Color COLOR_NEW_MESSAGE = new Color(200,0,0);
     public static Color COLOR_NEW_HIGHLIGHTED_MESSAGE = new Color(255,80,0);
     
+    // For the JTattoo dark LaF the color has to be light enough to not get a
+    // white outline
     public static final Color COLOR_NEW_MESSAGE_DARK = new Color(255,80,80);
     public static final Color COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = new Color(255,180,40);
     
@@ -147,6 +151,7 @@ public class MainGui extends JFrame implements Runnable {
     // Helpers
     private final Highlighter highlighter = new Highlighter();
     private final Highlighter ignoreChecker = new Highlighter();
+    private final MsgColorManager msgColorManager;
     private StyleManager styleManager;
     private TrayIconManager trayIcon;
     private final StateUpdater state = new StateUpdater();
@@ -163,6 +168,7 @@ public class MainGui extends JFrame implements Runnable {
     
     public MainGui(TwitchClient client) {
         this.client = client;
+        msgColorManager = new MsgColorManager(client.settings);
         SwingUtilities.invokeLater(this);
     }
     
@@ -181,15 +187,17 @@ public class MainGui extends JFrame implements Runnable {
      */
     private void setWindowIcons() {
         ArrayList<Image> windowIcons = new ArrayList<>();
-        windowIcons.add(createImage("app_16.png"));
-        windowIcons.add(createImage("app_64.png"));
-        this.setIconImages(windowIcons);
+        windowIcons.add(createImage("app_main_16.png"));
+        windowIcons.add(createImage("app_main_64.png"));
+        windowIcons.add(createImage("app_main_128.png"));
+        setIconImages(windowIcons);
     }
     
     private void setLiveStreamsWindowIcons() {
         ArrayList<Image> windowIcons = new ArrayList<>();
         windowIcons.add(createImage("app_live_16.png"));
         windowIcons.add(createImage("app_live_64.png"));
+        windowIcons.add(createImage("app_live_128.png"));
         liveStreamsDialog.setIconImages(windowIcons);
     }
     
@@ -197,7 +205,16 @@ public class MainGui extends JFrame implements Runnable {
         ArrayList<Image> windowIcons = new ArrayList<>();
         windowIcons.add(createImage("app_help_16.png"));
         windowIcons.add(createImage("app_help_64.png"));
+        windowIcons.add(createImage("app_help_128.png"));
         aboutDialog.setIconImages(windowIcons);
+    }
+    
+    private void setDebugWindowIcons() {
+        ArrayList<Image> windowIcons = new ArrayList<>();
+        windowIcons.add(createImage("app_debug_16.png"));
+        windowIcons.add(createImage("app_debug_64.png"));
+        windowIcons.add(createImage("app_debug_128.png"));
+        debugWindow.setIconImages(windowIcons);
     }
     
     /**
@@ -211,6 +228,7 @@ public class MainGui extends JFrame implements Runnable {
         
         // Error/debug stuff
         debugWindow = new DebugWindow(new DebugCheckboxListener());
+        setDebugWindowIcons();
         errorMessage = new ErrorMessage(this, linkLabelListener);
         
         // Dialogs and stuff
@@ -241,7 +259,7 @@ public class MainGui extends JFrame implements Runnable {
                 this, client.api, contextMenuListener);
         
         // Tray/Notifications
-        trayIcon = new TrayIconManager(createImage("app_16.png"));
+        trayIcon = new TrayIconManager(createImage("app_main_16.png"));
         trayIcon.addActionListener(new TrayMenuListener());
         notificationWindowManager = new NotificationWindowManager<>(this);
         notificationWindowManager.setNotificationActionListener(new MyNotificationActionListener());
@@ -2001,9 +2019,17 @@ public class MainGui extends JFrame implements Runnable {
     public java.util.List<UsercolorItem> getUsercolorData() {
         return client.usercolorManager.getData();
     }
-    
+
     public void setUsercolorData(java.util.List<UsercolorItem> data) {
         client.usercolorManager.setData(data);
+    }
+    
+    public java.util.List<MsgColorItem> getMsgColorData() {
+        return msgColorManager.getData();
+    }
+    
+    public void setMsgColorData(java.util.List<MsgColorItem> data) {
+        msgColorManager.setData(data);
     }
     
     public java.util.List<Usericon> getUsericonData() {
@@ -2696,6 +2722,9 @@ public class MainGui extends JFrame implements Runnable {
                     // Print message, but determine how exactly
                     UserMessage message = new UserMessage(user, text, tagEmotes, id, bits);
                     message.color = highlighter.getLastMatchColor();
+                    if (!highlighted) {
+                        message.color = msgColorManager.getColor(user, text);
+                    }
                     message.whisper = whisper;
                     message.action = action;
                     if (highlighted) {
