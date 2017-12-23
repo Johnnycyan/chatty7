@@ -6,6 +6,8 @@ import java.awt.GridBagConstraints;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Fork settings..
@@ -49,13 +51,6 @@ public class ForkSettings extends SettingsPanel {
         fork.add(printCheck,
                 d.makeGbc(0, 10, 3, 1, GridBagConstraints.WEST));
 
-        JCheckBox middleClickNick = d.addSimpleBooleanSetting(
-                "mentionByDisplayNick",
-                "Mention user with displayed nick.",
-                "For asian symbols.");
-        fork.add(middleClickNick,
-                d.makeGbc(0, 11, 3, 1, GridBagConstraints.WEST));
-
         fork.add(new JLabel("Path of videoplayer:"),
                 d.makeGbc(0, 7, 1, 1, GridBagConstraints.WEST));
         
@@ -94,6 +89,18 @@ public class ForkSettings extends SettingsPanel {
         fork.add(d.addSimpleStringSetting(
                 "colorNewHighlightedMessage", 10, true),
                 d.makeGbc(1, 9, 2, 1, GridBagConstraints.WEST));
+
+        Map<String, String> mentionNicknameOptions = new HashMap<>();
+        mentionNicknameOptions.put("normal", "Localized nickname");
+        mentionNicknameOptions.put("real", "Real nickname");
+        mentionNicknameOptions.put("customReal", "Custom (or real) nickname");
+        mentionNicknameOptions.put("custom", "Custom (or localized) nickname");
+        ComboStringSetting mentionNicknameSetting = new ComboStringSetting(mentionNicknameOptions);
+        d.addStringSetting("mentionByNickname", mentionNicknameSetting);
+        fork.add(new JLabel("Mention with middle click by"), d.makeGbc(0, 11, 1, 1, GridBagConstraints.WEST));
+        fork.add(mentionNicknameSetting,
+            d.makeGbc(1, 11, 2, 1, GridBagConstraints.WEST)
+        );
 
         
     }

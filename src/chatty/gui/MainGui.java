@@ -1962,8 +1962,13 @@ public class MainGui extends JFrame implements Runnable {
         public void userClicked(User user, String msgId, String autoModMsgId, MouseEvent e) {
             if (e != null && SwingUtilities.isMiddleMouseButton(e)) {
                 String n = user.getName();
-                if (client.settings.getBoolean("mentionByDisplayNick")) {
+                String set = client.settings.getString("mentionByNickname");
+                if (set == "normal") {
                     n = user.getDisplayNick();
+                } else if (set == "custom") {
+                    n = user.getCustomNick();
+                } else if (set == "customReal") {
+                    n = user.getCustomNickOrReal();
                 }
                 channels.getActiveChannel().insertText(n + ", ", true);
                 return;

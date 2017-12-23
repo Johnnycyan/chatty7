@@ -399,6 +399,13 @@ public class User implements Comparable {
         }
         return getDisplayNick();
     }
+
+    public synchronized String getCustomNickOrReal() {
+        if (customNick != null) {
+            return customNick;
+        }
+        return getName();
+    }
     
     public synchronized void setCustomNick(String nick) {
         this.customNick = nick;
