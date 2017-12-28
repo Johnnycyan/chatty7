@@ -27,6 +27,7 @@ public class ForkUtil {
 
     public static boolean SHOW_TITLE = true;
     public static boolean REMOVE_SHARP = false;
+    public static String MENTION_NICK = "normal";
 
     public static String removeSharpFromTitle(Channel channel) {
         if (channel.getType() == Channel.Type.CHANNEL && REMOVE_SHARP) {

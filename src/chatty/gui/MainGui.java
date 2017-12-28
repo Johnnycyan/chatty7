@@ -1962,12 +1962,12 @@ public class MainGui extends JFrame implements Runnable {
         public void userClicked(User user, String msgId, String autoModMsgId, MouseEvent e) {
             if (e != null && SwingUtilities.isMiddleMouseButton(e)) {
                 String n = user.getName();
-                String set = client.settings.getString("mentionByNickname");
-                if (set == "normal") {
+                String set = ForkUtil.MENTION_NICK;
+                if (set.equals("normal")) {
                     n = user.getDisplayNick();
-                } else if (set == "custom") {
+                } else if (set.equals("custom")) {
                     n = user.getCustomNick();
-                } else if (set == "customReal") {
+                } else if (set.equals("customReal")) {
                     n = user.getCustomNickOrReal();
                 }
                 channels.getActiveChannel().insertText(n + ", ", true);
@@ -4199,6 +4199,7 @@ public class MainGui extends JFrame implements Runnable {
     private void updateForkSettings() {
         ForkUtil.SHOW_TITLE = client.settings.getBoolean("urlTitleDescription");
         ForkUtil.REMOVE_SHARP = client.settings.getBoolean("removeSharp");
+        ForkUtil.MENTION_NICK = client.settings.getString("mentionByNickname");
 
         COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
         COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));
