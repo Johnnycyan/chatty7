@@ -25,7 +25,7 @@ import javax.swing.JTextArea;
  */
 public class UpdateMessage extends JDialog {
     
-    private static final String CHANGELOG_URL = "http://zik.one/chatty/changes.txt";
+    private static final String CHANGELOG_URL = "https://zik.one/chatty/changes.txt";
     
     private final JLabel version;
     private final JTextArea changelog;
