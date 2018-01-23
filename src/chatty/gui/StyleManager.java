@@ -35,7 +35,8 @@ public class StyleManager implements StyleServer {
             "pauseChatOnMouseMoveCtrlRequired", "showAnimatedEmotes",
             "colorCorrection", "banReasonAppended", "banDurationAppended",
             "banDurationMessage", "banReasonMessage", "displayNamesMode",
-            "paragraphSpacing", "bufferSizes", "userlistFont"
+            "paragraphSpacing", "bufferSizes", "userlistFont",
+            "inputHistoryMultirowRequireCtrl" // Not delievered through this
             ));
     
     private MutableAttributeSet baseStyle;

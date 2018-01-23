@@ -3,6 +3,7 @@ package chatty.gui.components;
 
 import chatty.gui.HtmlColors;
 import chatty.gui.components.AutoCompletionServer.CompletionItems;
+import chatty.util.StringUtil;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -23,6 +24,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
+import javax.swing.text.JTextComponent;
 
 /**
  * Provides the feature to complete text when the user performs a certain action
@@ -48,7 +50,7 @@ public class AutoCompletion {
     /**
      * The JTextField the completion is performed in.
      */
-    private final JTextField textField;
+    private final JTextComponent textField;
 
     // Settings
     private int maxResultsShown = 5;
@@ -81,7 +83,7 @@ public class AutoCompletion {
      *
      * @param textField The JTextField to perform the completion on
      */
-    public AutoCompletion(JTextField textField) {
+    public AutoCompletion(JTextComponent textField) {
         this.textField = textField;
         textField.addCaretListener(new CaretListener() {
 
@@ -736,7 +738,7 @@ public class AutoCompletion {
         for (String item : input) {
             if (result == null) {
                 result = item;
-            } else if (!item.toLowerCase().startsWith(result.toLowerCase())) {
+            } else if (!StringUtil.toLowerCase(item).startsWith(StringUtil.toLowerCase(result))) {
                 result = findCommonPrefix(item, result);
                 if (result.isEmpty()) {
                     return result;
@@ -756,7 +758,7 @@ public class AutoCompletion {
     private static String findCommonPrefix(String a, String b) {
         int minLength = Math.min(a.length(), b.length());
         for (int i = 0; i < minLength; i++) {
-            if (a.toLowerCase().charAt(i) != b.toLowerCase().charAt(i)) {
+            if (StringUtil.toLowerCase(a).charAt(i) != StringUtil.toLowerCase(b).charAt(i)) {
                 return a.substring(0, i);
             }
         }

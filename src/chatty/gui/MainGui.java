@@ -61,6 +61,7 @@ import chatty.gui.notifications.Notification;
 import chatty.gui.notifications.NotificationActionListener;
 import chatty.gui.notifications.NotificationManager;
 import chatty.gui.notifications.NotificationWindowManager;
+import chatty.lang.Language;
 import chatty.util.TwitchEmotes.EmotesetInfo;
 import chatty.util.api.ChatInfo;
 import chatty.util.api.CheerEmoticon;
@@ -86,6 +87,7 @@ import javax.swing.Action;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -339,6 +341,11 @@ public class MainGui extends JFrame implements Runnable {
         windowStateManager.addWindow(userInfoDialog, "userInfo", true, false);
         windowStateManager.addWindow(autoModDialog, "autoMod", true, true);
         
+        if (System.getProperty("java.version").equals("1.8.0_161")
+                || System.getProperty("java.version").equals("1.8.0_162")) {
+            GuiUtil.installTextComponentFocusWorkaround();
+        }
+        
         guiCreated = true;
     }
     
@@ -390,8 +397,8 @@ public class MainGui extends JFrame implements Runnable {
      * @param mnemonic The mnemonic for the action in the menu
      * @param action The action to perform
      */
-    private void addMenuAction(String id, String label, String menuLabel, int mnemonic, Action action) {
-        action.putValue(Action.NAME, menuLabel);
+    private void addMenuAction(String id, String label, int mnemonic, Action action) {
+        action.putValue(Action.NAME, Language.getString("menubar."+id));
         action.putValue(Action.MNEMONIC_KEY, mnemonic);
         menu.setAction(id, action);
         hotkeyManager.registerAction(id, label, action);
@@ -440,7 +447,7 @@ public class MainGui extends JFrame implements Runnable {
 
         
         addMenuAction("dialog.search", "Dialog: Open Search Dialog",
-                "Find text..", KeyEvent.VK_F, new AbstractAction() {
+                KeyEvent.VK_F, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -449,7 +456,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.addressbook", "Dialog: Addressbook (toggle)",
-                "Addressbook", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -458,7 +465,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.autoModDialog", "Dialog: AutoMod Dialog (toggle)",
-                "AutoMod", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -467,7 +474,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.moderationLog", "Dialog: Moderation Log (toggle)",
-                "Moderation Log", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -476,7 +483,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.channelInfo", "Dialog: Channel Info Dialog (toggle)",
-                "Channel Info", KeyEvent.VK_C, new AbstractAction() {
+                KeyEvent.VK_C, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -485,7 +492,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.channelAdmin", "Dialog: Channel Admin Dialog (toggle)",
-                "Channel Admin", KeyEvent.VK_A, new AbstractAction() {
+                KeyEvent.VK_A, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -494,7 +501,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.chatRules", "Dialog: Chat Rules (toggle)",
-                "Chat Rules", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -503,7 +510,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.toggleEmotes", "Dialog: Emotes Dialog (toggle)",
-                "Emoticons", KeyEvent.VK_E, new AbstractAction() {
+                KeyEvent.VK_E, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -512,7 +519,7 @@ public class MainGui extends JFrame implements Runnable {
         });
 
         addMenuAction("dialog.highlightedMessages", "Dialog: Highlighted Messages (toggle)",
-                "Highlights", KeyEvent.VK_H, new AbstractAction() {
+                KeyEvent.VK_H, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -521,7 +528,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.ignoredMessages", "Dialog: Ignored Messages (toggle)",
-                "Ignored", KeyEvent.VK_I, new AbstractAction() {
+                KeyEvent.VK_I, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -530,7 +537,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.streams", "Dialog: Live Channels Dialog (toggle)",
-                "Live Channels", KeyEvent.VK_L, new AbstractAction() {
+                KeyEvent.VK_L, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -539,7 +546,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.followers", "Dialog: Followers List (toggle)",
-                "Followers", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -548,7 +555,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("dialog.subscribers", "Dialog: Subscriber List (toggle)",
-                "Subscribers", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -557,7 +564,7 @@ public class MainGui extends JFrame implements Runnable {
         });
 
         addMenuAction("dialog.joinChannel", "Dialog: Join Channel",
-                "Join Channel", KeyEvent.VK_J, new AbstractAction() {
+                KeyEvent.VK_J, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -565,7 +572,7 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
         
-        addMenuAction("about", "Open Help", "About/Help", KeyEvent.VK_H,
+        addMenuAction("about", "Open Help", KeyEvent.VK_H,
                 new AbstractAction() {
 
             @Override
@@ -724,7 +731,7 @@ public class MainGui extends JFrame implements Runnable {
         });
 
         addMenuAction("dialog.streamchat", "Window: Open StreamChat",
-                "Open Dialog", KeyEvent.VK_O, new AbstractAction() {
+                KeyEvent.VK_O, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -749,7 +756,7 @@ public class MainGui extends JFrame implements Runnable {
         });
         
         addMenuAction("application.exit", "Exit Chatty",
-                "Exit", KeyEvent.VK_UNDEFINED, new AbstractAction() {
+                KeyEvent.VK_UNDEFINED, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -869,6 +876,7 @@ public class MainGui extends JFrame implements Runnable {
         updateHighlight();
         updateIgnore();
         updateHistoryRange();
+        updateHistoryVerticalZoom();
         updateNotificationSettings();
         updateChannelsSettings();
         updateHighlightNextMessages();
@@ -1150,6 +1158,12 @@ public class MainGui extends JFrame implements Runnable {
         int range = (int)client.settings.getLong("historyRange");
         channelInfoDialog.setHistoryRange(range);
         liveStreamsDialog.setHistoryRange(range);
+    }
+    
+    private void updateHistoryVerticalZoom() {
+        boolean zoom = client.settings.getBoolean("historyVerticalZoom");
+        channelInfoDialog.setHistoryVerticalZoom(zoom);
+        liveStreamsDialog.setHistoryVerticalZoom(zoom);
     }
     
     private void openTokenDialog() {
@@ -1589,12 +1603,7 @@ public class MainGui extends JFrame implements Runnable {
                 }
             }
             else if (cmd.equals("joinHostedChannel")) {
-                String chan = client.getHostedChannel(channels.getActiveChannel().getName());
-                if (chan == null) {
-                    printLine("No channel is currently being hosted.");
-                } else {
-                    client.joinChannel(chan);
-                }
+                client.command(channels.getActiveChannel().getName(), "joinhosted", null);
             }
             else if (cmd.equals("srcOpen")) {
                 client.speedruncom.openCurrentGame(channels.getActiveChannel());
@@ -1605,29 +1614,15 @@ public class MainGui extends JFrame implements Runnable {
             else if (cmd.startsWith("command")) {
                 customCommand(channels.getActiveChannel().getName(), e, channels.getActiveChannel().getStreamName());
             }
-            else if (cmd.startsWith("range")) {
-                int range = -1;
-                switch (cmd) {
-                    case "range1h":
-                        range = 60;
-                        break;
-                    case "range2h":
-                        range = 120;
-                        break;
-                    case "range4h":
-                        range = 240;
-                        break;
-                    case "range8h":
-                        range = 480;
-                        break;
-                    case "range12h":
-                        range = 720;
-                        break;
-                }
+            else if (cmd.startsWith("historyRange")) {
+                int range = Integer.parseInt(cmd.substring("historyRange".length()));
                 // Change here as well, because even if it's the same value,
                 // update may be needed. This will make it update twice often.
-                updateHistoryRange();
+                //updateHistoryRange();
                 client.settings.setLong("historyRange", range);
+            } else if (cmd.startsWith("toggleVerticalZoom")) {
+                boolean selected = ((JMenuItem)e.getSource()).isSelected();
+                client.settings.setBoolean("historyVerticalZoom", selected);
             } else {
                 nameBasedStuff(e, channels.getActiveChannel().getStreamName());
             }
@@ -1800,18 +1795,18 @@ public class MainGui extends JFrame implements Runnable {
                     }
                 }
                 for (String stream : streams) {
-                    livestreamerDialog.open(stream.toLowerCase(), quality);
+                    livestreamerDialog.open(StringUtil.toLowerCase(stream), quality);
                 }
             } else if (cmd.equals("showChannelEmotes")) {
                 if (firstStream != null) {
                     // Should add the stream to be requested
-                    openEmotesDialogChannelEmotes(firstStream.toLowerCase());
+                    openEmotesDialogChannelEmotes(StringUtil.toLowerCase(firstStream));
                     // Request immediately in this case
                     client.api.requestEmotesNow();
                 }
             } else if (cmd.equals("hostchannel")) {
                 if (firstStream != null && streams.size() == 1) {
-                    client.command(null, "host2", firstStream.toLowerCase());
+                    client.command(null, "host2", StringUtil.toLowerCase(firstStream));
                 } else {
                     printLine("Can't host more than one channel.");
                 }
@@ -4150,6 +4145,9 @@ public class MainGui extends JFrame implements Runnable {
             }
             if (setting.equals("historyRange")) {
                 updateHistoryRange();
+            }
+            if (setting.equals("historyVerticalZoom")) {
+                updateHistoryVerticalZoom();
             }
             Set<String> notificationSettings = new HashSet<>(Arrays.asList(
                 "nScreen", "nPosition", "nDisplayTime", "nMaxDisplayTime",

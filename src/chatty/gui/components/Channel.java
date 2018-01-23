@@ -234,7 +234,7 @@ public class Channel extends JPanel {
             "customEmotes", "reloadCustomEmotes", "addStreamHighlight", "openStreamHighlights",
             "ignore", "unignore", "ignoreWhisper", "unignoreWhisper", "ignoreChat", "unignoreChat",
             "follow", "unfollow", "ffzws", "followers", "followersoff",
-            "setcolor", "untimeout", "userinfo"
+            "setcolor", "untimeout", "userinfo", "joinhosted", "favorite", "unfavorite"
         }));
         
         private final Set<String> prefixesPreferUsernames = new HashSet<>(Arrays.asList(new String[]{
@@ -253,7 +253,7 @@ public class Channel extends JPanel {
         @Override
         public CompletionItems getCompletionItems(String type, String prefix, String search) {
             updateSettings();
-            search = search.toLowerCase(Locale.ENGLISH);
+            search = StringUtil.toLowerCase(search);
             if (type == null) {
                 return getRegularCompletionItems(prefix, search);
             } else if (type.equals("special")) {
@@ -398,7 +398,7 @@ public class Channel extends JPanel {
                 String search) {
             List<String> matched = new ArrayList<>();
             for (String name : data) {
-                if (name.toLowerCase().startsWith(search)) {
+                if (StringUtil.toLowerCase(name).startsWith(search)) {
                     matched.add(name);
                 }
             }
@@ -417,11 +417,11 @@ public class Channel extends JPanel {
                     matched = true;
                     regularMatched.add(user);
                 }
-                if (!user.hasRegularDisplayNick() && user.getDisplayNick().toLowerCase(Locale.ROOT).startsWith(search)) {
+                if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(search)) {
                     matched = true;
                     localizedMatched.add(user);
                 }
-                if (user.hasCustomNickSet() && user.getCustomNick().toLowerCase(Locale.ROOT).startsWith(search)) {
+                if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(search)) {
                     matched = true;
                     customMatched.add(user);
                 }
@@ -589,6 +589,7 @@ public class Channel extends JPanel {
         input.setBackground(styleManager.getColor("inputBackground"));
         input.setCaretColor(styleManager.getColor("inputForeground"));
         input.setForeground(styleManager.getColor("inputForeground"));
+        input.setHistoryRequireCtrlMultirow(main.getSettings().getBoolean("inputHistoryMultirowRequireCtrl"));
         users.setFont(styleManager.getFont("userlist"));
         users.setBackground(styleManager.getColor("background"));
         users.setForeground(styleManager.getColor("foreground"));

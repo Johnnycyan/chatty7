@@ -6,6 +6,7 @@ import chatty.gui.WindowStateManager;
 import chatty.gui.notifications.Notification;
 import chatty.util.BackupManager;
 import chatty.util.DateTime;
+import chatty.util.StringUtil;
 import chatty.util.hotkeys.Hotkey;
 import chatty.util.settings.Setting;
 import chatty.util.settings.Settings;
@@ -116,6 +117,7 @@ public class SettingsManager {
         addDefaultHotkeyAppWide("0.9b1", "about", "F1");
         settings.addList("hotkeys", getDefaultHotkeySettingValue(), Setting.LIST);
         settings.addBoolean("globalHotkeysEnabled", true);
+        settings.addBoolean("inputHistoryMultirowRequireCtrl", true);
         
 
         //===========
@@ -177,6 +179,8 @@ public class SettingsManager {
         settings.addString("laf","default");
         settings.addString("lafTheme","Default");
         settings.addMap("lafCustomTheme", new HashMap<>(), Setting.STRING);
+        
+        settings.addString("language", "");
         
         settings.addLong("dialogFontSize", -1);
 
@@ -371,6 +375,7 @@ public class SettingsManager {
 
         settings.addString("liveStreamsSorting", "recent");
         settings.addLong("historyRange", 0);
+        settings.addBoolean("historyVerticalZoom", false);
 
         //=======
         // Sounds
@@ -674,8 +679,8 @@ public class SettingsManager {
                  */
                 settings.setString("timeoutButtons", null);
                 LOGGER.warning("Updated timeoutButtons setting to new default");
-            } else if (!value.toLowerCase(Locale.ENGLISH).contains("/ban") &&
-                    !value.toLowerCase(Locale.ENGLISH).contains("/unban")) {
+            } else if (!StringUtil.toLowerCase(value).contains("/ban") &&
+                    !StringUtil.toLowerCase(value).contains("/unban")) {
                 /**
                  * Setting wasn't on the old default value, but it doesn't
                  * contain /Ban or /Unban, so add those to the current
@@ -705,7 +710,7 @@ public class SettingsManager {
         }
         if (switchedFromVersionBefore("0.8.5b4")) {
             String currentValue = settings.getString("timeoutButtons");
-            if (!currentValue.toLowerCase().contains("/modunmod")) {
+            if (!StringUtil.toLowerCase(currentValue).contains("/modunmod")) {
                 settings.setString("timeoutButtons", currentValue+"\n/ModUnmod");
             }
         }
@@ -714,7 +719,7 @@ public class SettingsManager {
         }
         if (switchedFromVersionBefore("0.8.7b1")) {
             String currentValue = settings.getString("timeoutButtons");
-            if (!currentValue.toLowerCase().contains("/automod_approve")) {
+            if (!StringUtil.toLowerCase(currentValue).contains("/automod_approve")) {
                 settings.setString("timeoutButtons", currentValue + "\n\n"
                         + "@AutoMod\n"
                         + ".Approve=/Automod_approve\n"

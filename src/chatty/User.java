@@ -521,7 +521,7 @@ public class User implements Comparable {
         if (nick.isEmpty()) {
             return;
         }
-        String name = nick.toLowerCase();
+        String name = StringUtil.toLowerCase(nick);
         int n = name.codePointAt(0) + name.codePointAt(name.length() - 1);
         color = defaultColors[n % defaultColors.length];
         hasDefaultColor = true;
