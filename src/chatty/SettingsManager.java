@@ -361,7 +361,7 @@ public class SettingsManager {
         // Tabs
         settings.addString("tabOrder", "normal");
         settings.addBoolean("tabsMwheelScrolling", false);
-        settings.addBoolean("tabsMwheelScrollingAnywhere", false);
+        settings.addBoolean("tabsMwheelScrollingAnywhere", true);
         settings.addString("tabsPlacement", "top");
         settings.addString("tabsLayout", "wrap");
 
@@ -370,6 +370,7 @@ public class SettingsManager {
         settings.addLong("userlistWidth", 120);
         settings.addLong("userlistMinWidth", 0);
         settings.addBoolean("userlistEnabled", true);
+        settings.addBoolean("inputEnabled", true);
         settings.addLong("bufferSize", 500);
         settings.addMap("bufferSizes", new HashMap<>(), Setting.LONG);
 

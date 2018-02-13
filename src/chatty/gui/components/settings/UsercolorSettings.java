@@ -4,11 +4,13 @@ package chatty.gui.components.settings;
 import chatty.gui.HtmlColors;
 import chatty.gui.colors.UsercolorItem;
 import chatty.gui.components.LinkLabel;
+import chatty.lang.Language;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.util.List;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
@@ -39,14 +41,19 @@ public class UsercolorSettings extends SettingsPanel {
     public UsercolorSettings(SettingsDialog d) {
         super(true);
         
-        JPanel main = addTitledPanel("Usercolors", 0, true);
+        JPanel customPanel = addTitledPanel("Custom Usercolors", 0, true);
+        JPanel mainPanel = addTitledPanel(Language.getString("settings.section.usercolorsOther"), 1);
         
         GridBagConstraints gbc;
         
+        //===================
+        // Custom Usercolors
+        //===================
         gbc = d.makeGbc(0, 0, 1, 1);
         gbc.anchor = GridBagConstraints.WEST;
-        main.add(d.addSimpleBooleanSetting("customUsercolors", "Enable custom usercolors", "Changes colors and stuff.."), gbc);
-        
+        customPanel.add(d.addSimpleBooleanSetting("customUsercolors",
+                "Enable custom usercolors", ""), gbc);
+
         data = new ItemColorEditor<>(d,
                 (id, color) -> { return new UsercolorItem(id, color); });
         data.setRendererForColumn(0, new ItemIdRenderer());
@@ -55,11 +62,16 @@ public class UsercolorSettings extends SettingsPanel {
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1;
         gbc.weighty = 1;
-        main.add(data, gbc);
+        customPanel.add(data, gbc);
         
         LinkLabel info = new LinkLabel(INFO_TEXT, d.getSettingsHelpLinkLabelListener());
-        main.add(info, d.makeGbc(1, 1, 1, 1));
+        customPanel.add(info, d.makeGbc(1, 1, 1, 1));
         
+        //================
+        // Other Settings
+        //================
+        mainPanel.add(d.addSimpleBooleanSetting("colorCorrection"),
+                d.makeGbcCloser(0, 0, 1, 1, GridBagConstraints.WEST));
     }
     
     public void setData(List<UsercolorItem> data) {

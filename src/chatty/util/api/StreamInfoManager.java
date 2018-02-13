@@ -500,6 +500,12 @@ public class StreamInfoManager {
                 case "watch_party":
                     streamType = StreamType.WATCH_PARTY;
                     break;
+                case "rerun":
+                    streamType = StreamType.RERUN;
+                    break;
+                case "premiere":
+                    streamType = StreamType.PREMIERE;
+                    break;
                 default:
                     streamType = StreamType.LIVE;
             }

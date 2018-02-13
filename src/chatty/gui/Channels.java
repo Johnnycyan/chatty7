@@ -180,6 +180,11 @@ public class Channels {
         if (type == Channel.Type.SPECIAL || type == Channel.Type.WHISPER) {
             channel.setUserlistEnabled(false);
         }
+        
+        if (!gui.getSettings().getBoolean("inputEnabled")) {
+            channel.toggleInput();
+        }
+        
         return channel;
     }
     

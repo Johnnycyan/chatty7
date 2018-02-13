@@ -42,7 +42,7 @@ public class ChannelInfoDialog extends JDialog implements ViewerHistoryListener 
     private static final String STATUS_LABEL_TEXT_HISTORY = Language.getString("channelInfo.history")+":";
     
     private static final String GAME_LABEL_TEXT = Language.getString("channelInfo.playing")+":";
-    private static final String GAME_LABEL_TEXT_VOD = "VODCAST / "+Language.getString("channelInfo.playing")+":";
+    private static final String GAME_LABEL_TEXT_VOD = "VOD / "+Language.getString("channelInfo.playing")+":";
     
     private final JLabel statusLabel = new JLabel(STATUS_LABEL_TEXT);
     private final ExtendedTextPane title = new ExtendedTextPane();
@@ -166,9 +166,9 @@ public class ChannelInfoDialog extends JDialog implements ViewerHistoryListener 
         add(historyLabel,gbc);
         
         history.setListener(this);
-        history.setForegroundColor(gameLabel.getForeground());
-        history.setBackgroundColor(gameLabel.getBackground());
-        history.setFontSize(gameLabel.getFont().getSize());
+        history.setForegroundColor(game.getForeground());
+        history.setBackgroundColor(game.getBackground());
+        history.setBaseFont(game.getFont());
         history.setPreferredSize(new Dimension(300,150));
         history.setMinimumSize(new Dimension(1,20));
         gbc = makeGbc(0,5,2,1);
@@ -308,7 +308,7 @@ public class ChannelInfoDialog extends JDialog implements ViewerHistoryListener 
     }
     
     private void updateStreamType(StreamType streamType) {
-        if (streamType == StreamType.WATCH_PARTY) {
+        if (streamType != StreamType.LIVE) {
             gameLabel.setText(GAME_LABEL_TEXT_VOD);
         } else {
             gameLabel.setText(GAME_LABEL_TEXT);
