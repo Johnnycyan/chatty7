@@ -107,8 +107,8 @@ public class MainGui extends JFrame implements Runnable {
     
     // For the JTattoo dark LaF the color has to be light enough to not get a
     // white outline
-    public static final Color COLOR_NEW_MESSAGE_DARK = new Color(255,80,80);
-    public static final Color COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = new Color(255,180,40);
+    public static Color COLOR_NEW_MESSAGE_DARK = new Color(255,80,80);
+    public static Color COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = new Color(255,180,40);
     
     public final Emoticons emoticons = new Emoticons();
     
@@ -4203,6 +4203,9 @@ public class MainGui extends JFrame implements Runnable {
 
         COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
         COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));
+
+        COLOR_NEW_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(255,80,80));
+        COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,180,40));
 
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
         chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
