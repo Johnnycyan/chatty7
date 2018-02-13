@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JTextField;
+import javax.swing.JTextArea;
 import javax.swing.JWindow;
 import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
@@ -44,7 +44,7 @@ public class EditBoxPopup {
     /**
      * The JTextField the completion is performed in.
      */
-    private final JTextField textField;
+    private final JTextArea textField;
 
     // Settings
     private boolean showPopup = true;
@@ -62,7 +62,7 @@ public class EditBoxPopup {
      *
      * @param textField The JTextField to perform the completion on
      */
-    public EditBoxPopup(JTextField textField) {
+    public EditBoxPopup(JTextArea textField) {
         this.textField = textField;
         
         /**

@@ -248,6 +248,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         cards.add(new ChatSettings(this), Page.CHAT.name);
         nameSettings = new NameSettings(this);
         cards.add(nameSettings, Page.NAMES.name);
+        cards.add(new ForkSettings(this), Page.FORK.name);
 
         // Track current settings page
         currentlyShown = Page.MAIN;
