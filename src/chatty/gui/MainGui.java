@@ -4208,7 +4208,7 @@ public class MainGui extends JFrame implements Runnable {
         COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,180,40));
 
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
-        chatty.gui.components.EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP = Math.toIntExact(client.settings.getLong("maxSymbols"));
+        
         if (client.settings.getLong("checkVersionInterval") <= 1) {
             TwitchClient.CHECK_VERSION_INTERVAL = 60 * 60 * 1;
         } else if (client.settings.getLong("checkVersionInterval") >= 500) {

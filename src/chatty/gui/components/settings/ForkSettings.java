@@ -58,15 +58,6 @@ public class ForkSettings extends SettingsPanel {
                 "playerPath", 20, true),
                 d.makeGbc(1, 7, 2, 1, GridBagConstraints.WEST));
 
-        fork.add(new JLabel("Show popup with inputed text after "),
-                d.makeGbc(0, 4, 1, 1, GridBagConstraints.WEST));
-        
-        fork.add(d.addSimpleLongSetting("maxSymbols", 4, true),
-                d.makeGbc(1, 4, 1, 1, GridBagConstraints.WEST));
-
-        fork.add(new JLabel(" symbols."),
-                d.makeGbc(2, 4, 1, 1, GridBagConstraints.WEST));
-
         fork.add(new JLabel("Check new version every "),
                 d.makeGbc(0, 5, 1, 1, GridBagConstraints.WEST));
         

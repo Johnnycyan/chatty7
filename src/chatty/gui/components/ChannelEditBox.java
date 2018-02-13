@@ -39,13 +39,9 @@ public class ChannelEditBox extends JTextArea implements KeyListener,
     
     // Auto completion
     private final AutoCompletion autoCompletion;
-
-    private final EditBoxPopup editBoxPopup;
     
     public ChannelEditBox(int size) {
         autoCompletion = new AutoCompletion(this);
-
-        editBoxPopup = new EditBoxPopup(this);
 
         this.addKeyListener(this);
         setLineWrap(true);
@@ -147,9 +143,6 @@ public class ChannelEditBox extends JTextArea implements KeyListener,
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_RIGHT) {
-            editBoxPopup.updateCaretSymbolPosition();
-        }
         if (!historyRequireCtrlMultirow || e.isControlDown() || isSingleRow()) {
             if (e.getKeyCode() == KeyEvent.VK_UP
                     && (e.isControlDown() || isCaretInFirstRow())) {
@@ -187,13 +180,6 @@ public class ChannelEditBox extends JTextArea implements KeyListener,
             }
         } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
             autoCompletion.cancelAutoCompletion();
-            editBoxPopup.hideInfoWindow();
-        } else if (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_RIGHT) {
-            editBoxPopup.updateCaretSymbolPosition();
-        } else {
-            if (getText().length() > EditBoxPopup.MAX_SYMBOLS_FOR_SHOWING_POPUP) { 
-                editBoxPopup.showInfoWindow(this.getText(), true);
-            }
         }
     }
     
@@ -305,9 +291,6 @@ public class ChannelEditBox extends JTextArea implements KeyListener,
 
     @Override
     public void removeUpdate(DocumentEvent e) {
-        if (getText().length() < 100) { 
-            editBoxPopup.hideInfoWindow();
-        }
         historyTextEdited = true;
     }
 
