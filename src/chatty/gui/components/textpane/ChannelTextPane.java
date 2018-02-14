@@ -228,8 +228,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param message Message object containing all the data
      */
     public void printMessage(Message message) {
+        printMessage(message, null);
+    }
+
+    public void printMessage(Message message, String timestamp) {
         if (message instanceof UserMessage) {
-            printUserMessage((UserMessage)message);
+            printUserMessage((UserMessage)message, timestamp);
         } else if (message instanceof SubscriberMessage) {
             printSubscriberMessage((SubscriberMessage)message);
         } else if (message instanceof AutoModMessage) {
@@ -293,7 +297,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * 
      * @param message The object contain all the data
      */
-    private void printUserMessage(UserMessage message) {
+    private void printUserMessage(UserMessage message, String timestamp) {
         User user = message.user;
         boolean ignored = message.ignored_compact;
         if (ignored) {
@@ -319,7 +323,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         } else {
             style = styles.standard(color);
         }
-        print(getTimePrefix(), style);
+        if (timestamp == null) {
+            print(getTimePrefix(), style);
+        } else {
+            print(getTimePrefixFromString(timestamp), style);
+        }
         printUser(user, action, message.whisper, message.id);
         
         // Change style for text if /me and no highlight (if enabled)
@@ -2092,6 +2100,13 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     protected String getTimePrefix() {
         if (styles.timestampFormat() != null) {
             return DateTime.currentTime(styles.timestampFormat())+" ";
+        }
+        return "";
+    }
+
+    protected String getTimePrefixFromString(String timestamp) {
+        if (styles.timestampFormat() != null) {
+            return DateTime.format(Long.parseLong(timestamp), styles.timestampFormat())+" ";
         }
         return "";
     }

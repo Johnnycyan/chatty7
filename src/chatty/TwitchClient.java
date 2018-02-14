@@ -2367,6 +2367,7 @@ public class TwitchClient {
             channelFavorites.addChannelToHistory(channel);
             
             g.printLine(channel, Language.getString("chat.joined", channel));
+            g.loadRecentMessages(channel);
             
             // Icons and FFZ/BTTV Emotes
             //api.requestChatIcons(Helper.toStream(channel), false);

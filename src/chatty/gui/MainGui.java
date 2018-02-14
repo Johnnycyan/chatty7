@@ -2621,15 +2621,22 @@ public class MainGui extends JFrame implements Runnable {
     /* ############
      * # Messages #
      */
+
+    //For timestamp
+    public void printMessage(String toChan, User user, String text, boolean action,
+            String emotes, int bits, String id) {
+        printMessage(toChan, user, text, action, emotes, bits, id, null);
+    }
+    //For timestamp
     
     public void printMessage(String toChan, User user, String text, boolean action,
             String emotes, int bits) {
-        printMessage(toChan, user, text, action, emotes, bits, null);
+        printMessage(toChan, user, text, action, emotes, bits, null, null);
     }
     
     public void printMessage(final String toChan, final User user,
             final String text, final boolean action, final String emotes,
-            final int origBits, final String id) {
+            final int origBits, final String id, final String timestamp) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -2738,7 +2745,7 @@ public class MainGui extends JFrame implements Runnable {
                     } else if (ignored && ignoreMode == IgnoredMessages.MODE_COMPACT) {
                         message.ignored_compact = true;
                     }
-                    chan.printMessage(message);
+                    chan.printMessage(message, timestamp);
                     if (client.settings.listContains("streamChatChannels", channel)) {
                         streamChat.printMessage(message);
                     }
@@ -4208,7 +4215,7 @@ public class MainGui extends JFrame implements Runnable {
         COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,180,40));
 
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
-        
+
         if (client.settings.getLong("checkVersionInterval") <= 1) {
             TwitchClient.CHECK_VERSION_INTERVAL = 60 * 60 * 1;
         } else if (client.settings.getLong("checkVersionInterval") >= 500) {
@@ -4216,6 +4223,38 @@ public class MainGui extends JFrame implements Runnable {
         } else {
             TwitchClient.CHECK_VERSION_INTERVAL = 60 * 60 * Math.toIntExact(client.settings.getLong("checkVersionInterval"));
         }
+    }
+
+    public void loadRecentMessages(String channel) {
+        List<String> msgs = ForkUtil.getRecentMessages(channel);
+        String[] msgArray = msgs.toArray(new String[0]);
+        for (String str : msgArray) {
+           printOneRecentMessage(channel, str);
+        }
+    }
+
+    private void printOneRecentMessage(String channel, String data) {
+        if (data == null) {
+            return;
+        }
+        
+        MsgTags tags = MsgTags.EMPTY;
+        if (data.startsWith("@")) {
+            int endOfTags = data.indexOf(" ");
+            if (endOfTags == -1) {
+                return;
+            }
+            tags = MsgTags.parse(data.substring(1, endOfTags));
+            data = data.substring(endOfTags+1);
+        }
+
+        User user = client.getUser(channel, tags.get("display-name"));
+        ForkUtil.updateUserFromTags(user, tags);
+        String emotesTag = tags.get("emotes");
+        String id = tags.get("id");
+        int bits = tags.getInteger("bits", 0);
+        String separator = "PRIVMSG " + channel + " :";
+        this.printMessage(channel, user, data.substring(data.indexOf(separator) + separator.length()), false, emotesTag, bits, id, tags.get("tmi-sent-ts"));
     }
     
     private class MySettingsListener implements SettingsListener {

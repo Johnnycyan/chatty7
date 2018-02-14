@@ -571,9 +571,13 @@ public class Channel extends JPanel {
     public void printCompact(String type, User user) {
         text.printCompact(type, user);
     }
-    
+
     public void printMessage(Message message) {
-        text.printMessage(message);
+        text.printMessage(message, null);
+    }
+    
+    public void printMessage(Message message, String timestamp) {
+        text.printMessage(message, timestamp);
     }
     
     
