@@ -54,6 +54,7 @@ public class ForkUtil {
     public static String getTooltip(String url) {
         try {
             String taks = "https://api.betterttv.net/2/link_resolver/" + URLEncoder.encode(url, "ISO-8859-1");
+            taks = taks.replaceAll("\\+", "");
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(readUrl(taks));
             String tooltip = (String)json.get("tooltip");
