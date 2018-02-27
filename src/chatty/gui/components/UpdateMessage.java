@@ -4,12 +4,14 @@ package chatty.gui.components;
 import chatty.Chatty;
 import chatty.gui.UrlOpener;
 import chatty.util.UrlRequest;
+import chatty.util.MiscUtil;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.JComponent;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -26,10 +28,12 @@ import javax.swing.JTextArea;
 public class UpdateMessage extends JDialog {
     
     private static final String CHANGELOG_URL = "https://zik.one/chatty/changes.txt";
+    private static final String RELEASES_URL = "https://zik.one/chatty/latest";
     
     private final JLabel version;
     private final JTextArea changelog;
     private boolean changelogLoaded;
+    private String newVersion;
     
     public UpdateMessage(Window owner) {
         super(owner);
@@ -60,14 +64,45 @@ public class UpdateMessage extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (e.getSource() == openWebsite) {
-                    UrlOpener.openUrlPrompt(UpdateMessage.this, Chatty.FORK_WEBSITE + "/latest", true);
+                    UrlOpener.openUrlPrompt(UpdateMessage.this, Chatty.FORK_WEBSITE + "/", true);
                 } else if (e.getSource() == close) {
                     setVisible(false);
+                } else {
+                    String url = String.format(RELEASES_URL + "/Chatty_%1$s%2$s.zip", newVersion, ((JComponent) e.getSource()).getName());
+                    UrlOpener.openUrlPrompt(UpdateMessage.this, url, true);
                 }
             }
         };
         openWebsite.addActionListener(buttonAction);
         close.addActionListener(buttonAction);
+
+        final JButton latest = new JButton("Download latest");
+        latest.setName("");
+        latest.addActionListener(buttonAction);
+
+        if (MiscUtil.OS_WINDOWS) {
+            final JLabel downloads = new JLabel("Downloads: ");
+            latest.setText("Standard");
+            final JButton hotkey32 = new JButton("Global hotkey (32-bit)");
+            final JButton hotkey64 = new JButton("Global hotkey (64-bit)");
+            final JButton standalone = new JButton("Standalone");
+
+            hotkey32.setName("_hotkey_32bit");
+            hotkey64.setName("_hotkey_64bit");
+            standalone.setName("_windows_standalone");
+
+            buttons.add(downloads);
+            buttons.add(latest);
+            buttons.add(hotkey32);
+            buttons.add(hotkey64);
+            buttons.add(standalone);
+
+            hotkey32.addActionListener(buttonAction);
+            hotkey64.addActionListener(buttonAction);
+            standalone.addActionListener(buttonAction);
+        } else {
+            buttons.add(latest);
+        }
         
         pack();
     }
@@ -79,6 +114,7 @@ public class UpdateMessage extends JDialog {
     }
     
     public void setNewVersion(String newVersion) {
+        this.newVersion = newVersion;
         version.setText("<html><body style='padding: 6px;'>Your version: "+Chatty.VERSION+" | Latest: "+newVersion);
     }
     
