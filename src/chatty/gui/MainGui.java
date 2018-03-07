@@ -16,6 +16,7 @@ import chatty.gui.components.TokenGetDialog;
 import chatty.gui.components.FavoritesDialog;
 import chatty.gui.components.JoinDialog;
 import chatty.util.*;
+import chatty.util.irc.MsgTags;
 import chatty.util.api.Emoticon;
 import chatty.util.api.StreamInfo;
 import chatty.util.api.TokenInfo;
@@ -2667,15 +2668,15 @@ public class MainGui extends JFrame implements Runnable {
      */
 
     //For timestamp
-    public void printMessage(String toChan, User user, String text, boolean action,
+    public void printMessage(User user, String text, boolean action,
             String emotes, int bits, String id) {
-        printMessage(toChan, user, text, action, emotes, bits, id, null);
+        printMessage(user, text, action, emotes, bits, id, null);
     }
     //For timestamp
     
     public void printMessage(User user, String text, boolean action,
             String emotes, int bits) {
-        printMessage(toChan, user, text, action, emotes, bits, null, null);
+        printMessage(user, text, action, emotes, bits, null, null);
     }
     
     public void printMessage(final User user,
@@ -4311,7 +4312,7 @@ public class MainGui extends JFrame implements Runnable {
         String id = tags.get("id");
         int bits = tags.getInteger("bits", 0);
         String separator = "PRIVMSG " + channel + " :";
-        this.printMessage(channel, user, data.substring(data.indexOf(separator) + separator.length()), false, emotesTag, bits, id, tags.get("tmi-sent-ts"));
+        this.printMessage(user, data.substring(data.indexOf(separator) + separator.length()), false, emotesTag, bits, id, tags.get("tmi-sent-ts"));
     }
     
     private class MySettingsListener implements SettingsListener {

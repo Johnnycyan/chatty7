@@ -175,7 +175,7 @@ public class Channels {
             }
         }
         for (Channel chan : chans) {
-            tabs.setTitleForComponent(chan, ForkUtil.removeSharpFromTitle(channel) + "*", chan.getToolTipText());
+            tabs.setTitleForComponent(chan, ForkUtil.removeSharpFromTitle(chan) + "*", chan.getToolTipText());
         }
     }
     
@@ -340,7 +340,6 @@ public class Channels {
             }
         }
         channels.put(room.getChannel(), panel);
-        tabs.setTitleForComponent(panel, ForkUtil.removeSharpFromTitle(panel));
         return panel;
     }
     

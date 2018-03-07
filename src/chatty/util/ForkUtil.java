@@ -3,6 +3,7 @@ package chatty.util;
 
 import chatty.Chatty;
 import chatty.User;
+import chatty.util.irc.MsgTags;
 
 import java.util.ArrayList;
 

@@ -2422,7 +2422,7 @@ public class TwitchClient {
             if (user.getRoom().hasTopic()) {
                 g.printLine(user.getRoom(), user.getRoom().getTopicText());
             }
-            g.loadRecentMessages(channel);
+            g.loadRecentMessages(user.getChannel());
             
             // Icons and FFZ/BTTV Emotes
             //api.requestChatIcons(Helper.toStream(channel), false);
