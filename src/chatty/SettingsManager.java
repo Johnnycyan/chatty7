@@ -3,6 +3,7 @@ package chatty;
 
 import chatty.gui.HtmlColors;
 import chatty.gui.WindowStateManager;
+import chatty.gui.components.settings.NotificationSettings;
 import chatty.gui.notifications.Notification;
 import chatty.util.BackupManager;
 import chatty.util.DateTime;
@@ -288,6 +289,8 @@ public class SettingsManager {
         settings.setFile("channelHistory", historyFile);
         settings.addList("channelFavorites", new ArrayList(), Setting.STRING);
         settings.setFile("channelFavorites", historyFile);
+        settings.addMap("roomFavorites", new HashMap(), Setting.LIST);
+        settings.setFile("roomFavorites", historyFile);
         settings.addLong("channelHistoryKeepDays", 30);
         settings.addBoolean("saveChannelHistory", true);
         settings.addBoolean("historyClear", true);
@@ -414,9 +417,7 @@ public class SettingsManager {
         settings.addBoolean("ignoreOfflineNotifications", false);
         settings.addBoolean("requestFollowedStreams", true);
         
-        settings.addBoolean("useCustomNotifications", true);
-        
-        settings.addLong("nType", 0);
+        settings.addLong("nType", NotificationSettings.NOTIFICATION_TYPE_CUSTOM);
         settings.addLong("nScreen", -1);
         settings.addLong("nPosition", 3);
         settings.addLong("nDisplayTime", 10);
@@ -498,6 +499,7 @@ public class SettingsManager {
 
         // Chat Logging
         settings.addString("logMode", "always");
+        settings.addBoolean("logMessage", true);
         settings.addBoolean("logMod", true);
         settings.addBoolean("logJoinPart", false);
         settings.addBoolean("logBan", true);
@@ -725,6 +727,21 @@ public class SettingsManager {
                         + ".Approve=/Automod_approve\n"
                         + ".Deny=/Automod_deny");
             }
+        }
+        if (switchedFromVersionBefore("0.9.1b2")) {
+            LOGGER.info("Migrating Favorites/History");
+            List<String> favs = settings.getList("channelFavorites");
+            Map<String, Long> h = settings.getMap("channelHistory");
+            Map<String, List> entries = new HashMap<>();
+            for (String stream : h.keySet()) {
+                boolean isFavorite = favs.contains(stream);
+                long lastJoined = h.get(stream);
+                String channel = Helper.toChannel(stream);
+                favs.remove(stream);
+                entries.put(channel, new ChannelFavorites.Favorite(
+                        Room.createRegular(channel), lastJoined, isFavorite).toList());
+            }
+            settings.putMap("roomFavorites", entries);
         }
         overrideHotkeySettings();
     }
