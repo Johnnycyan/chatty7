@@ -7,7 +7,8 @@ This is fork of [Chatty](http://chatty.github.io) with some improvements and wit
 
 List of added features.
 ----------------------------
-
+* Load recent messages of channel.
+![2018-02-14_00-59-33](https://i.imgur.com/uRTU1Uq.gif)
 * Mention user by middle click.  
 ![2017-09-20_00-59-33](https://user-images.githubusercontent.com/4051126/31056895-23baf91a-a6e2-11e7-8b22-d021cdc4fb14.gif)
 * Shortcut to Livestreamer window through context menu.  
