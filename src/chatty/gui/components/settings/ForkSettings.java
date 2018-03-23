@@ -93,6 +93,13 @@ public class ForkSettings extends SettingsPanel {
             d.makeGbc(1, 11, 2, 1, GridBagConstraints.WEST)
         );
 
+        JCheckBox emoteCode = d.addSimpleBooleanSetting(
+                "emoteCodeInDialog",
+                "Show code of emotes in Emoticons Dialog.",
+                "Reboot is needed.");
+        fork.add(emoteCode,
+                d.makeGbc(0, 12, 3, 1, GridBagConstraints.WEST));
+
         
     }
     

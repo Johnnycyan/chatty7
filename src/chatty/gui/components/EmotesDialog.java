@@ -3,6 +3,7 @@ package chatty.gui.components;
 
 import chatty.Chatty;
 import chatty.Helper;
+import chatty.util.ForkUtil;
 import chatty.gui.GuiUtil;
 import chatty.gui.HtmlColors;
 import chatty.gui.LaF;
@@ -473,6 +474,13 @@ public class EmotesDialog extends JDialog {
             this.emote = emoteImage;
             setIcon(emoteImage.getImageIcon());
             setToolTipText(emote.code);
+
+            if (ForkUtil.EMOTE_CODE) {
+                setText(emote.code);
+                setHorizontalTextPosition(JLabel.CENTER);
+                setVerticalTextPosition(JLabel.BOTTOM);
+            }
+            
             if (emote.type == Emoticon.Type.EMOJI) {
                 setToolTipText(emote.getInfos().toString());
             }

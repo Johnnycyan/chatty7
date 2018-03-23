@@ -589,6 +589,7 @@ public class SettingsManager {
         settings.addString("colorNewHighlightedMessage", "#FF5000");
         settings.addBoolean("printAboutCheckingVersion", true);
         settings.addString("mentionByNickname", "normal");
+        settings.addBoolean("emoteCodeInDialog", true);
     }
     
     /**
