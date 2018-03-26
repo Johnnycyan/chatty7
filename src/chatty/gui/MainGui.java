@@ -4300,6 +4300,7 @@ public class MainGui extends JFrame implements Runnable {
             // Dont show message if nothing to load.
             printSystem("[End of recent messages.]");
         }
+
     }
 
     private void printOneRecentMessage(String channel, String data) {
@@ -4323,7 +4324,15 @@ public class MainGui extends JFrame implements Runnable {
         String id = tags.get("id");
         int bits = tags.getInteger("bits", 0);
         String separator = "PRIVMSG " + channel + " :";
-        this.printMessage(user, data.substring(data.indexOf(separator) + separator.length()), false, emotesTag, bits, id, tags.get("tmi-sent-ts"));
+
+        boolean action = false;
+        String textMsg = data.substring(data.indexOf(separator) + separator.length());
+        if (textMsg.indexOf("\u0001ACTION ") > -1) {
+            action = true;
+        }
+        textMsg = textMsg.replaceAll("\u0001ACTION ", "");
+        textMsg = textMsg.replaceAll("\u0001", "");
+        this.printMessage(user, textMsg, action, emotesTag, bits, id, tags.get("tmi-sent-ts"));
     }
     
     private class MySettingsListener implements SettingsListener {
