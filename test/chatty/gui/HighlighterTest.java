@@ -23,6 +23,7 @@ public class HighlighterTest {
     private static final User user = new User("testUser", Room.createRegular("#testChannel"));
     private static final User user2 = new User("testUser2", Room.createRegular("#testChannel"));
     private static final User user3 = new User("testUser2", Room.createRegular("#testChannel2"));
+    private static final User user4 = new User("testUser3", Room.createRegular("#testChannel2"));
     private static Highlighter highlighter;
     private static Addressbook ab;
     
@@ -40,41 +41,151 @@ public class HighlighterTest {
         ab.add("testUser", "testCat");
     }
     
-    @AfterClass
-    public static void tearDownClass() {
+    private void update(String... items) {
+        highlighter.update(Arrays.asList(items));
     }
     
-    @Before
-    public void setUp() {
-    }
-    
-    @After
-    public void tearDown() {
+    private void updateBlacklist(String... items) {
+        highlighter.updateBlacklist(Arrays.asList(items));
     }
 
     @Test
     public void test() {
+        updateBlacklist();
+        
+        // Regular
         assertFalse(highlighter.check(user, "test message"));
-        highlighter.update(Arrays.asList(new String[]{"test"}));
+        
+        update("test");
         assertTrue(highlighter.check(user, "test message"));
         assertFalse(highlighter.check(user, "abc"));
-        highlighter.update(Arrays.asList(new String[]{"cs:Test"}));
+        
+        update("");
+        assertFalse(highlighter.check(user, "test"));
+        assertFalse(highlighter.check(user3, ""));
+        
+        update("mäh");
+        assertTrue(highlighter.check(user, "mäh"));
+        assertTrue(highlighter.check(user, "Mäh"));
+        assertTrue(highlighter.check(user, "MÄH"));
+        
+        // cs:
+        update("cs:Test");
         assertTrue(highlighter.check(user, " Test "));
         assertFalse(highlighter.check(user, "testi"));
-        highlighter.update(Arrays.asList(new String[]{"start:Test"}));
+        
+        // start:
+        update("start:Test");
         assertTrue(highlighter.check(user, "test message"));
         assertFalse(highlighter.check(user, "message test"));
-        highlighter.update(Arrays.asList(new String[]{"user:testUser start:Test"}));
+        
+        update("start:!bet");
+        assertFalse(highlighter.check(user, "test"));
+        assertFalse(highlighter.check(user, " !bet test"));
+        assertTrue(highlighter.check(user, "!bett"));
+        assertTrue(highlighter.check(user3, "!bet abc"));
+        
+        update("start:!bet ");
+        assertFalse(highlighter.check(user, "test"));
+        assertFalse(highlighter.check(user, " !bet test"));
+        assertTrue(highlighter.check(user, "!bett"));
+        assertTrue(highlighter.check(user3, "!bet abc"));
+        
+        // w:
+        update("w:Test");
+        assertTrue(highlighter.check(user, "test message"));
+        assertFalse(highlighter.check(user, "testmessage"));
+
+        // wcs:
+        update("wcs:Test");
+        assertTrue(highlighter.check(user, "Test message"));
+        assertTrue(highlighter.check(user, "!Test message"));
+        assertFalse(highlighter.check(user, "Testmessage"));
+        assertFalse(highlighter.check(user, "test message"));
+        assertFalse(highlighter.check(user, "testmessage"));
+        
+        update("wcs:Test|Test2");
+        assertTrue(highlighter.check(user, "Test|Test2"));
+        assertFalse(highlighter.check(user, "Test"));
+        
+        // reg: / re*:
+        update("reg:dumdi|dum");
+        assertTrue(highlighter.check(user, "dumdi"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertTrue(highlighter.check(user, "hmm dum dum dumdidum"));
+        assertFalse(highlighter.check(user, "Dum"));
+        
+        update("re*:dumdi|dum");
+        assertTrue(highlighter.check(user, "dumdi"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertTrue(highlighter.check(user, "hmm dum dum dumdidum"));
+        assertFalse(highlighter.check(user, "Dum"));
+        
+        // regi:
+        update("reg:dumdi|dum");
+        assertTrue(highlighter.check(user, "didadumdidum"));
+        assertTrue(highlighter.check(user, "dumdi"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertTrue(highlighter.check(user, "hmm dum dum dumdidum"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertFalse(highlighter.check(user, "test"));
+        
+        // regm: / re:
+        update("regm:dumdi|dum");
+        assertTrue(highlighter.check(user, "dumdi"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertFalse(highlighter.check(user, "hmm dum dum dumdidum"));
+        assertFalse(highlighter.check(user, "Dum"));
+        
+        update("re:dumdi|dum");
+        assertTrue(highlighter.check(user, "dumdi"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertFalse(highlighter.check(user, "hmm dum dum dumdidum"));
+        assertFalse(highlighter.check(user, "Dum"));
+        
+        // regmi:
+        update("regmi:dumdi|dum");
+        assertTrue(highlighter.check(user, "dumdi"));
+        assertTrue(highlighter.check(user, "dumDi"));
+        assertTrue(highlighter.check(user, "dum"));
+        assertFalse(highlighter.check(user, "hmm dum dum dumdidum"));
+        assertTrue(highlighter.check(user, "Dum"));
+        assertFalse(highlighter.check(user, "didadumdidum"));
+        
+        // regw:
+        update("regw:word1|word2");
+        assertTrue(highlighter.check(user, "word1"));
+        assertTrue(highlighter.check(user, "hmm word1!"));
+        assertTrue(highlighter.check(user, "hmm word2!"));
+        assertTrue(highlighter.check(user, "word1!"));
+        assertTrue(highlighter.check(user, "word2!"));
+        assertFalse(highlighter.check(user, "wword1"));
+        assertFalse(highlighter.check(user, "wword2"));
+        assertFalse(highlighter.check(user, "word11"));
+        assertFalse(highlighter.check(user, "word22"));
+        
+        // regwi:
+        update("regwi:word1|word2");
+        assertTrue(highlighter.check(user, "Word1"));
+        assertTrue(highlighter.check(user, "hmm word1!"));
+        assertTrue(highlighter.check(user, "hmm Word2!"));
+        assertTrue(highlighter.check(user, "WORD1!"));
+        assertTrue(highlighter.check(user, "WORD2!"));
+        assertFalse(highlighter.check(user, "Wword1"));
+        assertFalse(highlighter.check(user, "wword2"));
+        assertFalse(highlighter.check(user, "word11"));
+        assertFalse(highlighter.check(user, "Word22"));
+        
+        // Several
+        update("user:testUser start:Test");
         assertTrue(highlighter.check(user, "test message"));
         assertFalse(highlighter.check(user, "message test"));
-        highlighter.update(Arrays.asList(new String[]{"user:testUser test"}));
+        update("user:testUser test");
         assertTrue(highlighter.check(user, "test message"));
         assertFalse(highlighter.check(user, "abc"));
         assertFalse(highlighter.check(user2, "test message"));
-        highlighter.update(Arrays.asList(new String[]{"w:Test"}));
-        assertTrue(highlighter.check(user, "test message"));
-        assertFalse(highlighter.check(user, "testmessage"));
-        highlighter.update(Arrays.asList(new String[]{"wcs:Test", "re:.*(abc|dumdidum).*"}));
+        
+        update("wcs:Test", "re:.*(abc|dumdidum).*");
         assertTrue(highlighter.check(user, "Test message"));
         assertFalse(highlighter.check(user, "test message"));
         assertFalse(highlighter.check(user, "Testmessage"));
@@ -83,40 +194,40 @@ public class HighlighterTest {
         assertTrue(highlighter.check(user, "j90awipfkdumdidumifwaef"));
         assertFalse(highlighter.check(user, "test"));
         
-        highlighter.update(Arrays.asList(new String[]{"wcs:S", "user:testuser"}));
+        update("wcs:S", "user:testuser");
         assertTrue(highlighter.check(user, "Hello S!"));
         assertTrue(highlighter.check(user, "Hello SSSsss!"));
         assertFalse(highlighter.check(user2, "Hello SSSsss!"));
         
-        highlighter.update(Arrays.asList(new String[]{"cat:testCat chan:testChannel"}));
+        update("cat:testCat chan:testChannel");
         assertTrue(highlighter.check(user, "test"));
         assertFalse(highlighter.check(user2, "test"));
         ab.add("testUser2", "testCat");
         assertTrue(highlighter.check(user2, "test"));
         
-        highlighter.update(Arrays.asList(new String[]{"!chan:testChannel2 test"}));
+        update("!chan:testChannel2 test");
         assertTrue(highlighter.check(user, "test"));
         assertFalse(highlighter.check(user, "mäh"));
         assertFalse(highlighter.check(user3, "test"));
+
+        // reuser:
+        update("reuser:test.*");
+        assertTrue(highlighter.check(user, "whatever"));
+        assertTrue(highlighter.check(user2, "whatever"));
+        assertTrue(highlighter.check(user3, "whatever"));
         
-        highlighter.update(Arrays.asList(new String[]{""}));
-        assertFalse(highlighter.check(user, "test"));
-        assertFalse(highlighter.check(user3, ""));
+        update("reuser:");
+        assertFalse(highlighter.check(user, "whatever"));
+        assertFalse(highlighter.check(user2, "whatever"));
+        assertFalse(highlighter.check(user3, "whatever"));
         
-        highlighter.update(Arrays.asList(new String[]{"start:!bet"}));
-        assertFalse(highlighter.check(user, "test"));
-        assertFalse(highlighter.check(user, " !bet test"));
-        assertTrue(highlighter.check(user, "!bett"));
-        assertTrue(highlighter.check(user3, "!bet abc"));
-        
-        highlighter.update(Arrays.asList(new String[]{"start:!bet "}));
-        assertFalse(highlighter.check(user, "test"));
-        assertFalse(highlighter.check(user, " !bet test"));
-        assertTrue(highlighter.check(user, "!bett"));
-        assertTrue(highlighter.check(user3, "!bet abc"));
+        update("reuser:test.*[0-2]");
+        assertFalse(highlighter.check(user, "whatever"));
+        assertTrue(highlighter.check(user2, "whatever"));
+        assertFalse(highlighter.check(user4, "whatever"));
         
         // Color
-        highlighter.update(Arrays.asList(new String[]{"color:red testi", "test"}));
+        update("color:red testi", "test");
         assertTrue(highlighter.check(user, "test"));
         assertEquals(highlighter.getLastMatchColor(), null);
         assertTrue(highlighter.check(user, "testi"));
@@ -126,16 +237,33 @@ public class HighlighterTest {
         assertTrue(highlighter.check(user2, "test"));
         assertEquals(highlighter.getLastMatchColor(), null);
         
-        highlighter.update(Arrays.asList(new String[]{"Test"}));
+        // Highlight follow-up messages
+        update("Test");
         assertTrue(highlighter.check(user, "test"));
         assertFalse(highlighter.check(user, "mäh"));
         highlighter.setHighlightNextMessages(true);
         assertTrue(highlighter.check(user, "mäh"));
         highlighter.setHighlightNextMessages(false);
+        
+        // Highlight username
+        update("");
+        highlighter.setHighlightUsername(true);
+        highlighter.setUsername("username");
+        assertTrue(highlighter.check(user, "username"));
+        assertTrue(highlighter.check(user, "hi username :)"));
+        assertTrue(highlighter.check(user, "hi, username!"));
+        assertTrue(highlighter.check(user, "Username!"));
+        assertFalse(highlighter.check(user, "usernamee"));
+        highlighter.setHighlightUsername(false);
+        assertFalse(highlighter.check(user, "username"));
+        highlighter.setHighlightUsername(true);
+        assertTrue(highlighter.check(user, "username"));
     }
     
     @Test
     public void testStatusReq() {
+        updateBlacklist();
+        
         User broadcaster = new User("test", Room.createRegular("#test"));
         broadcaster.setBroadcaster(true);
         
@@ -159,7 +287,7 @@ public class HighlighterTest {
         User subscriber = new User("test7", Room.createRegular("#test"));
         subscriber.setSubscriber(true);
         
-        highlighter.update(Arrays.asList(new String[]{"status:b"}));
+        update("status:b");
         assertTrue(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -168,7 +296,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"!status:b"}));
+        update("!status:b");
         assertFalse(highlighter.check(broadcaster, ""));
         assertTrue(highlighter.check(normal, ""));
         assertTrue(highlighter.check(modTurbo, ""));
@@ -177,7 +305,7 @@ public class HighlighterTest {
         assertTrue(highlighter.check(staff, ""));
         assertTrue(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:m"}));
+        update("status:m");
         assertFalse(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertTrue(highlighter.check(modTurbo, ""));
@@ -186,7 +314,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:abmf"}));
+        update("status:abmf");
         assertTrue(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertTrue(highlighter.check(modTurbo, ""));
@@ -195,7 +323,7 @@ public class HighlighterTest {
         assertTrue(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"!status:bmaf"}));
+        update("!status:bmaf");
         assertFalse(highlighter.check(broadcaster, ""));
         assertTrue(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -204,7 +332,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertTrue(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:a !status:b"}));
+        update("status:a !status:b");
         assertFalse(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -213,7 +341,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:m !status:m"}));
+        update("status:m !status:m");
         assertFalse(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -222,7 +350,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:t"}));
+        update("status:t");
         assertFalse(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertTrue(highlighter.check(modTurbo, ""));
@@ -231,7 +359,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"!status:t"}));
+        update("!status:t");
         assertTrue(highlighter.check(broadcaster, ""));
         assertTrue(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -240,7 +368,7 @@ public class HighlighterTest {
         assertTrue(highlighter.check(staff, ""));
         assertTrue(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:s"}));
+        update("status:s");
         assertFalse(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -250,7 +378,7 @@ public class HighlighterTest {
         assertTrue(highlighter.check(subscriber, ""));
         
         // Test if it still works in combination with text
-        highlighter.update(Arrays.asList(new String[]{"status:smb test"}));
+        update("status:smb test");
         assertFalse(highlighter.check(broadcaster, ""));
         assertFalse(highlighter.check(normal, ""));
         assertFalse(highlighter.check(modTurbo, ""));
@@ -259,7 +387,7 @@ public class HighlighterTest {
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
         
-        highlighter.update(Arrays.asList(new String[]{"status:smb test"}));
+        update("status:smb test");
         assertTrue(highlighter.check(broadcaster, "test"));
         assertFalse(highlighter.check(normal, ""));
         assertTrue(highlighter.check(modTurbo, "test"));
@@ -267,6 +395,84 @@ public class HighlighterTest {
         assertFalse(highlighter.check(adminBroadcasterTurbo, "hello"));
         assertFalse(highlighter.check(staff, ""));
         assertFalse(highlighter.check(subscriber, ""));
+    }
+    
+    @Test
+    public void testBlacklist() {
+        updateBlacklist();
+        update("test");
+        assertTrue(highlighter.check(user, "Hello testi"));
+        updateBlacklist("testi");
+        assertFalse(highlighter.check(user, "Hello testi"));
+        
+        updateBlacklist();
+        update("w:ROM");
+        assertTrue(highlighter.check(user, "Heard of that nice ROM hack?"));
+        assertFalse(highlighter.check(user, "Heard of that nice ROMhack?"));
+        updateBlacklist("rom hack");
+        assertFalse(highlighter.check(user, "Heard of that nice ROM hack?"));
+        
+        updateBlacklist();
+        update("w:Prom");
+        assertTrue(highlighter.check(user, "Heard of that nice Prom Hack?"));
+        updateBlacklist("rom hack");
+        assertTrue(highlighter.check(user, "Heard of that nice Prom Hack?"));
+        
+        updateBlacklist();
+        update("josh");
+        assertTrue(highlighter.check(user, "joshBarksAtKitty joshimuz"));
+        assertTrue(highlighter.check(user, "joshBarksAtKitty joshBarksAtKitty"));
+        updateBlacklist("joshBarksAtKitty");
+        assertTrue(highlighter.check(user, "joshBarksAtKitty joshimuz"));
+        assertFalse(highlighter.check(user, "joshBarksAtKitty joshBarksAtKitty"));
+        updateBlacklist("start:joshBarksAtKitty");
+        assertTrue(highlighter.check(user, "joshBarksAtKitty joshimuz"));
+        assertTrue(highlighter.check(user, "joshBarksAtKitty joshBarksAtKitty"));
+        
+        update("josh");
+        updateBlacklist("chan:testChannel joshBarksAtKitty");
+        assertFalse(highlighter.check(user, "joshBarksAtKitty"));
+        assertTrue(highlighter.check(user3, "joshBarksAtKitty"));
+        
+        updateBlacklist("chan:testChannel");
+        assertFalse(highlighter.check(user, "joshBarksAtKitty"));
+        assertTrue(highlighter.check(user3, "joshBarksAtKitty"));
+        
+        updateBlacklist("chan:testChannel reg:.*");
+        assertFalse(highlighter.check(user, "joshBarksAtKitty"));
+        assertTrue(highlighter.check(user3, "joshBarksAtKitty"));
+        
+        // Highlight username
+        update();
+        updateBlacklist();
+        highlighter.setHighlightUsername(true);
+        highlighter.setUsername("username");
+        assertTrue(highlighter.check(user, "username"));
+        assertTrue(highlighter.check(user, "hi username :)"));
+        assertTrue(highlighter.check(user, "hi, username!"));
+        assertTrue(highlighter.check(user, "Username!"));
+        assertFalse(highlighter.check(user, "usernamee"));
+        
+        updateBlacklist("username!");
+        assertTrue(highlighter.check(user, "username"));
+        assertTrue(highlighter.check(user, "hi username :)"));
+        assertFalse(highlighter.check(user, "hi, username!"));
+        assertFalse(highlighter.check(user, "Username!"));
+        assertFalse(highlighter.check(user, "usernamee"));
+        
+        updateBlacklist("username");
+        assertFalse(highlighter.check(user, "username"));
+        assertFalse(highlighter.check(user, "hi username :)"));
+        assertFalse(highlighter.check(user, "hi, username!"));
+        assertFalse(highlighter.check(user, "Username!"));
+        assertFalse(highlighter.check(user, "usernamee"));
+        
+        updateBlacklist("user");
+        assertTrue(highlighter.check(user, "username"));
+        assertTrue(highlighter.check(user, "hi username :)"));
+        assertTrue(highlighter.check(user, "hi, username!"));
+        assertTrue(highlighter.check(user, "Username!"));
+        assertFalse(highlighter.check(user, "usernamee"));
     }
     
 }
