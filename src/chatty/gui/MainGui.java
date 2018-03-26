@@ -4288,8 +4288,17 @@ public class MainGui extends JFrame implements Runnable {
     public void loadRecentMessages(String channel) {
         List<String> msgs = ForkUtil.getRecentMessages(channel);
         String[] msgArray = msgs.toArray(new String[0]);
+
+        if (msgArray.length > 0) {
+            // Dont show message if nothing to load.
+            printSystem("[Begin of recent messages.]");
+        }
         for (String str : msgArray) {
            printOneRecentMessage(channel, str);
+        }
+        if (msgArray.length > 0) {
+            // Dont show message if nothing to load.
+            printSystem("[End of recent messages.]");
         }
     }
 
