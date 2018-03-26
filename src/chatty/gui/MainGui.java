@@ -4291,14 +4291,14 @@ public class MainGui extends JFrame implements Runnable {
 
         if (msgArray.length > 0) {
             // Dont show message if nothing to load.
-            printSystem("[Begin of recent messages.]");
+            printLine(client.roomManager.getRoom(channel), "[Begin of recent messages.]");
         }
         for (String str : msgArray) {
            printOneRecentMessage(channel, str);
         }
         if (msgArray.length > 0) {
             // Dont show message if nothing to load.
-            printSystem("[End of recent messages.]");
+            printLine(client.roomManager.getRoom(channel), "[End of recent messages.]");
         }
 
     }
