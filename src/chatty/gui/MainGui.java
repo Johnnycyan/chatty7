@@ -3413,7 +3413,7 @@ public class MainGui extends JFrame implements Runnable {
             updateMenuState(state);
             updateTitles(state);
         }
-
+        
         /**
          * Disables/enables menu items based on the current state.
          *
