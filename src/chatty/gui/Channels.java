@@ -648,6 +648,7 @@ public class Channels {
     }
     
     public void setInitialFocus() {
+        System.out.println("setInitialFocus");
         getActiveChannel().requestFocusInWindow();
     }
     
