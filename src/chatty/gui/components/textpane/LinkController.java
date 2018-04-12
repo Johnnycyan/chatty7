@@ -135,6 +135,7 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
                 return;
             }
         }
+
         alreadyHandled = false;
         
         if (e.getClickCount() == 1 && SwingUtilities.isLeftMouseButton(e)) {
