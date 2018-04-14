@@ -15,6 +15,7 @@ import chatty.User;
 import chatty.util.api.usericons.Usericon;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.util.DateTime;
+import chatty.util.ForkUtil;
 import chatty.util.StringUtil;
 import chatty.util.TwitchEmotes.Emoteset;
 import chatty.util.api.CheerEmoticon;
@@ -319,14 +320,22 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
 
         MutableAttributeSet style;
         if (highlighted) {
-            style = styles.highlight(color);
+            if (ForkUtil.USE_HIGHLIGHT2) {
+                style = styles.highlightWithBackground();
+            } else {
+                style = styles.highlight(color);
+            }
         } else {
             style = styles.standard(color);
         }
         if (timestamp == null) {
-            print(getTimePrefix(), style);
+            if (ForkUtil.USE_HIGHLIGHT2) {
+                print(getTimePrefix(), styles.standard(color));
+            } else {
+                print(getTimePrefix(), style);
+            }
         } else {
-            print(getTimePrefixFromString(timestamp), style);
+            print(getTimePrefixFromString(timestamp), styles.standard(color));
         }
         printUser(user, action, message.whisper, message.id);
         
@@ -2563,6 +2572,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             SimpleAttributeSet searchResult2 = new SimpleAttributeSet();
             StyleConstants.setBackground(searchResult2, styleServer.getColor("searchResult2"));
             styles.put("searchResult2", searchResult2);
+
+            SimpleAttributeSet highlightWithBackground = new SimpleAttributeSet();
+            StyleConstants.setBackground(highlightWithBackground, new Color(20, 0, 0));
+            styles.put("highlightWithBackground", highlightWithBackground);
             
             SimpleAttributeSet clearSearchResult = new SimpleAttributeSet();
             StyleConstants.setBackground(clearSearchResult, new Color(0,0,0,0));
@@ -2786,6 +2799,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         public MutableAttributeSet searchResult2(boolean italic) {
             StyleConstants.setItalic(styles.get("searchResult2"), italic);
             return styles.get("searchResult2");
+        }
+
+        public MutableAttributeSet highlightWithBackground() {
+            // StyleConstants.setItalic(styles.get("highlightWithBackground"), italic);
+            return styles.get("highlightWithBackground");
         }
         
         public MutableAttributeSet clearSearchResult() {
