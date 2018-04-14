@@ -1,0 +1,1 @@
+cd c:\chatty && del /s /q build\releases\* && gradlew build && gradlew hotkey32Zip && cd build\releases\ && 7z x *.zip && java -jar Chatty.jar
