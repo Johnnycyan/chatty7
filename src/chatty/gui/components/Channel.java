@@ -11,6 +11,7 @@ import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.components.textpane.ChannelTextPane;
 import chatty.gui.components.textpane.Message;
 import chatty.util.StringUtil;
+import chatty.util.ForkUtil;
 import chatty.util.api.Emoticon;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -423,8 +424,12 @@ public class Channel extends JPanel {
         private List<String> filterCompletionItems(Collection<String> data,
                 String search) {
             List<String> matched = new ArrayList<>();
+            String ruSearch = ForkUtil.replaceWrongLanguage(search, "ru");
             for (String name : data) {
                 if (StringUtil.toLowerCase(name).startsWith(search)) {
+                    matched.add(name);
+                }
+                if (StringUtil.toLowerCase(name).startsWith(ruSearch)) {
                     matched.add(name);
                 }
             }
@@ -437,25 +442,30 @@ public class Channel extends JPanel {
             Set<User> regularMatched = new HashSet<>();
             Set<User> customMatched = new HashSet<>();
             Set<User> localizedMatched = new HashSet<>();
-            for (User user : users.getData()) {
-                boolean matched = false;
-                if (user.getName().startsWith(search)) {
-                    matched = true;
-                    regularMatched.add(user);
-                }
-                if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(search)) {
-                    matched = true;
-                    localizedMatched.add(user);
-                }
-                if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(search)) {
-                    matched = true;
-                    customMatched.add(user);
-                }
-                
-                if (matched) {
-                    matchedUsers.add(user);
+
+            String[] str = {search, ForkUtil.replaceWrongLanguage(search, "ru")};
+            for (String localSearch : str) {
+                for (User user : users.getData()) {
+                    boolean matched = false;
+                    if (user.getName().startsWith(localSearch)) {
+                        matched = true;
+                        regularMatched.add(user);
+                    }
+                    if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(localSearch)) {
+                        matched = true;
+                        localizedMatched.add(user);
+                    }
+                    if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(localSearch)) {
+                        matched = true;
+                        customMatched.add(user);
+                    }
+                    
+                    if (matched) {
+                        matchedUsers.add(user);
+                    }
                 }
             }
+            
             switch (main.getSettings().getString("completionSorting")) {
                 case "predictive":
                     Collections.sort(matchedUsers, userSorterNew);

@@ -44,6 +44,24 @@ public class ForkUtil {
     public static boolean NOT_STRIKE = false;
     public static Color COLOR_BANNED_HIGHLIGHT_MESSAGE = new Color(50, 50, 50);
 
+    public static Map<String, String> completionLangs = new HashMap<>();
+    static {
+        completionLangs.put("ru", "йцукенгшщзхъ\\фывапролджэячсмитьбю.ёЙЦУКЕНГШЩЗХЪ/ФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё!\"№;%:?*()_+");
+        completionLangs.put("en", "qwertyuiop[]\\asdfghjkl;\"zxcvbnm,./`QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>?~!@#$%^&*()_+");
+    }
+
+    public static String replaceWrongLanguage(String text, String lang) {
+        String s = completionLangs.get(lang);
+        String en = completionLangs.get("en");
+        String newString = "";
+
+        for (int i = 0; i < text.length(); i++) {
+            int index = s.indexOf(text.charAt(i));
+            newString += index < 0 ? text.charAt(i) : en.charAt(index);
+        }
+        return newString;
+    }
+
     public static String removeSharpFromTitle(Channel channel) {
         if (channel.getType() == Channel.Type.CHANNEL && REMOVE_SHARP) {
             return channel.getName().substring(1);
