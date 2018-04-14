@@ -201,7 +201,7 @@ public class Channel extends JPanel {
     
     @Override
     public String getName() {
-        return room.getDisplayName();
+        return room != null ? room.getDisplayName() : null;
     }
     
     public String getOwnerChannel() {
