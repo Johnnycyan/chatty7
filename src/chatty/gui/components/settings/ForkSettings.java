@@ -6,8 +6,12 @@ import java.awt.GridBagConstraints;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 import java.util.HashMap;
 import java.util.Map;
+
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 
 /**
  * Fork settings..
@@ -100,6 +104,10 @@ public class ForkSettings extends SettingsPanel {
         fork.add(emoteCode,
                 d.makeGbc(0, 12, 3, 1, GridBagConstraints.WEST));
 
+
+
+
+
         JCheckBox highlight2 = d.addSimpleBooleanSetting(
                 "useHighlight2",
                 "Highlight messages with background color.",
@@ -107,12 +115,23 @@ public class ForkSettings extends SettingsPanel {
         fork.add(highlight2,
                 d.makeGbc(0, 13, 3, 1, GridBagConstraints.WEST));
 
-        fork.add(new JLabel("Background color of highlighted messages:"),
-                d.makeGbc(0, 14, 1, 1, GridBagConstraints.WEST));
+        JLabel highlight2_l = new JLabel("Background color of highlighted messages:");
+        fork.add(highlight2_l, d.makeGbc(0, 14, 1, 1, GridBagConstraints.WEST));
         
-        fork.add(d.addSimpleStringSetting(
-                "colorBackgroundHighlightedMessage", 10, true),
-                d.makeGbc(1, 14, 2, 1, GridBagConstraints.WEST));
+        JTextField highlight2_t = d.addSimpleStringSetting("colorBackgroundHighlightedMessage", 10, true);
+        fork.add(highlight2_t, d.makeGbc(1, 14, 2, 1, GridBagConstraints.WEST));
+
+        highlight2.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                highlight2_l.setEnabled(highlight2.isSelected());
+                highlight2_t.setEnabled(highlight2.isSelected());
+            }
+        });
+
+
+
+
 
         JCheckBox notStrike = d.addSimpleBooleanSetting(
                 "useNotStrike",
@@ -121,12 +140,19 @@ public class ForkSettings extends SettingsPanel {
         fork.add(notStrike,
                 d.makeGbc(0, 15, 3, 1, GridBagConstraints.WEST));
 
-        fork.add(new JLabel("Color of highlight banned messages:"),
-                d.makeGbc(0, 16, 1, 1, GridBagConstraints.WEST));
+        JLabel notStrike_l = new JLabel("Color of highlight banned messages:");
+        fork.add(notStrike_l, d.makeGbc(0, 16, 1, 1, GridBagConstraints.WEST));
         
-        fork.add(d.addSimpleStringSetting(
-                "colorBannedHighlightedMessage", 10, true),
-                d.makeGbc(1, 16, 2, 1, GridBagConstraints.WEST));
+        JTextField notStrike_t = d.addSimpleStringSetting("colorBannedHighlightedMessage", 10, true);
+        fork.add(notStrike_t, d.makeGbc(1, 16, 2, 1, GridBagConstraints.WEST));
+
+        notStrike.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                notStrike_l.setEnabled(notStrike.isSelected());
+                notStrike_t.setEnabled(notStrike.isSelected());
+            }
+        });
 
         
     }
