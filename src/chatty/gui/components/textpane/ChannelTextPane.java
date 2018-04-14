@@ -755,8 +755,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 LOGGER.warning("Bad location");
             }
         }
-        doc.setCharacterAttributes(startOffset, length, styles.deleted(), false);
-        setLineDeleted(startOffset);
+
+        if (!ForkUtil.NOT_STRIKE) {
+            doc.setCharacterAttributes(startOffset, length, styles.deleted(), false);
+            setLineDeleted(startOffset);
+        } else {
+            doc.setCharacterAttributes(messageStartOffset, messageLength, styles.deletedNotStrike(), false);
+            setLineDeleted(messageStartOffset);
+        }
     }
     
     /**
@@ -2558,6 +2564,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             StyleConstants.setUnderline(deleted, false);
             deleted.addAttribute(Attribute.URL_DELETED, true);
             styles.put("deleted", deleted);
+
+            SimpleAttributeSet deletedNotStrike = new SimpleAttributeSet();
+            deletedNotStrike.addAttribute(Attribute.URL_DELETED, true);
+            StyleConstants.setBackground(deletedNotStrike, styleServer.getColor("background"));
+            StyleConstants.setForeground(deletedNotStrike, new Color(30, 30, 30));
+            styles.put("deletedNotStrike", deletedNotStrike);
             
             SimpleAttributeSet deletedLine = new SimpleAttributeSet();
             deletedLine.addAttribute(Attribute.DELETED_LINE, true);
@@ -2768,6 +2780,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         public MutableAttributeSet deleted() {
             return styles.get("deleted");
+        }
+
+        public MutableAttributeSet deletedNotStrike() {
+            return styles.get("deletedNotStrike");
         }
         
         public MutableAttributeSet deletedLine() {

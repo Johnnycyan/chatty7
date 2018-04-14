@@ -114,6 +114,13 @@ public class ForkSettings extends SettingsPanel {
                 "colorBackgroundHighlightedMessage", 10, true),
                 d.makeGbc(1, 14, 2, 1, GridBagConstraints.WEST));
 
+        JCheckBox notStrike = d.addSimpleBooleanSetting(
+                "useNotStrike",
+                "Highlight banned message in specific color instead of strike.",
+                "...");
+        fork.add(notStrike,
+                d.makeGbc(0, 15, 3, 1, GridBagConstraints.WEST));
+
         
     }
     

@@ -4286,6 +4286,7 @@ public class MainGui extends JFrame implements Runnable {
         ForkUtil.MENTION_NICK = client.settings.getString("mentionByNickname");
         ForkUtil.EMOTE_CODE = client.settings.getBoolean("emoteCodeInDialog");
         ForkUtil.USE_HIGHLIGHT2 = client.settings.getBoolean("useHighlight2");
+        ForkUtil.NOT_STRIKE = client.settings.getBoolean("useNotStrike");
 
         COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
         COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));

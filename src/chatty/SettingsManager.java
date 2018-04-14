@@ -593,6 +593,7 @@ public class SettingsManager {
         settings.addBoolean("emoteCodeInDialog", true);
         settings.addBoolean("useHighlight2", false);
         settings.addString("colorBackgroundHighlightedMessage", "#C8C8C8");
+        settings.addBoolean("useNotStrike", false);
     }
     
     /**
