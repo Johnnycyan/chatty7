@@ -42,6 +42,7 @@ public class ForkUtil {
     public static boolean USE_HIGHLIGHT2 = false;
 
     public static boolean NOT_STRIKE = false;
+    public static Color COLOR_BANNED_HIGHLIGHT_MESSAGE = new Color(50, 50, 50);
 
     public static String removeSharpFromTitle(Channel channel) {
         if (channel.getType() == Channel.Type.CHANNEL && REMOVE_SHARP) {

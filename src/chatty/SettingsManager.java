@@ -594,6 +594,7 @@ public class SettingsManager {
         settings.addBoolean("useHighlight2", false);
         settings.addString("colorBackgroundHighlightedMessage", "#C8C8C8");
         settings.addBoolean("useNotStrike", false);
+        settings.addString("colorBannedHighlightedMessage", "#323232");
     }
     
     /**

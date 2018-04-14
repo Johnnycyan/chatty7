@@ -2568,7 +2568,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             SimpleAttributeSet deletedNotStrike = new SimpleAttributeSet();
             deletedNotStrike.addAttribute(Attribute.URL_DELETED, true);
             StyleConstants.setBackground(deletedNotStrike, styleServer.getColor("background"));
-            StyleConstants.setForeground(deletedNotStrike, new Color(30, 30, 30));
+            StyleConstants.setForeground(deletedNotStrike, ForkUtil.COLOR_BANNED_HIGHLIGHT_MESSAGE);
             styles.put("deletedNotStrike", deletedNotStrike);
             
             SimpleAttributeSet deletedLine = new SimpleAttributeSet();
@@ -2783,6 +2783,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
 
         public MutableAttributeSet deletedNotStrike() {
+            StyleConstants.setForeground(styles.get("deletedNotStrike"), ForkUtil.COLOR_BANNED_HIGHLIGHT_MESSAGE);
             return styles.get("deletedNotStrike");
         }
         
