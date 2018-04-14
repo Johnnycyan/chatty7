@@ -129,7 +129,8 @@ public class ForkSettings extends SettingsPanel {
             }
         });
 
-
+        highlight2_l.setEnabled(highlight2.isSelected());
+        highlight2_t.setEnabled(highlight2.isSelected());
 
 
 
@@ -153,6 +154,9 @@ public class ForkSettings extends SettingsPanel {
                 notStrike_t.setEnabled(notStrike.isSelected());
             }
         });
+
+        notStrike_l.setEnabled(notStrike.isSelected());
+        notStrike_t.setEnabled(notStrike.isSelected());
 
         
     }
