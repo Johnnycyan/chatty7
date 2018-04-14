@@ -23,6 +23,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import java.net.URLEncoder;
 import java.util.regex.*;
+import java.awt.Color;
 
 import chatty.gui.components.Channel;
 
@@ -36,6 +37,9 @@ public class ForkUtil {
     public static boolean REMOVE_SHARP = false;
     public static String MENTION_NICK = "normal";
     public static boolean EMOTE_CODE = true;
+
+    public static Color COLOR_HIGHLIGHT_MESSAGE = new Color(200,0,0);
+    public static boolean USE_HIGHLIGHT2 = false;
 
     public static String removeSharpFromTitle(Channel channel) {
         if (channel.getType() == Channel.Type.CHANNEL && REMOVE_SHARP) {

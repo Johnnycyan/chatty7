@@ -100,6 +100,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(emoteCode,
                 d.makeGbc(0, 12, 3, 1, GridBagConstraints.WEST));
 
+        JCheckBox highlight2 = d.addSimpleBooleanSetting(
+                "useHighlight2",
+                "Highlight messages with background color.",
+                "...");
+        fork.add(highlight2,
+                d.makeGbc(0, 13, 3, 1, GridBagConstraints.WEST));
+
         
     }
     

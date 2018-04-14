@@ -591,6 +591,7 @@ public class SettingsManager {
         settings.addBoolean("printAboutCheckingVersion", true);
         settings.addString("mentionByNickname", "normal");
         settings.addBoolean("emoteCodeInDialog", true);
+        settings.addBoolean("useHighlight2", false);
     }
     
     /**
