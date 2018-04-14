@@ -2574,6 +2574,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             styles.put("searchResult2", searchResult2);
 
             SimpleAttributeSet highlightWithBackground = new SimpleAttributeSet();
+            highlightWithBackground.addAttributes(styleServer.getStyle("standard").copyAttributes());
+            StyleConstants.setForeground(highlightWithBackground, styleServer.getColor("background"));
             StyleConstants.setBackground(highlightWithBackground, ForkUtil.COLOR_HIGHLIGHT_MESSAGE);
             styles.put("highlightWithBackground", highlightWithBackground);
             
