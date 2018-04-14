@@ -592,6 +592,7 @@ public class SettingsManager {
         settings.addString("mentionByNickname", "normal");
         settings.addBoolean("emoteCodeInDialog", true);
         settings.addBoolean("useHighlight2", false);
+        settings.addString("colorBackgroundHighlightedMessage", "#C8C8C8");
     }
     
     /**

@@ -107,6 +107,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(highlight2,
                 d.makeGbc(0, 13, 3, 1, GridBagConstraints.WEST));
 
+        fork.add(new JLabel("Background color of highlighted messages."),
+                d.makeGbc(0, 14, 1, 1, GridBagConstraints.WEST));
+        
+        fork.add(d.addSimpleStringSetting(
+                "colorBackgroundHighlightedMessage", 10, true),
+                d.makeGbc(1, 14, 2, 1, GridBagConstraints.WEST));
+
         
     }
     

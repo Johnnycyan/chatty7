@@ -2574,7 +2574,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             styles.put("searchResult2", searchResult2);
 
             SimpleAttributeSet highlightWithBackground = new SimpleAttributeSet();
-            StyleConstants.setBackground(highlightWithBackground, new Color(20, 0, 0));
+            StyleConstants.setBackground(highlightWithBackground, ForkUtil.COLOR_HIGHLIGHT_MESSAGE);
             styles.put("highlightWithBackground", highlightWithBackground);
             
             SimpleAttributeSet clearSearchResult = new SimpleAttributeSet();
@@ -2802,7 +2802,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
 
         public MutableAttributeSet highlightWithBackground() {
-            // StyleConstants.setItalic(styles.get("highlightWithBackground"), italic);
+            StyleConstants.setBackground(styles.get("highlightWithBackground"), ForkUtil.COLOR_HIGHLIGHT_MESSAGE);
             return styles.get("highlightWithBackground");
         }
         

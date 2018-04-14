@@ -4289,6 +4289,7 @@ public class MainGui extends JFrame implements Runnable {
 
         COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
         COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));
+        ForkUtil.COLOR_HIGHLIGHT_MESSAGE = HtmlColors.decode(client.settings.getString("colorBackgroundHighlightedMessage"), new Color(200, 200, 200));
 
         COLOR_NEW_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(255,80,80));
         COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,180,40));
