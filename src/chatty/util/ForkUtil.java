@@ -57,7 +57,7 @@ public class ForkUtil {
 
         for (int i = 0; i < text.length(); i++) {
             int index = s.indexOf(text.charAt(i));
-            newString += index < 0 ? text.charAt(i) : en.charAt(index);
+            newString += index < 0 ? "" : en.charAt(index);
         }
         return newString;
     }

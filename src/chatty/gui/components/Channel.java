@@ -424,13 +424,15 @@ public class Channel extends JPanel {
         private List<String> filterCompletionItems(Collection<String> data,
                 String search) {
             List<String> matched = new ArrayList<>();
-            String ruSearch = ForkUtil.replaceWrongLanguage(search, "ru");
+            String localSearch = ForkUtil.replaceWrongLanguage(search, "ru");
             for (String name : data) {
                 if (StringUtil.toLowerCase(name).startsWith(search)) {
                     matched.add(name);
                 }
-                if (StringUtil.toLowerCase(name).startsWith(ruSearch)) {
-                    matched.add(name);
+                if (!localSearch.equals("")) {
+                    if (StringUtil.toLowerCase(name).startsWith(localSearch)) {
+                        matched.add(name);
+                    }
                 }
             }
             Collections.sort(matched);
@@ -443,10 +445,17 @@ public class Channel extends JPanel {
             Set<User> customMatched = new HashSet<>();
             Set<User> localizedMatched = new HashSet<>();
 
-            String[] str = {search, ForkUtil.replaceWrongLanguage(search, "ru")};
+            String[] str = {ForkUtil.replaceWrongLanguage(search, "ru"), search};
             for (String localSearch : str) {
+                if (localSearch.equals("")) {
+                    continue;
+                }
                 for (User user : users.getData()) {
                     boolean matched = false;
+                    if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(localSearch)) {
+                        matched = true;
+                        customMatched.add(user);
+                    }
                     if (user.getName().startsWith(localSearch)) {
                         matched = true;
                         regularMatched.add(user);
@@ -454,10 +463,6 @@ public class Channel extends JPanel {
                     if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(localSearch)) {
                         matched = true;
                         localizedMatched.add(user);
-                    }
-                    if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(localSearch)) {
-                        matched = true;
-                        customMatched.add(user);
                     }
                     
                     if (matched) {
