@@ -357,6 +357,10 @@ public class Channel extends JPanel {
             if (prefix.endsWith(":")) {
                 return getCompletionItemsEmoji(search);
             }
+
+            if (ForkUtil.replaceWrongLanguage(search.substring(0, 1), "ru", "en").startsWith(":")) {
+                return getCompletionItemsEmoji(ForkUtil.replaceWrongLanguage(search, "ru", "en"));
+            }
             
             // Then check settings
             if (setting.equals("names")) {
@@ -424,7 +428,7 @@ public class Channel extends JPanel {
         private List<String> filterCompletionItems(Collection<String> data,
                 String search) {
             List<String> matched = new ArrayList<>();
-            String localSearch = ForkUtil.replaceWrongLanguage(search, "ru");
+            String localSearch = ForkUtil.replaceWrongLanguage(search, "ru", "en");
             for (String name : data) {
                 if (StringUtil.toLowerCase(name).startsWith(search)) {
                     matched.add(name);
@@ -445,7 +449,7 @@ public class Channel extends JPanel {
             Set<User> customMatched = new HashSet<>();
             Set<User> localizedMatched = new HashSet<>();
 
-            String[] str = {ForkUtil.replaceWrongLanguage(search, "ru"), search};
+            String[] str = {ForkUtil.replaceWrongLanguage(search, "ru", "en"), search};
             for (String localSearch : str) {
                 if (localSearch.equals("")) {
                     continue;

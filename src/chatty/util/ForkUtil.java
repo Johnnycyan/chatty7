@@ -46,13 +46,14 @@ public class ForkUtil {
 
     public static Map<String, String> completionLangs = new HashMap<>();
     static {
-        completionLangs.put("ru", "йцукенгшщзхъ\\фывапролджэячсмитьбю.ёЙЦУКЕНГШЩЗХЪ/ФЫВАПРОЛДЖЭЯЧСМИТЬБЮ,Ё!\"№;%:?*()_+");
+        // "Ж" and "ж" are swaped because "search" text is in lower case.
+        completionLangs.put("ru", "йцукенгшщзхъ\\фывапролдЖэячсмитьбю.ёЙЦУКЕНГШЩЗХЪ/ФЫВАПРОЛДжЭЯЧСМИТЬБЮ,Ё!\"№;%:?*()_+");
         completionLangs.put("en", "qwertyuiop[]\\asdfghjkl;\"zxcvbnm,./`QWERTYUIOP{}|ASDFGHJKL:\"ZXCVBNM<>?~!@#$%^&*()_+");
     }
 
-    public static String replaceWrongLanguage(String text, String lang) {
-        String s = completionLangs.get(lang);
-        String en = completionLangs.get("en");
+    public static String replaceWrongLanguage(String text, String fromLang, String toLang) {
+        String s = completionLangs.get(fromLang);
+        String en = completionLangs.get(toLang);
         String newString = "";
 
         for (int i = 0; i < text.length(); i++) {
