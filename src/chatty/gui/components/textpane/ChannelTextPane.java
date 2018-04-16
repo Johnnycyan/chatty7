@@ -751,6 +751,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 doc.remove(removedStart, removedLength);
                 length = length - removedLength - 1;
                 doc.insertString(removedStart, "..", styles.info());
+                messageLength = maxLength + 2;
             } catch (BadLocationException ex) {
                 LOGGER.warning("Bad location");
             }
