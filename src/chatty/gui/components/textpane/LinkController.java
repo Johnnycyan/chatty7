@@ -1,6 +1,7 @@
 
 package chatty.gui.components.textpane;
 
+import chatty.Helper;
 import chatty.User;
 import chatty.gui.LinkListener;
 import chatty.gui.MouseClickedListener;
@@ -12,20 +13,27 @@ import chatty.gui.components.menus.EmoteContextMenu;
 import chatty.gui.components.menus.UrlContextMenu;
 import chatty.gui.components.menus.UserContextMenu;
 import chatty.gui.components.menus.UsericonContextMenu;
+import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
+import chatty.util.api.Emoticons;
 import chatty.util.api.usericons.Usericon;
+import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
 import java.util.HashSet;
 import java.util.Set;
+import javax.swing.JLabel;
 import javax.swing.JPopupMenu;
 import javax.swing.JTextPane;
+import javax.swing.JViewport;
+import javax.swing.Popup;
+import javax.swing.PopupFactory;
 import javax.swing.SwingUtilities;
-import javax.swing.text.AttributeSet;
+import javax.swing.Timer;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 import javax.swing.text.StyledDocument;
@@ -40,7 +48,7 @@ import javax.swing.text.html.HTML;
  * 
  * @author tduva
  */
-public class LinkController extends MouseAdapter implements MouseMotionListener {
+public class LinkController extends MouseAdapter {
     
     private static final Cursor HAND_CURSOR = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR);
     private static final Cursor NORMAL_CURSOR = Cursor.getDefaultCursor();
@@ -60,7 +68,9 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
     
     private ContextMenu defaultContextMenu;
     
-    private boolean alreadyHandled;
+    private MyPopup popup = new MyPopup();
+    
+    private Element prevHoverElement;
     
     /**
      * Set the object that should receive the User object once a User is clicked
@@ -119,7 +129,8 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
     @Override
     public void mousePressed(MouseEvent e) {
         if (e.getClickCount() == 1 && SwingUtilities.isMiddleMouseButton(e)) {
-            String url = getUrl(e);
+            Element element = getElement(e);
+            String url = getUrl(element);
             if (url != null) {
                 for (UserListener listener : userListener) {
                     listener.imageClicked(url);
@@ -127,52 +138,49 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
                 return;
             }
 
-            User user = getUser(e);
+            User user = getUser(element);
             if (user != null) {
                 for (UserListener listener : userListener) {
-                    listener.userClicked(user, getMsgId(e), getAutoModMsgId(e), e);
+                    listener.userClicked(user, getMsgId(element), getAutoModMsgId(element), e);
                 }
                 return;
             }
         }
-
-        alreadyHandled = false;
         
         if (e.getClickCount() == 1 && SwingUtilities.isLeftMouseButton(e)) {
-            String url;
-            User user;
-            EmoticonImage emote;
-            Usericon usericon;
-            
-            if ((url = getUrl(e)) != null && !isUrlDeleted(e)) {
-                if (linkListener != null) {
-                    linkListener.linkClicked(url);
-                }
-                alreadyHandled = true;
+            Element element = getElement(e);
+            if (element != null) {
+                handleSingleLeftClick(e, element);
             }
-            else if ((user = getUser(e)) != null) {
-                for (UserListener listener : userListener) {
-                    SwingUtilities.invokeLater(() -> {
-                        listener.userClicked(user, getMsgId(e), getAutoModMsgId(e), e);
-                    });
-                }
-                alreadyHandled = true;
-            }
-            else if ((emote = getEmoticon(e)) != null) {
-                for (UserListener listener : userListener) {
-                    listener.emoteClicked(emote.getEmoticon(), e);
-                }
-                alreadyHandled = true;
-            }
-            else if ((usericon = getUsericon(e)) != null) {
-                for (UserListener listener : userListener) {
-                    listener.usericonClicked(usericon, e);
-                }
-                alreadyHandled = true;
-            }
-        }
-        else if (e.isPopupTrigger()) {
+        } else if (e.isPopupTrigger()) {
             openContextMenu(e);
+        }
+    }
+    
+    private void handleSingleLeftClick(MouseEvent e, Element element) {
+        String url;
+        User user;
+        EmoticonImage emoteImage;
+        Usericon usericon;
+
+        if ((url = getUrl(element)) != null && !isUrlDeleted(element)) {
+            if (linkListener != null) {
+                linkListener.linkClicked(url);
+            }
+        } else if ((user = getUser(element)) != null) {
+            for (UserListener listener : userListener) {
+                SwingUtilities.invokeLater(() -> {
+                    listener.userClicked(user, getMsgId(element), getAutoModMsgId(element), e);
+                });
+            }
+        } else if ((emoteImage = getEmoticonImage(element)) != null) {
+            for (UserListener listener : userListener) {
+                listener.emoteClicked(emoteImage.getEmoticon(), e);
+            }
+        } else if ((usericon = getUsericon(element)) != null) {
+            for (UserListener listener : userListener) {
+                listener.usericonClicked(usericon, e);
+            }
         }
     }
     
@@ -202,80 +210,72 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
     
     @Override
     public void mouseMoved(MouseEvent e) {
-
-        JTextPane text = (JTextPane)e.getSource();
+        Element element = getElement(e);
+        if (element == null) {
+            return;
+        }
+        // Check for Element instead of e.g. EmoticonImage because the same one
+        // can occur in several Element objects
+        hidePopupIfDifferentElement(element);
         
-        String url = getUrl(e);
-        if ((url != null && !isUrlDeleted(e)) || getUser(e) != null ||
-                getEmoticon(e) != null || getUsericon(e) != null) {
-            text.setCursor(HAND_CURSOR);
+        JTextPane textPane = (JTextPane)e.getSource();
+        EmoticonImage emoteImage = getEmoticonImage(element);
+        Usericon usericon = getUsericon(element);
+        if (emoteImage != null) {
+            popup.show(textPane, element, makeEmoticonPopupText(emoteImage), emoteImage.getImageIcon().getIconWidth());
+        } else if (usericon != null) {
+            popup.show(textPane, element, makeUsericonPopupText(usericon), usericon.image.getIconWidth());
         } else {
-            text.setCursor(NORMAL_CURSOR);
+            popup.hide();
         }
+
+        boolean isClickableElement = (getUrl(element) != null && !isUrlDeleted(element))
+                || getUser(element) != null
+                || emoteImage != null
+                || usericon != null;
+        
+        if (isClickableElement) {
+            textPane.setCursor(HAND_CURSOR);
+        } else {
+            textPane.setCursor(NORMAL_CURSOR);
+        }
+    }
+    
+    @Override
+    public void mouseExited(MouseEvent e) {
+        popup.hide();
     }
 
-    /**
-     * Gets the URL from the MouseEvent (if there is any).
-     * 
-     * @param e
-     * @return The URL or null if none was found.
-     */
-    private String getUrl(MouseEvent e) {
-        AttributeSet attributes = getAttributes(e);
-        if (attributes != null) {
-            return (String)(attributes.getAttribute(HTML.Attribute.HREF));
+    private String getUrl(Element e) {
+        return (String)(e.getAttributes().getAttribute(HTML.Attribute.HREF));
+    }
+    
+    private boolean isUrlDeleted(Element e) {
+        Boolean deleted = (Boolean) e.getAttributes().getAttribute(ChannelTextPane.Attribute.URL_DELETED);
+        if (deleted == null) {
+            return false;
         }
-        return null;
+        return deleted;
+    }
+
+    private User getUser(Element e) {
+        return (User) e.getAttributes().getAttribute(ChannelTextPane.Attribute.USER);
     }
     
-    private boolean isUrlDeleted(MouseEvent e) {
-        AttributeSet attributes = getAttributes(e);
-        if (attributes != null) {
-            Boolean deleted = (Boolean)attributes.getAttribute(ChannelTextPane.Attribute.URL_DELETED);
-            if (deleted == null) {
-                return false;
-            }
-            return deleted;
-        }
-        return false;
+    private String getMsgId(Element e) {
+        return (String) e.getAttributes().getAttribute(ChannelTextPane.Attribute.ID);
     }
     
-    /**
-     * Gets the User object from the MouseEvent (if there is any).
-     * 
-     * @param e
-     * @return The User object or null if none was found.
-     */
-    private User getUser(MouseEvent e) {
-        AttributeSet attributes = getAttributes(e);
-        if (attributes != null) {
-            return (User)(attributes.getAttribute(ChannelTextPane.Attribute.USER));
-        }
-        return null;
+    private String getAutoModMsgId(Element e) {
+        return (String) e.getAttributes().getAttribute(ChannelTextPane.Attribute.ID_AUTOMOD);
     }
     
-    private String getMsgId(MouseEvent e) {
-        return (String) getAttributes(e).getAttribute(ChannelTextPane.Attribute.ID);
+    private EmoticonImage getEmoticonImage(Element e) {
+        return (EmoticonImage)(e.getAttributes().getAttribute(ChannelTextPane.Attribute.EMOTICON));
     }
     
-    private String getAutoModMsgId(MouseEvent e) {
-        return (String) getAttributes(e).getAttribute(ChannelTextPane.Attribute.ID_AUTOMOD);
-    }
-    
-    private EmoticonImage getEmoticon(MouseEvent e) {
-        AttributeSet attributes = getAttributes(e);
-        if (attributes != null) {
-            return (EmoticonImage)(attributes.getAttribute(ChannelTextPane.Attribute.EMOTICON));
-        }
-        return null;
-    }
-    
-    private Usericon getUsericon(MouseEvent e) {
-        AttributeSet attributes = getAttributes(e);
-        if (attributes != null) {
-            return (Usericon)(attributes.getAttribute(ChannelTextPane.Attribute.USERICON));
-        }
-        return null;
+    private Usericon getUsericon(Element e) {
+        return (Usericon)(e.getAttributes().getAttribute(ChannelTextPane.Attribute.USERICON));
     }
     
     public static Element getElement(MouseEvent e) {
@@ -314,22 +314,6 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
         return null;
     }
     
-    /**
-     * Gets the attributes from the element in the document the mouse is
-     * pointing at.
-     * 
-     * @param e
-     * @return The attributes of this element or null if the mouse wasn't
-     *          pointing at an element
-     */
-    public static AttributeSet getAttributes(MouseEvent e) {
-        Element element = getElement(e);
-        if (element != null) {
-            return element.getAttributes();
-        }
-        return null;
-    }
-    
     private void openContextMenu(MouseEvent e) {
         // Component to show the context menu on has to be showing to determine
         // it's location (it might not be showing if the channel changed after
@@ -337,19 +321,23 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
         if (!e.getComponent().isShowing()) {
             return;
         }
-        User user = getUser(e);
-        String url = getUrl(e);
-        EmoticonImage emote = getEmoticon(e);
-        Usericon usericon = getUsericon(e);
+        Element element = getElement(e);
+        if (element == null) {
+            return;
+        }
+        User user = getUser(element);
+        String url = getUrl(element);
+        EmoticonImage emoteImage = getEmoticonImage(element);
+        Usericon usericon = getUsericon(element);
         JPopupMenu m;
         if (user != null) {
-            m = new UserContextMenu(user, getAutoModMsgId(e), contextMenuListener);
+            m = new UserContextMenu(user, getAutoModMsgId(element), contextMenuListener);
         }
         else if (url != null) {
-            m = new UrlContextMenu(url, isUrlDeleted(e), contextMenuListener);
+            m = new UrlContextMenu(url, isUrlDeleted(element), contextMenuListener);
         }
-        else if (emote != null) {
-            m = new EmoteContextMenu(emote, contextMenuListener);
+        else if (emoteImage != null) {
+            m = new EmoteContextMenu(emoteImage, contextMenuListener);
         }
         else if (usericon != null) {
             m = new UsericonContextMenu(usericon, contextMenuListener);
@@ -362,6 +350,208 @@ public class LinkController extends MouseAdapter implements MouseMotionListener 
             }
         }
         m.show(e.getComponent(), e.getX(), e.getY());
+        popup.hide();
+    }
+    
+    private static class MyPopup {
+        
+        private static final int SHOW_DELAY = 300;
+        private static final int NO_DELAY_WINDOW = 800;
+        
+        private final JLabel label = new JLabel();
+        private final Timer showTimer;
+
+        /**
+         * Current popup. If not null, it means it is currently showing.
+         */
+        private Popup popup;
+        private long lastShown;
+        
+        /**
+         * Popup not showing yet, but it has already been decided to try to show
+         * it (timer running or showing, if position is fine).
+         */
+        private boolean preparingToShow;
+        private JTextPane textPane;
+        private int sourceWidth;
+        private String text;
+        private Element element;
+        private Point position;
+
+        public MyPopup() {
+            showTimer = new Timer(SHOW_DELAY, e -> {
+                showNow();
+            });
+            showTimer.setRepeats(false);
+        }
+        
+        public void show(JTextPane textPane, Element element, String text, int sourceWidth) {
+            if (popup != null) {
+                return;
+            }
+            if (preparingToShow) {
+                return;
+            }
+
+            this.textPane = textPane;
+            this.text = text;
+            this.sourceWidth = sourceWidth;
+            this.element = element;
+            
+            preparingToShow = true;
+            if (System.currentTimeMillis() - lastShown < NO_DELAY_WINDOW) {
+                showNow();
+            } else {
+                showTimer.restart();
+            }
+        }
+        
+        public void hide() {
+            if (popup != null) {
+                popup.hide();
+                popup = null;
+                lastShown = System.currentTimeMillis();
+            }
+            preparingToShow = false;
+            showTimer.stop();
+        }
+        
+        public void update() {
+            if (popup != null) {
+                Point newPos = determinePosition();
+                if (newPos == null) {
+                    hide();
+                } else if (!newPos.equals(position)) {
+                    hide();
+                    showNow();
+                }
+            }
+        }
+        
+        private void showNow() {
+            if (popup != null) {
+                return;
+            }
+            label.setText(text);
+
+            Point p = determinePosition();
+            if (p != null) {
+                position = p;
+                popup = PopupFactory.getSharedInstance().getPopup(textPane, label, p.x, p.y);
+                popup.show();
+            }
+        }
+        
+        public void cleanUp() {
+            hide();
+        }
+        
+        private Point determinePosition() {
+            try {
+                Dimension labelSize = label.getPreferredSize();
+                Rectangle r = textPane.modelToView(element.getStartOffset());
+                r.translate(0, - labelSize.height - 3);
+                r.translate(sourceWidth / 2 - labelSize.width / 2, 0);
+                r.translate(textPane.getLocationOnScreen().x, textPane.getLocationOnScreen().y);
+                Component viewPort = textPane.getParent();
+                if (viewPort instanceof JViewport) {
+                    // Only check bounds if parent is as expected
+                    Point bounds = viewPort.getLocationOnScreen();
+                    if (bounds.y - 20 > r.y) {
+                        return null;
+                    }
+                    if (bounds.y + viewPort.getHeight() < r.y) {
+                        return null;
+                    }
+                    int overLeftEdge = (bounds.x - 5) - r.x;
+                    if (overLeftEdge > 0) {
+                        r.x = r.x + overLeftEdge;
+                    }
+                    int overRightEdge = (r.x + labelSize.width) - (bounds.x + textPane.getWidth() + 10);
+                    if (overRightEdge > 0) {
+                        r.x = r.x - overRightEdge;
+                    }
+                }
+                return new Point(r.x, r.y);
+            } catch (BadLocationException ex) {
+                // Just return null
+            }
+            return null;
+        }
+        
+    }
+
+    private void hidePopupIfDifferentElement(Element element) {
+        if (prevHoverElement != element) {
+            popup.hide();
+        }
+        prevHoverElement = element;
+    }
+    
+    /**
+     * This ultimately calls modelToView(), so it probably shouldn't be called
+     * during printing a line with many elements.
+     */
+    public void updatePopup() {
+        popup.update();
+    }
+    
+    private static final String POPUP_HTML_PREFIX = "<html>"
+            + "<body style='text-align:center;font-weight:bold;border:1px solid #000;padding:3px 5px 3px 5px;'>";
+    
+    private static String makeEmoticonPopupText(EmoticonImage emoticonImage) {
+        Emoticon emote = emoticonImage.getEmoticon();
+        String emoteInfo = "";
+        if (!emote.hasStreamSet() && emote.hasEmotesetInfo()) {
+            emoteInfo = emote.getEmotesetInfo() + " Emoticon";
+        } else if (emote.subType == Emoticon.SubType.CHEER) {
+            emoteInfo = "Cheering Emote";
+            if (emote.hasStreamRestrictions()) {
+                emoteInfo += " Local";
+            } else {
+                emoteInfo += " Global";
+            }
+        } else if (Emoticons.isTurboEmoteset(emote.emoteSet)) {
+            emoteInfo = "Turbo/Prime";
+        } else if (!emote.hasGlobalEmoteset() && emote.hasStreamSet()) {
+            emoteInfo = "Subemote ("+emote.getStream()+")";
+        } else if (!emote.hasGlobalEmoteset()) {
+            emoteInfo = "Unknown Emote";
+        } else {
+            emoteInfo = emote.type.label;
+            if (emote.type != Emoticon.Type.EMOJI) {
+                if (emote.hasStreamRestrictions()) {
+                    emoteInfo += " Local";
+                } else {
+                    emoteInfo += " Global";
+                }
+            }
+        }
+        String code = emote.type == Emoticon.Type.EMOJI ? emote.stringId : Emoticons.toWriteable(emote.code);
+        return String.format("%s%s<br /><span style='font-weight:normal'>%s</span>",
+                POPUP_HTML_PREFIX,
+                Helper.htmlspecialchars_encode(code),
+                emoteInfo);
+    }
+    
+    private static String makeUsericonPopupText(Usericon usericon) {
+        String info;
+        if (!usericon.metaTitle.isEmpty()) {
+            info = POPUP_HTML_PREFIX+"Badge: "+usericon.metaTitle;
+        } else {
+            info = POPUP_HTML_PREFIX+"Badge: "+usericon.type.label;
+        }
+        if (!usericon.channel.isEmpty() && !usericon.channelInverse) {
+            info += " (Local)";
+        }
+        if (usericon.source == Usericon.SOURCE_CUSTOM) {
+            info += " (Custom)";
+        }
+        return info;
+    }
+    
+    public void cleanUp() {
+        popup.cleanUp();
     }
     
 }
