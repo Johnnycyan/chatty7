@@ -361,6 +361,8 @@ public class LinkController extends MouseAdapter {
         private final JLabel label = new JLabel();
         private final Timer showTimer;
 
+        private boolean enabled;
+        
         /**
          * Current popup. If not null, it means it is currently showing.
          */
@@ -385,7 +387,14 @@ public class LinkController extends MouseAdapter {
             showTimer.setRepeats(false);
         }
         
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+        
         public void show(JTextPane textPane, Element element, String text, int sourceWidth) {
+            if (!enabled) {
+                return;
+            }
             if (popup != null) {
                 return;
             }
@@ -412,8 +421,10 @@ public class LinkController extends MouseAdapter {
                 popup = null;
                 lastShown = System.currentTimeMillis();
             }
-            preparingToShow = false;
-            showTimer.stop();
+            if (preparingToShow) {
+                preparingToShow = false;
+                showTimer.stop();
+            }
         }
         
         public void update() {
@@ -448,6 +459,11 @@ public class LinkController extends MouseAdapter {
         
         private Point determinePosition() {
             try {
+                // Component has to be showing to determine it's location (and
+                // showing the popup only makes sense if it's showing anyway)
+                if (!textPane.isShowing()) {
+                    return null;
+                }
                 Dimension labelSize = label.getPreferredSize();
                 Rectangle r = textPane.modelToView(element.getStartOffset());
                 r.translate(0, - labelSize.height - 3);
@@ -494,6 +510,10 @@ public class LinkController extends MouseAdapter {
      */
     public void updatePopup() {
         popup.update();
+    }
+    
+    public void setPopupEnabled(boolean enabled) {
+        popup.setEnabled(enabled);
     }
     
     private static final String POPUP_HTML_PREFIX = "<html>"

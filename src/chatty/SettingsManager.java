@@ -201,6 +201,7 @@ public class SettingsManager {
         settings.addBoolean("actionColored", false);
         settings.addLong("displayNamesMode", DISPLAY_NAMES_MODE_BOTH);
         settings.addLong("displayNamesModeUserlist", DISPLAY_NAMES_MODE_CAPITALIZED);
+        settings.addBoolean("showImageTooltips", true);
 
         // Badges/Emotes
         settings.addBoolean("emoticonsEnabled",true);
@@ -283,6 +284,7 @@ public class SettingsManager {
         settings.addString("streamsContextMenu", "");
         
         settings.addBoolean("closeUserDialogOnAction", true);
+        settings.addBoolean("openUserDialogByMouse", true);
 
         // History / Favorites
         settings.addMap("channelHistory",new TreeMap(), Setting.LONG);

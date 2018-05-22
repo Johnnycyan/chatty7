@@ -131,7 +131,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         EMOTICON_MAX_HEIGHT, EMOTICON_SCALE_FACTOR, BOT_BADGE_ENABLED,
         FILTER_COMBINING_CHARACTERS, PAUSE_ON_MOUSEMOVE,
         PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, EMOTICONS_SHOW_ANIMATED,
-        COLOR_CORRECTION,
+        COLOR_CORRECTION, SHOW_TOOLTIPS,
         
         DISPLAY_NAMES_MODE
     }
@@ -1479,35 +1479,13 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param user 
      */
     private void printUserIcons(User user) {
-        addAddonIcons(user, true);
-
-        addTwitchBadges(user);
-        if (user.isBot() && styles.botBadgeEnabled()) {
-            Usericon icon = user.getIcon(Usericon.Type.BOT);
-            if (icon != null && !icon.removeBadge) {
-                print(icon.getSymbol(), styles.makeIconStyle(icon));
-            }
-        }
-
-        addAddonIcons(user, false);
-    }
-    
-    private void addTwitchBadges(User user) {
-        java.util.List<Usericon> badges = user.getTwitchBadgeUsericons();
+        java.util.List<Usericon> badges = user.getBadges(styles.botBadgeEnabled());
         if (badges != null) {
             for (Usericon badge : badges) {
                 if (badge.image != null && !badge.removeBadge) {
                     print(badge.getSymbol(), styles.makeIconStyle(badge));
                 }
             }
-        }
-    }
-    
-    private void addAddonIcons(User user, boolean first) {
-        // Output addon usericons (if there are any)
-        java.util.List<Usericon> icons = user.getAddonIcons(first);
-        for (Usericon icon : icons) {
-            print(icon.getSymbol(), styles.makeIconStyle(icon));
         }
     }
     
@@ -2668,6 +2646,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addSetting(Setting.PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, false);
             addSetting(Setting.EMOTICONS_SHOW_ANIMATED, false);
             addSetting(Setting.COLOR_CORRECTION, true);
+            addSetting(Setting.SHOW_TOOLTIPS, true);
             addNumericSetting(Setting.FILTER_COMBINING_CHARACTERS, 1, 0, 2);
             addNumericSetting(Setting.DELETED_MESSAGES_MODE, 30, -1, 9999999);
             addNumericSetting(Setting.BUFFER_SIZE, 250, BUFFER_SIZE_MIN, BUFFER_SIZE_MAX);
@@ -2676,6 +2655,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addNumericSetting(Setting.EMOTICON_SCALE_FACTOR, 100, 1, 200);
             addNumericSetting(Setting.DISPLAY_NAMES_MODE, 0, 0, 10);
             timestampFormat = styleServer.getTimestampFormat();
+            linkController.setPopupEnabled(settings.get(Setting.SHOW_TOOLTIPS));
         }
         
         /**
