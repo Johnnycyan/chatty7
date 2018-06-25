@@ -236,8 +236,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     public void printMessage(Message message, String timestamp) {
         if (message instanceof UserMessage) {
             printUserMessage((UserMessage)message, timestamp);
-        } else if (message instanceof SubscriberMessage) {
-            printSubscriberMessage((SubscriberMessage)message);
+        } else if (message instanceof UserNotice) {
+            printUsernotice((UserNotice)message);
         } else if (message instanceof AutoModMessage) {
             printAutoModMessage((AutoModMessage)message);
         }
@@ -249,7 +249,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * 
      * @param message 
      */
-    private void printSubscriberMessage(SubscriberMessage message) {
+    private void printUsernotice(UserNotice message) {
         closeCompactMode();
         print(getTimePrefix(), styles.info());
         
@@ -270,10 +270,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
         
         String text = message.text;
-        if (DateTime.isAprilFirst()) {
-            text = text.replace("months in a row", "years in a row");
-        }
-        print("[Notification] "+text+" ", style);
+        print("["+message.type+"] "+text+" ", style);
         if (!StringUtil.isNullOrEmpty(message.attachedMessage)) {
             print("[", styles.info());
             // Output with emotes, but don't turn URLs into clickable links
@@ -2379,8 +2376,29 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 return;
             }
             scrollingDownInProgress = true;
-            scrollpane.getVerticalScrollBar().setValue(scrollpane.getVerticalScrollBar().getMaximum());
+            scrollDown2();
             scrollingDownInProgress = false;
+        }
+        
+        private void scrollDown1() {
+            scrollpane.getVerticalScrollBar().setValue(scrollpane.getVerticalScrollBar().getMaximum());
+        }
+        
+        private void scrollDown2() {
+            scrollRectToVisible(new Rectangle(0,getPreferredSize().height,10,10));
+        }
+        
+        private void scrollDown3() {
+            try {
+                int endPosition = doc.getLength();
+                Rectangle bottom = modelToView(endPosition);
+                if (bottom != null) {
+                    bottom.height = bottom.height + 100;
+                    scrollRectToVisible(bottom);
+                }
+            } catch (BadLocationException ex) {
+                LOGGER.warning("Bad Location");
+            }
         }
         
         /**
@@ -2392,7 +2410,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         private void scrollToOffset(int offset) {
             try {
                 Rectangle rect = modelToView(offset);
-                scrollRectToVisible(rect);
+                if (rect != null) {
+                    scrollRectToVisible(rect);
+                }
             } catch (BadLocationException ex) {
                 LOGGER.warning("Bad Location");
             }
