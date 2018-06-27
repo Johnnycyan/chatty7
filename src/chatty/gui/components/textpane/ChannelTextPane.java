@@ -168,8 +168,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         this.setDocument(new MyDocument());
         doc = getStyledDocument();
         setEditable(false);
-        DefaultCaret caret = (DefaultCaret)getCaret();
+        DefaultCaret caret = new NoScrollCaret();
         caret.setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
+        setCaret(caret);
         styles.setStyles();
         
         if (special) {
@@ -2376,7 +2377,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 return;
             }
             scrollingDownInProgress = true;
-            scrollDown2();
+            scrollDown1();
             scrollingDownInProgress = false;
         }
         
