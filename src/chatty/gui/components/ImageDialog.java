@@ -38,6 +38,11 @@ public class ImageDialog extends JDialog {
 
     private int counterResize = 0;
 
+    // 0 - size of owner
+    // 1 - size of owner x2
+    // 2 - original size
+    private int currentStateOfImage = 0;
+
     public static void showImageDialog(Window owner, String url) {
         String type = getURLType(url);
         if (type.indexOf("image/") >= 0) {
@@ -52,7 +57,7 @@ public class ImageDialog extends JDialog {
     public ImageDialog(final Window owner, String url, String type) {
         super(owner);
         setTitle(url);
-        setResizable(true);
+        setResizable(false);
         setMinimumSize(new Dimension(100, 100));
         setLayout(new GridBagLayout());
         getContentPane().setBackground(new Color(35, 35, 35));
@@ -61,7 +66,7 @@ public class ImageDialog extends JDialog {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 1;
-        gbc.insets = new Insets(5,5,5,5);
+        gbc.insets = new Insets(3,3,3,3);
         gbc.anchor = GridBagConstraints.WEST;
 
         try {
@@ -90,18 +95,6 @@ public class ImageDialog extends JDialog {
             exxx.printStackTrace();
         }
 
-        addComponentListener(new ComponentAdapter() {
-            public void componentResized(ComponentEvent e) {
-                counterResize++;
-                if (counterResize % 10 == 0) {
-                    Dimension dimension = getScaledDimension(iconOrigin, getBounds());
-                    if (dimension.width != iconOrigin.getIconWidth() || dimension.height != iconOrigin.getIconHeight()) {
-                        icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
-                    }
-                }
-            }
-        });
-
         getContentPane().addMouseListener(new MouseAdapter() {
             public void mousePressed (MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
@@ -128,20 +121,31 @@ public class ImageDialog extends JDialog {
 
 
                     if (SwingUtilities.isRightMouseButton(e)) {
-                        JFileChooser chooser = new JFileChooser();
-                        FileNameExtensionFilter filter = new FileNameExtensionFilter("JPG & PNG Images", "jpg", "png");
-                        chooser.setFileFilter(filter);
-                        int returnVal = chooser.showSaveDialog(owner);
-                        if (returnVal == JFileChooser.APPROVE_OPTION) {
-                            try {
-                                File f = chooser.getSelectedFile();
-                                
-                                String test = f.getAbsolutePath() + "." + ext;
-                                ImageIO.write(bi, ext, new File(test));
-                            } catch(IOException ex) {
-                                ex.printStackTrace();
-                            }
+                        currentStateOfImage++;
+                        if (currentStateOfImage > 2) {
+                            currentStateOfImage = 0;
                         }
+
+                        int widthOffset = 15;
+                        int heightOffset = 35;
+                        Dimension dimension = owner.getBounds().getSize();
+
+                        if (currentStateOfImage == 0) {
+                            dimension = getScaledDimension(iconOrigin, owner.getBounds());
+                            icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+                        } else if (currentStateOfImage == 1) {
+                            dimension = getScaledDimension(iconOrigin, owner.getBounds());
+                            dimension.width *= 2;
+                            dimension.height *= 2;
+                            icon.setImage(getScaledImage(iconOrigin.getImage(), dimension.width, dimension.height));
+                        } else if (currentStateOfImage == 2) {
+                            dimension = new Dimension(iconOrigin.getIconWidth(), iconOrigin.getIconHeight());
+                            icon.setImage(iconOrigin.getImage());
+                        }
+                        dimension.width += widthOffset;
+                        dimension.height += heightOffset;
+                        setSize(dimension);
+
                     }
                 } catch (OutOfMemoryError exx) {
                     dispose();
