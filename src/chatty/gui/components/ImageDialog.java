@@ -96,8 +96,8 @@ public class ImageDialog extends JDialog {
         }
 
         getContentPane().addMouseListener(new MouseAdapter() {
-            public void mousePressed (MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
+            public void mouseReleased (MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
                     dispose();
                 }
 
@@ -120,7 +120,7 @@ public class ImageDialog extends JDialog {
                     }
 
 
-                    if (SwingUtilities.isRightMouseButton(e)) {
+                    if (SwingUtilities.isLeftMouseButton(e)) {
                         currentStateOfImage++;
                         if (currentStateOfImage > 2) {
                             currentStateOfImage = 0;
