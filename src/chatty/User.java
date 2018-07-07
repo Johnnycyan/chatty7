@@ -273,6 +273,13 @@ public class User implements Comparable {
         numberOfMessages++;
         lastMessage = System.currentTimeMillis();
     }
+
+    // Overload method for recent messages.
+    public synchronized void addMessage(String line, boolean action, String id, String timestamp) {
+        addLine(new TextMessage(Long.parseLong(timestamp), line, action, id));
+        numberOfMessages++;
+        lastMessage = System.currentTimeMillis();
+    }
     
     /**
      * Adds a single ban with the current time.

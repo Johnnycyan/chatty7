@@ -2817,7 +2817,11 @@ public class MainGui extends JFrame implements Runnable {
                 CopyMessages.copyMessage(client.settings, user, text, highlighted);
                 
                 // Stuff independent of highlight/ignore
-                user.addMessage(processMessage(text), action, id);
+                if (timestamp == null) {
+                    user.addMessage(processMessage(text), action, id);
+                } else {
+                    user.addMessage(processMessage(text), action, id, timestamp);
+                }
                 if (highlighted) {
                     user.setHighlighted();
                 }
@@ -4323,31 +4327,30 @@ public class MainGui extends JFrame implements Runnable {
     public void loadRecentMessages(String channel) {
         List<String> msgs = ForkUtil.getRecentMessages(channel);
         String[] msgArray = msgs.toArray(new String[0]);
+        boolean firstMessagePrinted = false;
 
-        if (msgArray.length > 0) {
-            // Dont show message if nothing to load.
-            printLine(client.roomManager.getRoom(channel), "[Begin of recent messages.]");
-        }
         for (String str : msgArray) {
-           printOneRecentMessage(channel, str);
+           if (printOneRecentMessage(channel, str, firstMessagePrinted)) {
+                firstMessagePrinted = true;
+           }
         }
-        if (msgArray.length > 0) {
-            // Dont show message if nothing to load.
+        if (firstMessagePrinted) {
+            // Dont show message if nothing was printed.
             printLine(client.roomManager.getRoom(channel), "[End of recent messages.]");
         }
 
     }
 
-    private void printOneRecentMessage(String channel, String data) {
+    private boolean printOneRecentMessage(String channel, String data, boolean firstMessagePrinted) {
         if (data == null) {
-            return;
+            return false;
         }
         
         MsgTags tags = MsgTags.EMPTY;
         if (data.startsWith("@")) {
             int endOfTags = data.indexOf(" ");
             if (endOfTags == -1) {
-                return;
+                return false;
             }
             tags = MsgTags.parse(data.substring(1, endOfTags));
             data = data.substring(endOfTags+1);
@@ -4367,7 +4370,38 @@ public class MainGui extends JFrame implements Runnable {
         }
         textMsg = textMsg.replaceAll("\u0001ACTION ", "");
         textMsg = textMsg.replaceAll("\u0001", "");
+
+        long messageSentTimestamp = Long.parseLong(tags.get("tmi-sent-ts"));
+
+        // Check for duplicates.
+        List<User.Message> messagesOfUser = user.getMessages();              
+        for (User.Message messageOfUser : messagesOfUser) {
+            if (messageOfUser.getType() == User.Message.MESSAGE) {
+                User.TextMessage textMessage = (User.TextMessage)messageOfUser;
+
+                // If the timestamps are the same, no need to duplicate the message.
+                if (messageOfUser.getTime() == messageSentTimestamp) {
+                    return false;
+                /* But sent messages are a little different from the messages 
+                    that are stored on the server, so we have to take into account 
+                    the delay of let's say 2000 milliseconds and compare the text 
+                    before making sure the message already exists.
+                */
+                } else if (Math.abs(messageOfUser.getTime() - messageSentTimestamp) < 2000) {
+                    if (textMsg.equals(textMessage.text)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (!firstMessagePrinted) {
+            // Dont show message if nothing was printed.
+            printLine(client.roomManager.getRoom(channel), "[Begin of recent messages.]");
+        }
+
         this.printMessage(user, textMsg, action, emotesTag, bits, id, tags.get("tmi-sent-ts"));
+        return true;
     }
     
     private class MySettingsListener implements SettingsListener {
