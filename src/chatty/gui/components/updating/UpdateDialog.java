@@ -64,6 +64,8 @@ public class UpdateDialog extends JDialog {
     private final JCheckBox enableCheckBeta;
     private final JButton closeButton;
     private final JButton downloadButton;
+
+    private String forkUrl = "https://zik.one/chatty/latest/";
     
     public UpdateDialog(Window owner, LinkLabelListener linkLabelListener,
             Settings settings, InstallListener installListener) {
@@ -120,7 +122,8 @@ public class UpdateDialog extends JDialog {
             updateDisplay();
         });
         gbc = GuiUtil.makeGbc(0, 4, 1, 1, GridBagConstraints.WEST);
-        add(enableCheckBeta, gbc);
+        // add(enableCheckBeta, gbc);
+        settings.setBoolean("checkNewBeta", true);
         
         gbc = GuiUtil.makeGbc(0, 5, 1, 1);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -278,8 +281,9 @@ public class UpdateDialog extends JDialog {
         StringBuilder b = new StringBuilder();
         b.append("<ul style='margin-left:24'>");
         for (Asset asset : release.getAssets()) {
+            String assetName = asset.getName();
             b.append("<li>");
-            b.append("[url:").append(asset.getUrl()).append(" ").append(asset.getName()).append("]");
+            b.append("[url:").append(forkUrl + assetName).append(" ").append(assetName).append("]");
             b.append("</li>");
         }
         b.append("</ul>");
@@ -289,7 +293,7 @@ public class UpdateDialog extends JDialog {
     private void download(Asset asset) {
         try {
             Path installerPath = Stuff.getTempFilePath(asset.getName());
-            URL downloadUrl = new URL(asset.getUrl());
+            URL downloadUrl = new URL(forkUrl + asset.getName());
             if (FileDownloaderDialog.downloadFile(this, downloadUrl, installerPath, "Download update")) {
 //                int result = JOptionPane.showConfirmDialog(this, "Running the installer will close Chatty, continue?", "Install Update", JOptionPane.YES_NO_OPTION);
 //                if (result == JOptionPane.YES_OPTION) {

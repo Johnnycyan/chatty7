@@ -1,1 +1,1 @@
-gradlew windowsZip -PjavapackagerPath="c:\Program Files\Java\jdk1.8.0\bin\javapackager.exe"
+gradlew windowsZip -PjavapackagerPath="c:\Program Files\Java\jdk1.8.0\bin\javapackager.exe" && gradlew innosetup -PinnosetupPath="c:\Program Files (x86)\Inno Setup 5\ISCC.exe" && gradlew innosetupStandalone -PinnosetupPath="c:\Program Files (x86)\Inno Setup 5\ISCC.exe" -PjavapackagerPath="c:\Program Files\Java\jdk1.8.0\bin\javapackager.exe"
