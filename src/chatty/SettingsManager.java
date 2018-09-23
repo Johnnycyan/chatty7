@@ -1,6 +1,7 @@
 
 package chatty;
 
+import chatty.gui.components.updating.Version;
 import chatty.gui.HtmlColors;
 import chatty.gui.WindowStateManager;
 import chatty.gui.components.settings.NotificationSettings;
@@ -97,6 +98,7 @@ public class SettingsManager {
         settings.addLong("versionLastChecked", 0);
         settings.addString("updateAvailable", "");
         settings.addBoolean("checkNewVersion", true);
+        settings.addBoolean("checkNewBeta", false);
         settings.addBoolean("newsAutoRequest", true);
         settings.addLong("newsLastRead", 0);
         settings.addString("currentVersion", "");
@@ -191,7 +193,8 @@ public class SettingsManager {
         settings.addString("inputFont", "Dialog 14");
         settings.addString("userlistFont", "Dialog Bold 12");
         settings.addLong("lineSpacing", 2);
-        settings.addLong("paragraphSpacing", 6);
+        settings.addLong("paragraphSpacing", 8);
+        settings.addLong("bottomMargin", -1);
         settings.addString("timestamp","[HH:mm]");
         settings.addString("timestampTimezone", "");
         settings.addBoolean("capitalizedNames", true);
@@ -238,11 +241,17 @@ public class SettingsManager {
         // Colors
         settings.addString("foregroundColor","#111111");
         settings.addString("backgroundColor","#FAFAFA");
+        settings.addBoolean("alternateBackground", false);
+        settings.addString("backgroundColor2","#EAEAEA");
+        settings.addBoolean("messageSeparator", false);
+        settings.addString("separatorColor", "#DFDFDF");
         settings.addString("infoColor","#001480");
         settings.addString("compactColor","#A0A0A0");
         settings.addString("inputBackgroundColor","White");
         settings.addString("inputForegroundColor","Black");
         settings.addString("highlightColor","Red");
+        settings.addBoolean("highlightBackground", true);
+        settings.addString("highlightBackgroundColor", "#FFFFEA");
         settings.addString("searchResultColor", "LightYellow");
         settings.addString("searchResultColor2", "#FFFF80");
         settings.addBoolean("colorCorrection", true);
@@ -489,6 +498,7 @@ public class SettingsManager {
         settings.addBoolean("highlightIgnored", false);
         settings.addList("noHighlightUsers", new ArrayList(), Setting.STRING);
         settings.addList("highlightBlacklist", new ArrayList(), Setting.STRING);
+        settings.addBoolean("highlightMatches", true);
 
         // Ignore
         settings.addList("ignore", new ArrayList(), Setting.STRING);
@@ -791,6 +801,9 @@ public class SettingsManager {
     }
     
     public void debugSettings() {
+        if (Chatty.getInvalidSettingsDirectory() != null) {
+            LOGGER.warning("Invalid -d dir: "+Chatty.getInvalidSettingsDirectory());
+        }
         StringBuilder result = new StringBuilder("Settings: ");
         boolean first = true;
         for (String setting : debugSettings) {

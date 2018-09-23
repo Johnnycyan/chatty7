@@ -5,7 +5,7 @@
         <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 <body>
-    <h1><a name="top">Chatty (Version: 0.9.2b4)</a></h1>
+    <h1><a name="top">Chatty (Version: 0.9.2b8)</a></h1>
     <table>
         <tr>
             <td valign="top">
@@ -72,6 +72,7 @@
                 <strong>Miscellaneous</strong>
                 <ul class="menu">
                     <li><a href="help-releases.html">Release Information</a></li>
+                    <li><a href="help-standalone.html">Standalone Version</a></li>
                     <li><a href="help-troubleshooting.html">Troubleshooting</a></li>
                     <li><a href="#contact">Contact</a></li>
                     <li><a href="help-about.html#thanks">Miscellaneous / Thanks</a></li>
@@ -1416,12 +1417,11 @@ MiniK   http://static-cdn.jtvnw.net/emoticons/v1/25/1.0     set:793 id:3287</pre
         <a href="#top" class="top">[back to menu]</a>
     </h2>
     <p>There are a few options you can launch Chatty with, that will override
-    settings loaded from the settings file. You need to run Chatty from the
-    commandline or <a href="help-guide_create_shortcut.html">Create a shortcut</a>
-    to use these.</p>
-    
-    <p>These need to be defined after the <code>Chatty.jar</code>, for example:
-        <code>javaw -jar Chatty.jar -channel lotsofs</code></p>
+    settings loaded from the settings file or change how Chatty is started. You
+    need to run Chatty from the commandline or
+    <a href="help-guide_create_shortcut.html">Create a shortcut</a> to use
+    these. If you're using the Standalone version you can also specify launch
+    options in the <a href="help-standalone.html#cfg-launch">Chatty.cfg</a>.</p>
     
     <dl class="dl-settings">
         <dt><code>-server &lt;host/ip&gt;</code></dt>
@@ -1487,7 +1487,7 @@ MiniK   http://static-cdn.jtvnw.net/emoticons/v1/25/1.0     set:793 id:3287</pre
         <dd>Currently only the <code>-channel</code> parameter is used when 
             forwarded to an already running instance (joining the channel).</dd>
     </dl>
-    
+
     <h2>
         <a name="settings">Setting commands</a>
         <a href="#top" class="top">[back to menu]</a>
@@ -1524,16 +1524,16 @@ MiniK   http://static-cdn.jtvnw.net/emoticons/v1/25/1.0     set:793 id:3287</pre
         <a href="#top" class="top">[back to menu]</a>
     </h2>
     <ul>
-        <li>Website: <a href="http://chatty.github.io">http://chatty.github.io</a></li>
+        <li>Website: <a href="https://chatty.github.io">https://chatty.github.io</a></li>
         <li>E-Mail: chattyclient@gmail.com</li>
-        <li>Twitch Account: <a href="http://twitch.tv/tduva">tduva</a></li>
         <li>Twitter: <a href="https://twitter.com/ChattyClient">@ChattyClient</a></li>
-        <li><a href="https://discord.gg/WTuqGeJ">Discord</a></li>
+        <li>Discord: <a href="https://discord.gg/WTuqGeJ">Chatty Discord Invite</a></li>
     </ul>
     <p>If you are referring to a specific version of Chatty, please provide the
     actual version number, which you can find on the top of the main help page in Chatty
     (this one if you are reading this in Chatty, otherwise go to Chatty and open
-    <code>Help - About/Help</code> or press <kbd>F1</kbd>).</p>
+    <code>Help - About/Help</code> or press <kbd>F1</kbd>). You can also use the
+    <code>/appinfo</code> command.</p>
 
     <h2>
         <a name="about">About/License</a>

@@ -1,6 +1,7 @@
 
 package chatty.gui.components.textpane;
 
+import chatty.Chatty;
 import chatty.gui.components.ChannelEditBox;
 import chatty.Helper;
 import chatty.SettingsManager;
@@ -12,10 +13,12 @@ import chatty.gui.StyleServer;
 import chatty.gui.UrlOpener;
 import chatty.gui.MainGui;
 import chatty.User;
+import chatty.gui.Highlighter.Match;
 import chatty.util.api.usericons.Usericon;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.util.DateTime;
 import chatty.util.ForkUtil;
+import chatty.util.Debugging;
 import chatty.util.StringUtil;
 import chatty.util.TwitchEmotes.Emoteset;
 import chatty.util.api.CheerEmoticon;
@@ -76,7 +79,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private static final Logger LOGGER = Logger.getLogger(ChannelTextPane.class.getName());
     
-    private final StyledDocument doc;
+    private final DefaultStyledDocument doc;
     
     private static final Color BACKGROUND_COLOR = new Color(250,250,250);
     
@@ -108,7 +111,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     public enum Attribute {
         IS_BAN_MESSAGE, BAN_MESSAGE_COUNT, TIMESTAMP, USER, IS_USER_MESSAGE,
         URL_DELETED, DELETED_LINE, EMOTICON, IS_APPENDED_INFO, INFO_TEXT, BANS,
-        BAN_MESSAGE, ID, ID_AUTOMOD, USERICON
+        BAN_MESSAGE, ID, ID_AUTOMOD, USERICON,
+        
+        HIGHLIGHT_WORD, HIGHLIGHT_LINE, EVEN, PARAGRAPH_SPACING
     }
     
     public enum MessageType {
@@ -131,7 +136,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         EMOTICON_MAX_HEIGHT, EMOTICON_SCALE_FACTOR, BOT_BADGE_ENABLED,
         FILTER_COMBINING_CHARACTERS, PAUSE_ON_MOUSEMOVE,
         PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, EMOTICONS_SHOW_ANIMATED,
-        COLOR_CORRECTION, SHOW_TOOLTIPS,
+        COLOR_CORRECTION, SHOW_TOOLTIPS, BOTTOM_MARGIN,
         
         DISPLAY_NAMES_MODE
     }
@@ -166,7 +171,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         this.addMouseMotionListener(scrollManager);
         setEditorKit(new MyEditorKit(startAtBottom));
         this.setDocument(new MyDocument());
-        doc = getStyledDocument();
+        doc = (DefaultStyledDocument)getStyledDocument();
         setEditable(false);
         DefaultCaret caret = new NoScrollCaret();
         caret.setUpdatePolicy(DefaultCaret.NEVER_UPDATE);
@@ -275,10 +280,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         if (!StringUtil.isNullOrEmpty(message.attachedMessage)) {
             print("[", styles.info());
             // Output with emotes, but don't turn URLs into clickable links
-            printSpecials(message.attachedMessage, message.user, styles.info(), message.emotes, true, false);
+            printSpecials(message.attachedMessage, message.user, styles.info(), message.emotes, true, false, null);
             print("]", styles.info());
         }
-        printNewline();
+        finishLine();
     }
     
     private void printAutoModMessage(AutoModMessage message) {
@@ -289,7 +294,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         style.addAttribute(Attribute.ID_AUTOMOD, message.id);
         print("[AutoMod] <"+message.user.getDisplayNick()+"> ", style);
         print(message.text, styles.info());
-        printNewline();
+        finishLine();
     }
 
     /**
@@ -342,8 +347,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         if (!highlighted && color == null && action && styles.actionColored()) {
             style = styles.standard(user.getDisplayColor());
         }
-        printSpecials(text, user, style, emotes, false, message.bits > 0);
-        printNewline();
+        printSpecials(text, user, style, emotes, false, message.bits > 0, message.highlightMatches);
+        
+        if (message.highlighted) {
+            setLineHighlighted(doc.getLength());
+        }
+        finishLine();
     }
     
     private long getTimeAgo(Element element) {
@@ -565,7 +574,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 print(getTimePrefix(), styles.banMessage(user, message));
                 print(user.getCustomNick(), styles.nick(user, styles.info()));
                 print(" "+message, styles.info());
-                printNewline();
+                finishLine();
             }
         }
         
@@ -815,6 +824,16 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     private void setLineDeleted(int offset) {
         doc.setParagraphAttributes(offset, 1, styles.deletedLine(), false);
+    }
+    
+    private void setVariableLineAttributes(int offset, boolean even, boolean updateTimestamp) {
+        doc.setParagraphAttributes(offset, 1, styles.variableLineAttributes(even, updateTimestamp), false);
+    }
+    
+    private void setLineHighlighted(int offset) {
+        SimpleAttributeSet attr = new SimpleAttributeSet();
+        attr.addAttribute(Attribute.HIGHLIGHT_LINE, true);
+        doc.setParagraphAttributes(offset, 1, attr, false);
     }
     
     private int[] getMessageOffsets(Element line) {
@@ -1535,10 +1554,19 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     public void removeOldLines() {
         if (messageTimeout > 0) {
-            Element element = doc.getDefaultRootElement().getElement(0).getElement(0);
-            if (element != null && getTimeAgo(element) > messageTimeout * 1000) {
-                //System.out.println(getTimeAgo(element));
-                removeFirstLines(1);
+            Element paragraph = doc.getDefaultRootElement().getElement(0);
+            if (doc.getLength() > 1 && getTimeAgo(paragraph) > messageTimeout * 1000) {
+//                removeFirstLines(1);
+                
+                // Don't use doc.remove() for this, since removing one line with
+                // it seems to copy paragraph attributes to the follow line
+                // (visible if alternating backgrounds are showing)
+                if (doc.getDefaultRootElement().getElementCount() > 1) {
+                    // Can't use this if it's the last element
+                    doc.removeElement(doc.getDefaultRootElement().getElement(0));
+                } else {
+                    clearAll();
+                }
                 scrollDownIfNecessary();
                 resetNewlineRequired();
             }
@@ -1623,32 +1651,23 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     protected void closeCompactMode() {
         if (compactMode != null) {
-            printNewline();
+            finishLine();
             compactMode = null;
         }
     }
-    
-    /*
-     * ########################
-     * # General purpose print
-     * ########################
-     */
-    
-//    private static Highlighter.HighlightPainter painter = new TestPainter();
     
     /**
      * Start the next print with a newline. This must be called when the current
      * line is finished.
      */
-    protected void printNewline() {
+    protected void finishLine() {
         newlineRequired = true;
         lineSelection.onLineAdded(getLastLine(doc));
-//        try {
-//            getHighlighter().addHighlight(doc.getLength(), doc.getLength(), painter);
-//        } catch (BadLocationException ex) {
-//            Logger.getLogger(ChannelTextPane.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+        even = !even;
+        setVariableLineAttributes(doc.getLength() - 1, even, true);
     }
+    
+    boolean even = false;
     
    /**
      * Prints a regular-styled line (ended with a newline).
@@ -1667,7 +1686,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         // Close compact mode, because this is definately a new line (timestamp)
         closeCompactMode();
         print(getTimePrefix()+line,style);
-        printNewline();
+        finishLine();
     }
 
     /**
@@ -1684,9 +1703,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param style 
      * @param emotes 
      * @param ignoreLinks 
+     * @param containsBits 
      */
     protected void printSpecials(String text, User user, MutableAttributeSet style,
-            TagEmotes emotes, boolean ignoreLinks, boolean containsBits) {
+            TagEmotes emotes, boolean ignoreLinks, boolean containsBits,
+            java.util.List<Match> highlightMatches) {
         // Where stuff was found
         TreeMap<Integer,Integer> ranges = new TreeMap<>();
         // The style of the stuff (basicially metadata)
@@ -1713,17 +1734,61 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             if (start > lastPrintedPos) {
                 // If there is anything between the special stuff, print that
                 // first as regular text
-                String processed = processText(user, text.substring(lastPrintedPos, start));
-                print(processed, style);
+//                String processed = processText(user, text.substring(lastPrintedPos, start));
+//                print(processed, style);
+                specialPrint(user, text, lastPrintedPos, start, style, highlightMatches);
             }
             print(text.substring(start, end + 1),rangesStyle.get(start));
             lastPrintedPos = end + 1;
         }
         // If anything is left, print that as well as regular text
         if (lastPrintedPos < text.length()) {
-            print(processText(user, text.substring(lastPrintedPos)), style);
+//            print(processText(user, text.substring(lastPrintedPos)), style);
+            specialPrint(user, text, lastPrintedPos, text.length(), style, highlightMatches);
         }
         
+    }
+    
+    /**
+     * Prints the given range of text from start to end, adding the attribute
+     * for drawing Highlight/Ignore matches.
+     * 
+     * @param user
+     * @param text
+     * @param start
+     * @param end
+     * @param style
+     * @param highlightMatches 
+     */
+    private void specialPrint(User user, String text, int start, int end, MutableAttributeSet style, java.util.List<Match> highlightMatches) {
+        if (highlightMatches != null) {
+            for (Match m : highlightMatches) {
+                if (m.start < end && m.end > start) {
+                    // Affects this region at all
+                    int from = m.start;
+                    if (from < start) {
+                        from = start;
+                    }
+                    int to = m.end;
+                    if (to > end) {
+                        to = end;
+                    }
+                    if (from > start) {
+                        String processed = processText(user, text.substring(start, from));
+                        print(processed, style);
+                    }
+                    
+                    String processed = processText(user, text.substring(from, to));
+                    MutableAttributeSet styleCopy = new SimpleAttributeSet(style);
+                    styleCopy.addAttribute(Attribute.HIGHLIGHT_WORD, true);
+                    print(processed, styleCopy);
+                    start = to;
+                }
+            }
+        }
+        if (start < end) {
+            print(processText(user, text.substring(start, end)), style);
+        }
     }
     
     /**
@@ -2034,12 +2099,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param text
      * @param style 
      */
-    private void print(final String text,final MutableAttributeSet style) {
+    private void print(final String text, final MutableAttributeSet style) {
         try {
             String newline = "";
-            if (doc.getLength() == 0 || newlineRequired) {
-                style.addAttribute(Attribute.TIMESTAMP, System.currentTimeMillis());
-            }
             if (newlineRequired) {
                 newline = "\n";
                 newlineRequired = false;
@@ -2613,15 +2675,91 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 }
             }
             
+            // Load other stuff from the StyleServer
+            setSettings();
+
             // Additional styles
             SimpleAttributeSet nick = new SimpleAttributeSet(base());
             StyleConstants.setBold(nick, true);
             styles.put("nick", nick);
-            
+
+            //-----------------
+            // Paragraph Style
+            //-----------------
+//            Font font = new Font(StyleConstants.getFontFamily(standard()),
+//                    Font.PLAIN, StyleConstants.getFontSize(standard()));
+//            int fontHeight = new JFrame().getFontMetrics(font).getHeight();
+//            int fontHeight = font.getSize();
             MutableAttributeSet paragraph = styles.get("paragraph");
-            //StyleConstants.setLineSpacing(paragraph, 0.3f);
             paragraph.addAttribute(Attribute.DELETED_LINE, false);
+            /**
+             * Since the line spacing only gets added below the text, first add
+             * as much paragaph spacing above (if available), then distribute
+             * the rest above and below evenly. This should sort of center the
+             * text vertically in the paragraph, which is required for it to
+             * look good with paragraph seperating lines and backgounds.
+             */
+            int fontHeight = MyStyleConstants.getFontHeight(paragraph);
+            int preferredSpaceAbove = (int)Math.ceil(fontHeight * StyleConstants.getLineSpacing(paragraph));
+            int availableSpace = ((Long)paragraph.getAttribute(Attribute.PARAGRAPH_SPACING)).intValue();
+            int remainingSpace = Math.max(availableSpace - preferredSpaceAbove, 0);
+            int actualSpaceAbove = Math.min(preferredSpaceAbove, availableSpace);
+            int topSpacing = (int)(remainingSpace / 2 + actualSpaceAbove);
+            int bottomSpacing = (int)((remainingSpace / 2) + remainingSpace % 2);
+//            System.out.println(preferredSpaceAbove + " " + topSpacing + " " + bottomSpacing);
+            if (Debugging.isEnabled("oldspacings")) {
+                topSpacing = availableSpace / 3;
+                bottomSpacing = (availableSpace / 3) * 2 + availableSpace % 3;
+            }
+            StyleConstants.setSpaceAbove(paragraph, topSpacing);
+            StyleConstants.setSpaceBelow(paragraph, bottomSpacing);
             styles.put("paragraph", paragraph);
+            
+            //editorKit.setBottomMargin(Math.max((preferredSpaceAbove + availableSpace) / 4, 1));
+            int prevBottomMargin = getMargin().bottom;
+            int bottomMarginSetting = numericSettings.get(Setting.BOTTOM_MARGIN);
+            int bottomMargin = bottomMarginSetting;
+            if (bottomMarginSetting < 0) {
+                /**
+                 * Determine bottom margin automatically.
+                 * 
+                 * When there's nothing visually separating lines, then the
+                 * bottom line should (roughly) have as much space below as the
+                 * space to the previous line (so that the text seems vertically
+                 * centered), so add an additional bottom margin. When the lines
+                 * are separated, then only the paragraph's own spacing visually
+                 * belongs to it, so no additional margin is required.
+                 */
+                boolean alternatingBackgrounds = MyStyleConstants.getBackground2(paragraph) != null;
+                boolean separators = MyStyleConstants.getSeparatorColor(paragraph) != null;
+                int fullSpacing = preferredSpaceAbove + availableSpace;
+                if (!alternatingBackgrounds && !separators) {
+                    bottomMargin = (int)Math.max(fullSpacing / 2.5, 1);
+                } else if (!alternatingBackgrounds) {
+                    bottomMargin = 2;
+                } else {
+                    bottomMargin = 0;
+                }
+            }
+            if (Debugging.isEnabled("oldspacings")) {
+                bottomMargin = 3;
+            }
+            if (bottomMargin != prevBottomMargin) {
+                Chatty.println("Bottom Margin: "+bottomMargin);
+                setMargin(new Insets(3, 3, bottomMargin, 3));
+                repaint();
+            }
+            
+            //--------------
+            // Other Styles
+            //--------------
+            SimpleAttributeSet even = new SimpleAttributeSet();
+            even.addAttribute(Attribute.EVEN, true);
+            styles.put("even", even);
+            
+            SimpleAttributeSet odd = new SimpleAttributeSet();
+            odd.addAttribute(Attribute.EVEN, false);
+            styles.put("odd", odd);
             
             SimpleAttributeSet deleted = new SimpleAttributeSet();
             StyleConstants.setStrikeThrough(deleted, true);
@@ -2661,10 +2799,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             styles.put("clearSearchResult", clearSearchResult);
             
             setBackground(styleServer.getColor("background"));
-            
-            // Load other stuff from the StyleServer
-            setSettings();
-            
+
             return somethingChanged;
         }
         
@@ -2697,6 +2832,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addNumericSetting(Setting.EMOTICON_MAX_HEIGHT, 200, 0, 300);
             addNumericSetting(Setting.EMOTICON_SCALE_FACTOR, 100, 1, 200);
             addNumericSetting(Setting.DISPLAY_NAMES_MODE, 0, 0, 10);
+            addNumericSetting(Setting.BOTTOM_MARGIN, -1, -1, 100);
             timestampFormat = styleServer.getTimestampFormat();
             linkController.setPopupEnabled(settings.get(Setting.SHOW_TOOLTIPS));
         }
@@ -2769,9 +2905,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             LOGGER.info("Update styles (only types "+changedStyles+")");
             Element root = doc.getDefaultRootElement();
             for (int i = 0; i < root.getElementCount(); i++) {
-                Element line = root.getElement(i);
-                for (int j = 0; j < line.getElementCount(); j++) {
-                    Element element = line.getElement(j);
+                Element paragraph = root.getElement(i);
+                if (changedStyles.contains("paragraph")) {
+                    doc.setParagraphAttributes(paragraph.getStartOffset(),
+                        1, paragraph(), false);
+                }
+                
+                for (int j = 0; j < paragraph.getElementCount(); j++) {
+                    Element element = paragraph.getElement(j);
                     String type = (String)element.getAttributes().getAttribute(TYPE);
                     int start = element.getStartOffset();
                     int end = element.getEndOffset();
@@ -2784,11 +2925,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                     // the previous one
                     // (seems to be faster than just setting all styles)
                     if (changedStyles.contains(type)) {
-                        if (type.equals("paragraph")) {
-                            //doc.setParagraphAttributes(start, length, rawStyles.get(type), false);
-                        } else {
-                            doc.setCharacterAttributes(start, length, style, false);
-                        }
+                        doc.setCharacterAttributes(start, length, style, false);
                     }
                 }
             }
@@ -2858,9 +2995,22 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
         
         public MutableAttributeSet paragraph() {
-            //System.out.println(styles.get("paragraph"));
-            //styles.get("paragraph").addAttribute(Attribute.TIMESTAMP, System.currentTimeMillis());
             return styles.get("paragraph");
+        }
+        
+        /**
+         * Currently whether the line is even and the timestamp of when the line
+         * was added (this method called).
+         * 
+         * @param even
+         * @return 
+         */
+        public MutableAttributeSet variableLineAttributes(boolean even, boolean updateTimestamp) {
+            MutableAttributeSet style = even ? styles.get("even") : styles.get("odd");
+            if (updateTimestamp) {
+                style.addAttribute(Attribute.TIMESTAMP, System.currentTimeMillis());
+            }
+            return style;
         }
         
         public MutableAttributeSet highlight(Color color) {
@@ -3062,6 +3212,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
 }
 
 
- 
+
 
 
