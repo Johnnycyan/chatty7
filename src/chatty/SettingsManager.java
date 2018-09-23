@@ -605,6 +605,7 @@ public class SettingsManager {
         settings.addBoolean("emoteCodeInDialog", true);
         settings.addBoolean("useNotStrike", false);
         settings.addString("colorBannedHighlightedMessage", "#323232");
+        settings.addBoolean("addAtToMentions", false);
     }
     
     /**

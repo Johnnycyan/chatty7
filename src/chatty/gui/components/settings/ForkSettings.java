@@ -129,6 +129,15 @@ public class ForkSettings extends SettingsPanel {
         notStrike_l.setEnabled(notStrike.isSelected());
         notStrike_t.setEnabled(notStrike.isSelected());
 
+
+
+        JCheckBox addAtToMentions = d.addSimpleBooleanSetting(
+                "addAtToMentions",
+                "Add @ before nickname when mention user by middle-click.",
+                "");
+        fork.add(addAtToMentions,
+                d.makeGbc(0, 17, 3, 1, GridBagConstraints.WEST));
+
         
     }
     

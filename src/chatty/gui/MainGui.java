@@ -2046,7 +2046,12 @@ public class MainGui extends JFrame implements Runnable {
                 } else if (set.equals("customReal")) {
                     n = user.getCustomNickOrReal();
                 }
-                channels.getActiveChannel().insertText(n + ", ", true);
+
+                String at = "";
+                if (client.settings.getBoolean("addAtToMentions")) {
+                    at = "@";
+                }
+                channels.getActiveChannel().insertText(at + n + ", ", true);
                 return;
             }
             if (e == null || (!e.isControlDown() && !e.isAltDown())) {
