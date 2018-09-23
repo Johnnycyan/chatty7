@@ -38,9 +38,6 @@ public class ForkUtil {
     public static String MENTION_NICK = "normal";
     public static boolean EMOTE_CODE = true;
 
-    public static Color COLOR_HIGHLIGHT_MESSAGE = new Color(200, 200, 200);
-    public static boolean USE_HIGHLIGHT2 = false;
-
     public static boolean NOT_STRIKE = false;
     public static Color COLOR_BANNED_HIGHLIGHT_MESSAGE = new Color(50, 50, 50);
 

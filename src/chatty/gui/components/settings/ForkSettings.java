@@ -105,35 +105,6 @@ public class ForkSettings extends SettingsPanel {
                 d.makeGbc(0, 12, 3, 1, GridBagConstraints.WEST));
 
 
-
-
-
-        JCheckBox highlight2 = d.addSimpleBooleanSetting(
-                "useHighlight2",
-                "Highlight messages with background color.",
-                "...");
-        fork.add(highlight2,
-                d.makeGbc(0, 13, 3, 1, GridBagConstraints.WEST));
-
-        JLabel highlight2_l = new JLabel("Background color of highlighted messages:");
-        fork.add(highlight2_l, d.makeGbc(0, 14, 1, 1, GridBagConstraints.WEST));
-        
-        JTextField highlight2_t = d.addSimpleStringSetting("colorBackgroundHighlightedMessage", 10, true);
-        fork.add(highlight2_t, d.makeGbc(1, 14, 2, 1, GridBagConstraints.WEST));
-
-        highlight2.addItemListener(new ItemListener() {
-            @Override
-            public void itemStateChanged(ItemEvent e) {
-                highlight2_l.setEnabled(highlight2.isSelected());
-                highlight2_t.setEnabled(highlight2.isSelected());
-            }
-        });
-
-        highlight2_l.setEnabled(highlight2.isSelected());
-        highlight2_t.setEnabled(highlight2.isSelected());
-
-
-
         JCheckBox notStrike = d.addSimpleBooleanSetting(
                 "useNotStrike",
                 "Highlight banned message in specific color instead of strike.",

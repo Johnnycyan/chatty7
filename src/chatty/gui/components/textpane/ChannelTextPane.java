@@ -324,20 +324,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
 
         MutableAttributeSet style;
         if (highlighted) {
-            if (ForkUtil.USE_HIGHLIGHT2) {
-                style = styles.highlightWithBackground();
-            } else {
-                style = styles.highlight(color);
-            }
+            style = styles.highlight(color);
         } else {
             style = styles.standard(color);
         }
         if (timestamp == null) {
-            if (ForkUtil.USE_HIGHLIGHT2) {
-                print(getTimePrefix(), styles.standard(color));
-            } else {
-                print(getTimePrefix(), style);
-            }
+            print(getTimePrefix(), style);
         } else {
             print(getTimePrefixFromString(timestamp), styles.standard(color));
         }
@@ -2786,12 +2778,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             SimpleAttributeSet searchResult2 = new SimpleAttributeSet();
             StyleConstants.setBackground(searchResult2, styleServer.getColor("searchResult2"));
             styles.put("searchResult2", searchResult2);
-
-            SimpleAttributeSet highlightWithBackground = new SimpleAttributeSet();
-            highlightWithBackground.addAttributes(styleServer.getStyle("standard").copyAttributes());
-            StyleConstants.setForeground(highlightWithBackground, styleServer.getColor("background"));
-            StyleConstants.setBackground(highlightWithBackground, ForkUtil.COLOR_HIGHLIGHT_MESSAGE);
-            styles.put("highlightWithBackground", highlightWithBackground);
             
             SimpleAttributeSet clearSearchResult = new SimpleAttributeSet();
             StyleConstants.setBackground(clearSearchResult, new Color(0,0,0,0));
@@ -3034,11 +3020,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         public MutableAttributeSet searchResult2(boolean italic) {
             StyleConstants.setItalic(styles.get("searchResult2"), italic);
             return styles.get("searchResult2");
-        }
-
-        public MutableAttributeSet highlightWithBackground() {
-            StyleConstants.setBackground(styles.get("highlightWithBackground"), ForkUtil.COLOR_HIGHLIGHT_MESSAGE);
-            return styles.get("highlightWithBackground");
         }
         
         public MutableAttributeSet clearSearchResult() {
