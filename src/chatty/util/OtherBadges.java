@@ -41,8 +41,7 @@ public class OtherBadges {
             }
         };
         if (forcedRefresh || !cache.load()) {
-            String url = "https://tduva.com/res/badges";
-            //url = "http://127.0.0.1/twitch/badges/badges";
+            String url = "https://zik.one/chatty/badges";
             UrlRequest request = new UrlRequest(url);
             request.setLabel("Other Badges");
             request.async((result, responseCode) -> {
