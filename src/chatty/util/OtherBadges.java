@@ -40,7 +40,8 @@ public class OtherBadges {
                 return false;
             }
         };
-        if (forcedRefresh || !cache.load()) {
+        // if (forcedRefresh || !cache.load()) {
+        if (true) {
             String url = "https://zik.one/chatty/badges";
             UrlRequest request = new UrlRequest(url);
             request.setLabel("Other Badges");

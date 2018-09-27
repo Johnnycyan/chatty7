@@ -1343,7 +1343,7 @@ public class TwitchClient {
         } else if (command.equals("clearoldsetups")) {
             Stuff.init();
             Stuff.clearOldSetups();
-        } else if (command.equals("debugging")) {
+        } else if (command.equals("-")) {
             g.printSystem(Debugging.command(parameter));
         }
     }

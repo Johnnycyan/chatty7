@@ -46,6 +46,7 @@ import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Map.Entry;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -81,6 +82,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private final DefaultStyledDocument doc;
     
+    private static AtomicLong idCounter = new AtomicLong();
+    
     private static final Color BACKGROUND_COLOR = new Color(250,250,250);
     
     // Compact mode
@@ -111,9 +114,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     public enum Attribute {
         IS_BAN_MESSAGE, BAN_MESSAGE_COUNT, TIMESTAMP, USER, IS_USER_MESSAGE,
         URL_DELETED, DELETED_LINE, EMOTICON, IS_APPENDED_INFO, INFO_TEXT, BANS,
-        BAN_MESSAGE, ID, ID_AUTOMOD, USERICON,
+        BAN_MESSAGE, ID, ID_AUTOMOD, USERICON, IMAGE_ID,
         
-        HIGHLIGHT_WORD, HIGHLIGHT_LINE, EVEN, PARAGRAPH_SPACING
+        HIGHLIGHT_WORD, HIGHLIGHT_LINE, EVEN, PARAGRAPH_SPACING,
+        
+        IS_REPLACEMENT, REPLACEMENT_FOR, REPLACED_WITH
     }
     
     public enum MessageType {
@@ -150,6 +155,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private int messageTimeout = -1;
     
+    private final MyEditorKit kit;
+    
     private final javax.swing.Timer updateTimer;
     
     public ChannelTextPane(MainGui main, StyleServer styleServer) {
@@ -169,7 +176,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         scrollManager = new ScrollManager();
         this.addMouseListener(scrollManager);
         this.addMouseMotionListener(scrollManager);
-        setEditorKit(new MyEditorKit(startAtBottom));
+        kit = new MyEditorKit(startAtBottom);
+        setEditorKit(kit);
         this.setDocument(new MyDocument());
         doc = (DefaultStyledDocument)getStyledDocument();
         setEditable(false);
@@ -225,9 +233,105 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * This seems pretty ineffecient, because it refreshes the whole document.
      */
     @Override
-    public void iconLoaded() {
-        ((MyDocument)doc).refresh();
+    public void iconLoaded(Image oldImage, Image newImage, boolean sizeChanged) {
+        kit.changeImage(oldImage, newImage);
+        boolean repainted = false;
+        if (!sizeChanged) {
+            repainted = repaintImage(newImage);
+        }
+        if (!repainted) {
+            ((MyDocument)doc).refresh();
+            if (Debugging.isEnabled("gifd", "gifd2")) {
+                Debugging.println("Refresh");
+            }
+        }
         scrollDownIfNecessary();
+    }
+    
+    /**
+     * Customized to handle Animated GIFs more efficiently. Anything else is
+     * handled as default.
+     * 
+     * This will achieve two main things: Only repaint a small area when a new
+     * frame is received (instead of the whole chat) and return false if the GIF
+     * is no longer present in the chat buffer (to stop further notifications).
+     * 
+     * For this purpose MyEditorKit stores the views that are created for
+     * Emotes, by Image. When chat messages are removed, the stored views are
+     * removed as well.
+     * 
+     * Note: Since the Emoticon class will first create a temporary image (the
+     * first time an Emote is added this session), the iconLoaded() method is
+     * called with the temporary and actual loaded image, so the references to
+     * the views can be updated. In order for the correct references to be found
+     * it is important that the temporary image is not reused across several
+     * different Emotes, since it acts as a key for lookup (this could probably
+     * be changed if reusing temporary images is added).
+     */
+    @Override
+    public boolean imageUpdate(Image img, int infoflags,
+                               int x, int y, int w, int h) {
+        if ((infoflags & FRAMEBITS) != 0 && !Debugging.isEnabled("gif1")) {
+            // Paint new frame of multi-frame image
+            boolean imageToRepaintStillPresent = repaintImage(img);
+            
+            if (Debugging.isEnabled("gifd")
+                    || (Debugging.isEnabled("gifd2") && !imageToRepaintStillPresent)) {
+                Debugging.println(String.format("FRAMEBITS (%s) %d,%d,%d,%d %d %s",
+                        img, x, y, w, h,
+                        Debugging.millisecondsElapsed("gifd"),
+                        imageToRepaintStillPresent));
+            }
+            return imageToRepaintStillPresent;
+        }
+        return super.imageUpdate(img, infoflags, x, y, w, h);
+    }
+    
+    /**
+     * Repaint the given image based on the views stored for it. If no views are
+     * present, then nothing is repainted and this returns false.
+     * 
+     * @param image The image to repaint, used to find the associated views
+     * @return true if any repainting was attempted, false otherwise
+     */
+    private boolean repaintImage(Image image) {
+        Collection<MyIconView> set = kit.getByImage(image);
+        if (set != null && !set.isEmpty()) {
+            Rectangle r = new Rectangle();
+            for (MyIconView v : set) {
+                v.getRectangle(r);
+                repaint(r);
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * Remove text from chat, while also handling Emotes in the removed section
+     * correctly.
+     *
+     * @param start Start offset
+     * @param len Length of section to remove
+     * @throws BadLocationException 
+     */
+    private void remove(int start, int len) throws BadLocationException {
+        Debugging.edt();
+        int startLine = doc.getDefaultRootElement().getElementIndex(start);
+        int endLine = doc.getDefaultRootElement().getElementIndex(start+len);
+        Set<Long> before = Util.getImageIds(doc, startLine, endLine);
+        doc.remove(start, len);
+        if (!before.isEmpty()) {
+            Set<Long> after = Util.getImageIds(doc, startLine, endLine);
+            if (Debugging.isEnabled("gifd", "gifd2")) {
+                Debugging.println(String.format("Removed %d+%d (Before: %s After: %s)",
+                        start, len, before, after));
+            }
+            before.removeAll(after);
+            for (long id : before) {
+                kit.clearImage(id);
+            }
+        }
     }
     
     /**
@@ -280,7 +384,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         if (!StringUtil.isNullOrEmpty(message.attachedMessage)) {
             print("[", styles.info());
             // Output with emotes, but don't turn URLs into clickable links
-            printSpecials(message.attachedMessage, message.user, styles.info(), message.emotes, true, false, null);
+            printSpecials(message.attachedMessage, message.user, styles.info(), message.emotes, true, false, null, null, null);
             print("]", styles.info());
         }
         finishLine();
@@ -339,7 +443,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         if (!highlighted && color == null && action && styles.actionColored()) {
             style = styles.standard(user.getDisplayColor());
         }
-        printSpecials(text, user, style, emotes, false, message.bits > 0, message.highlightMatches);
+        printSpecials(text, user, style, emotes, false, message.bits > 0,
+                message.highlightMatches,
+                message.replaceMatches, message.replacement);
         
         if (message.highlighted) {
             setLineHighlighted(doc.getLength());
@@ -748,7 +854,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             try {
                 int removedStart = messageStartOffset + maxLength;
                 int removedLength = messageLength - maxLength;
-                doc.remove(removedStart, removedLength);
+                remove(removedStart, removedLength);
                 length = length - removedLength - 1;
                 doc.insertString(removedStart, "..", styles.info());
                 messageLength = maxLength + 2;
@@ -788,7 +894,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             int endOffset = messageOffsets[1];
             try {
                 // -1 to length to not delete newline character (I think :D)
-                doc.remove(startOffset, endOffset - startOffset - 1);
+                remove(startOffset, endOffset - startOffset - 1);
                 doc.insertString(startOffset, "<message deleted>", styles.info());
                 setLineDeleted(startOffset);
             } catch (BadLocationException ex) {
@@ -1530,6 +1636,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
         Element firstToRemove = doc.getDefaultRootElement().getElement(0);
         Element lastToRemove = doc.getDefaultRootElement().getElement(amount - 1);
+        // TODO: change to fix for amount, maybe change to removing elements
+        clearImages(firstToRemove);
+        clearImages(lastToRemove);
         //System.out.println(firstToRemove+" "+lastToRemove);
         int startOffset = firstToRemove.getStartOffset();
         int endOffset = lastToRemove.getEndOffset();
@@ -1569,8 +1678,21 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         try {
             doc.remove(0, doc.getLength());
             resetNewlineRequired();
+            kit.clearImages();
         } catch (BadLocationException ex) {
             Logger.getLogger(ChannelTextPane.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    private void clearImages(Element element) {
+        Long imageId = (Long)element.getAttributes().getAttribute(Attribute.IMAGE_ID);
+        if (imageId != null) {
+            kit.clearImage(imageId);
+        }
+        if (!element.isLeaf()) {
+            for (int i=0; i<element.getElementCount(); i++) {
+                clearImages(element.getElement(i));
+            }
         }
     }
     
@@ -1699,11 +1821,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     protected void printSpecials(String text, User user, MutableAttributeSet style,
             TagEmotes emotes, boolean ignoreLinks, boolean containsBits,
-            java.util.List<Match> highlightMatches) {
+            java.util.List<Match> highlightMatches,
+            java.util.List<Match> replacements, String replacement) {
         // Where stuff was found
         TreeMap<Integer,Integer> ranges = new TreeMap<>();
         // The style of the stuff (basicially metadata)
         HashMap<Integer,MutableAttributeSet> rangesStyle = new HashMap<>();
+        
+        applyReplacements(text, replacements, replacement, ranges, rangesStyle);
         
         if (!ignoreLinks) {
             findLinks(text, ranges, rangesStyle);
@@ -1730,7 +1855,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
 //                print(processed, style);
                 specialPrint(user, text, lastPrintedPos, start, style, highlightMatches);
             }
-            print(text.substring(start, end + 1),rangesStyle.get(start));
+            AttributeSet rangeStyle = rangesStyle.get(start);
+            String rangeText;
+            if (rangeStyle.containsAttribute(Attribute.IS_REPLACEMENT, true)) {
+                rangeText = (String)rangeStyle.getAttribute(Attribute.REPLACED_WITH);
+            } else {
+                rangeText = text.substring(start, end + 1);
+            }
+            print(rangeText, rangeStyle);
             lastPrintedPos = end + 1;
         }
         // If anything is left, print that as well as regular text
@@ -1805,6 +1937,23 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         return result;
     }
     
+    private void applyReplacements(String text, java.util.List<Match> matches,
+            String replacement,
+            Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle) {
+        if (matches != null) {
+            if (StringUtil.isNullOrEmpty(replacement)) {
+                replacement = "..";
+            }
+            for (Match m : matches) {
+                if (!inRanges(m.start, ranges) && !inRanges(m.end, ranges)) {
+                    ranges.put(m.start, m.end - 1);
+                    String replacedText = text.substring(m.start, m.end);
+                    rangesStyle.put(m.start, styles.replacement(replacedText, replacement));
+                }
+            }
+        }
+    }
+    
     private void findLinks(String text, Map<Integer, Integer> ranges,
             Map<Integer, MutableAttributeSet> rangesStyle) {
         // Find links
@@ -1812,7 +1961,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         while (urlMatcher.find()) {
             int start = urlMatcher.start();
             int end = urlMatcher.end() - 1;
-            if (!inRanges(start, ranges) && !inRanges(end,ranges)) {
+            if (!inRanges(start, ranges) && !inRanges(end, ranges)) {
                 String foundUrl = urlMatcher.group();
                 
                 // Check if URL contains ( ) like http://example.com/test(abc)
@@ -1932,7 +2081,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                         }
                         emoticon = b.build();
                         main.emoticons.addTempEmoticon(emoticon);
-                        LOGGER.info("Added emote from message: "+emoticon);
                     }
                     if (!main.emoticons.isEmoteIgnored(emoticon)) {
                         addEmoticon(emoticon, start, end, ranges, rangesStyle);
@@ -2091,7 +2239,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param text
      * @param style 
      */
-    private void print(final String text, final MutableAttributeSet style) {
+    private void print(final String text, final AttributeSet style) {
         try {
             String newline = "";
             if (newlineRequired) {
@@ -3150,6 +3298,15 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             return urlStyle;
         }
         
+        public MutableAttributeSet replacement(String text, String replacement) {
+            SimpleAttributeSet style = new SimpleAttributeSet(standard());
+            StyleConstants.setUnderline(style, true);
+            style.addAttribute(Attribute.IS_REPLACEMENT, true);
+            style.addAttribute(Attribute.REPLACEMENT_FOR, text);
+            style.addAttribute(Attribute.REPLACED_WITH, replacement);
+            return style;
+        }
+        
         /**
          * Make a style with the given icon.
          * 
@@ -3164,6 +3321,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             StyleConstants.setIcon(emoteStyle, emoteImage.getImageIcon());
             
             emoteStyle.addAttribute(Attribute.EMOTICON, emoteImage);
+            emoteStyle.addAttribute(Attribute.IMAGE_ID, idCounter.getAndIncrement());
             Emoticons.addInfo(main.emoticons.getEmotesetInfo(), emoticon);
             return emoteStyle;
         }
