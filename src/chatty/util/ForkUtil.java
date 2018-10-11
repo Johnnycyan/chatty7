@@ -41,6 +41,9 @@ public class ForkUtil {
     public static boolean NOT_STRIKE = false;
     public static Color COLOR_BANNED_HIGHLIGHT_MESSAGE = new Color(50, 50, 50);
 
+    public static boolean REPLACEMENT_UNDERLINE = false;
+    public static String REPLACEMENT_EMPTY = "..";
+
     public static Map<String, String> completionLangs = new HashMap<>();
     static {
         // "Ж" and "ж" are swaped because "search" text is in lower case.

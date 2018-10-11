@@ -1942,7 +1942,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle) {
         if (matches != null) {
             if (StringUtil.isNullOrEmpty(replacement)) {
-                replacement = "..";
+                replacement = ForkUtil.REPLACEMENT_EMPTY;
             }
             for (Match m : matches) {
                 if (!inRanges(m.start, ranges) && !inRanges(m.end, ranges)) {
@@ -3300,7 +3300,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         public MutableAttributeSet replacement(String text, String replacement) {
             SimpleAttributeSet style = new SimpleAttributeSet(standard());
-            StyleConstants.setUnderline(style, true);
+            StyleConstants.setUnderline(style, ForkUtil.REPLACEMENT_UNDERLINE);
             style.addAttribute(Attribute.IS_REPLACEMENT, true);
             style.addAttribute(Attribute.REPLACEMENT_FOR, text);
             style.addAttribute(Attribute.REPLACED_WITH, replacement);
