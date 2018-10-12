@@ -565,6 +565,9 @@ public class LinkController extends MouseAdapter {
                 }
             }
         }
+        if (Debugging.isEnabled("tt")) {
+            emoteInfo += " ["+emoticonImage.getImageIcon().getDescription()+"]";
+        }
         String code = emote.type == Emoticon.Type.EMOJI ? emote.stringId : Emoticons.toWriteable(emote.code);
         return String.format("%s%s<br /><span style='font-weight:normal'>%s</span>",
                 POPUP_HTML_PREFIX,
@@ -584,6 +587,9 @@ public class LinkController extends MouseAdapter {
         }
         if (usericon.source == Usericon.SOURCE_CUSTOM) {
             info += " (Custom)";
+        }
+        if (Debugging.isEnabled("tt")) {
+            info += " ["+usericon.image.getDescription()+"]";
         }
         return info;
     }
