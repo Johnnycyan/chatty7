@@ -54,7 +54,7 @@ public class Chatty {
      * by points. May contain a single "b" for beta versions, which are counted
      * as older (so 0.8.7b4 is older than 0.8.7).
      */
-    public static final String VERSION = "0.9.2.129";
+    public static final String VERSION = "0.9.2.131";
     
     /**
      * Enable Version Checker (if you compile and distribute this yourself, you
@@ -260,7 +260,7 @@ public class Chatty {
     }
     
     public static String getTempDirectory() {
-        return System.getProperty("java.io.tmpdir")+File.separator;
+        return System.getProperty("java.io.tmpdir");
     }
     
     public static String getDebugLogDirectory() {
