@@ -159,20 +159,8 @@ public class SettingsManager {
         settings.addBoolean("foreignToken", false);
         // Don't save setting, login with password isn't possible anymore
         settings.addBoolean("usePassword", false, false);
-
-        // Token
-        settings.addBoolean("token_editor", false);
-        settings.setFile("token_editor", loginFile);
-        settings.addBoolean("token_commercials", false);
-        settings.setFile("token_commercials", loginFile);
-        settings.addBoolean("token_user", false);
-        settings.setFile("token_user", loginFile);
-        settings.addBoolean("token_subs", false);
-        settings.setFile("token_subs", loginFile);
-        settings.addBoolean("token_chat", false);
-        settings.setFile("token_chat", loginFile);
-        settings.addBoolean("token_follow", false);
-        settings.setFile("token_follow", loginFile);
+        settings.addList("scopes", new HashSet<>(), Setting.STRING);
+        settings.setFile("scopes", loginFile);
 
         //=================
         // Appearance / GUI
@@ -521,6 +509,7 @@ public class SettingsManager {
         settings.addBoolean("logMod", true);
         settings.addBoolean("logJoinPart", false);
         settings.addBoolean("logBan", true);
+        settings.addBoolean("logDeleted", true);
         settings.addBoolean("logSystem", false);
         settings.addBoolean("logInfo", true);
         settings.addBoolean("logViewerstats", true);
@@ -585,6 +574,7 @@ public class SettingsManager {
         settings.addString("streamHighlightCommand", "!highlight");
         settings.addString("streamHighlightChannel", "");
         settings.addBoolean("streamHighlightChannelRespond", false);
+        settings.addBoolean("streamHighlightMarker", true);
 
         // Stream Status Writer
         settings.addBoolean("enableStatusWriter", false);
@@ -750,6 +740,13 @@ public class SettingsManager {
                         + "@AutoMod\n"
                         + ".Approve=/Automod_approve\n"
                         + ".Deny=/Automod_deny");
+            }
+        }
+        if (switchedFromVersionBefore("0.9.3")) {
+            String currentValue = settings.getString("timeoutButtons");
+            if (!StringUtil.toLowerCase(currentValue).contains("/delete")) {
+                settings.setString("timeoutButtons", currentValue + "\n\n"
+                        + "Delete=/delete $$(msg-id)");
             }
         }
         if (switchedFromVersionBefore("0.9.1b3")) {

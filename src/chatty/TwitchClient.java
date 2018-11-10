@@ -98,7 +98,8 @@ public class TwitchClient {
             + "&client_id="+Chatty.CLIENT_ID
             + "&redirect_uri="+Chatty.REDIRECT_URI
             + "&force_verify=true"
-            + "&scope=chat_login";
+            + "&scope=";
+
     /**
      * The interval to check version in (seconds)
      */
@@ -216,6 +217,8 @@ public class TwitchClient {
         settingsManager.overrideSettings();
         settingsManager.debugSettings();
         
+        initDxSettings();
+        
         Language.setLanguage(settings.getString("language"));
         
         pubsub = new chatty.util.api.pubsub.Manager(
@@ -282,8 +285,6 @@ public class TwitchClient {
         streamStatusWriter.setEnabled(settings.getBoolean("enableStatusWriter"));
         settings.addSettingChangeListener(streamStatusWriter);
         
-        initDxSettings();
-        
         LaF.setSettings(settings);
         LaF.setLookAndFeel(settings.getString("laf"), settings.getString("lafTheme"));
         GuiUtil.addMacKeyboardActions();
@@ -342,6 +343,8 @@ public class TwitchClient {
     }
     
     public void init() {
+        LOGGER.info("GUI shown");
+        
         // Output any cached warning messages
         warning(null);
         
@@ -1080,6 +1083,9 @@ public class TwitchClient {
         else if (command.equals("automod_deny")) {
             autoModCommandHelper.deny(channel, parameter);
         }
+        else if (command.equals("marker")) {
+            commandAddStreamMarker(room, parameter);
+        }
         else if (command.equals("addstreamhighlight")) {
             commandAddStreamHighlight(room, parameter);
         }
@@ -1367,7 +1373,7 @@ public class TwitchClient {
     }
     
     public void anonCustomCommand(Room room, CustomCommand command, Parameters parameters) {
-        if (command.getError() != null) {
+        if (command.hasError()) {
             g.printLine("Custom command invalid: "+command.getError());
             return;
         }
@@ -1661,6 +1667,17 @@ public class TwitchClient {
         }
     }
     
+    public void commandAddStreamMarker(Room room, String description) {
+        api.createStreamMarker(room.getStream(), description, error -> {
+            String info = StringUtil.aEmptyb(description, "no description", "'%s'");
+            if (error == null) {
+                g.printLine("Stream marker created ("+info+")");
+            } else {
+                g.printLine("Failed to create stream marker ("+info+"): "+error);
+            }
+        });
+    }
+    
     private void commandRefresh(String channel, String parameter) {
         if (!Helper.isRegularChannel(channel)) {
             channel = null;
@@ -1899,6 +1916,11 @@ public class TwitchClient {
         }
         
         @Override
+        public void tokenRevoked(String error) {
+            // TODO
+        }
+        
+        @Override
         public void runCommercialResult(String stream, String text, RequestResultCode result) {
             commercialResult(stream, text, result);
         }
@@ -1915,7 +1937,7 @@ public class TwitchClient {
 
         @Override
         public void accessDenied() {
-            checkToken();
+            api.checkToken();
         }
 
         @Override
@@ -2039,10 +2061,6 @@ public class TwitchClient {
             }
         }
         
-    }
-    
-    private void checkToken() {
-        api.checkToken(settings.getString("token"));
     }
     
     // Webserver
@@ -2552,20 +2570,10 @@ public class TwitchClient {
         public void onUserRemoved(User user) {
             g.removeUser(user);
         }
-        
-        private final Pattern findId = Pattern.compile(
-                        "([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})",
-                        Pattern.CASE_INSENSITIVE);
 
         @Override
         public void onBan(User user, long duration, String reason, String targetMsgId) {
             User localUser = c.getLocalUser(user.getChannel());
-//            Matcher m = findId.matcher(reason);
-//            String id = null;
-//            if (m.find()) {
-//                id = m.group();
-//                reason = reason.replace(id, "").trim();
-//            }
             if (localUser != user && !localUser.hasModeratorRights()) {
                 // Remove reason if not the affected user and not a mod, to be
                 // consistent with other applications
@@ -2575,6 +2583,17 @@ public class TwitchClient {
             ChannelInfo channelInfo = api.getOnlyCachedChannelInfo(user.getName());
             chatLog.userBanned(user.getRoom().getFilename(), user.getRegularDisplayNick(),
                     duration, reason, channelInfo);
+        }
+        
+        @Override
+        public void onMsgDeleted(User user, String targetMsgId, String msg) {
+            User localUser = c.getLocalUser(user.getChannel());
+            if (localUser == user) {
+                g.printLine(user.getRoom(), "Your message was deleted: "+msg);
+            } else {
+                g.msgDeleted(user, targetMsgId, msg);
+            }
+            chatLog.msgDeleted(user, msg);
         }
         
         @Override
@@ -2605,7 +2624,7 @@ public class TwitchClient {
         public void onDisconnect(int reason, String reasonMessage) {
             //g.clearUsers();
             if (reason == Irc.ERROR_REGISTRATION_FAILED) {
-                checkToken();
+                api.checkToken();
             }
             if (reason == Irc.ERROR_CONNECTION_CLOSED) {
                 pubsub.checkConnection();

@@ -2,7 +2,6 @@
 package chatty.gui;
 
 import chatty.gui.components.textpane.UserMessage;
-import chatty.gui.components.userinfo.UserInfo;
 import chatty.gui.components.DebugWindow;
 import chatty.gui.components.ChannelInfoDialog;
 import chatty.gui.components.LinkLabelListener;
@@ -51,7 +50,6 @@ import chatty.gui.components.SearchDialog;
 import chatty.gui.components.ImageDialog;
 import chatty.gui.components.StreamChat;
 import chatty.gui.components.updating.UpdateDialog;
-import chatty.gui.components.UpdateMessage;
 import chatty.gui.components.menus.CommandActionEvent;
 import chatty.gui.components.menus.CommandMenuItems;
 import chatty.gui.components.menus.ContextMenuHelper;
@@ -710,11 +708,19 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
         
-        hotkeyManager.registerAction("stream.addhighlight", "Add Stream Highlight", new AbstractAction() {
+        hotkeyManager.registerAction("stream.addhighlight", "Stream: Add Stream Highlight", new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
                 hotkeyCommand("addstreamhighlight", null, false);
+            }
+        });
+        
+        hotkeyManager.registerAction("stream.addmarker", "Stream: Add Stream Marker", new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                hotkeyCommand("marker", null, false);
             }
         });
         
@@ -801,6 +807,7 @@ public class MainGui extends JFrame implements Runnable {
                 if (!guiCreated) {
                     return;
                 }
+                
                 channels.setInitialFocus();
                 
                 windowStateManager.loadWindowStates();
@@ -939,7 +946,11 @@ public class MainGui extends JFrame implements Runnable {
         emoticons.addEmoji(client.settings.getString("emoji"));
         emoticons.setCheerState(client.settings.getString("cheersType"));
         emoticons.setCheerBackground(HtmlColors.decode(client.settings.getString("backgroundColor")));
+        
         client.api.setToken(client.settings.getString("token"));
+        if (client.settings.getList("scopes").isEmpty()) {
+            client.api.checkToken();
+        }
         
         userInfoDialog.setFontSize(client.settings.getLong("dialogFontSize"));
         
@@ -1270,23 +1281,31 @@ public class MainGui extends JFrame implements Runnable {
             // Token Dialog actions
             //---------------------------
             else if (event.getSource() == tokenDialog.getDeleteTokenButton()) {
-                int result = JOptionPane.showConfirmDialog(tokenDialog,
+                int result = JOptionPane.showOptionDialog(tokenDialog,
                         "<html><body style='width:400px'>"
-                        + "This removes the login token from Chatty.<br><br>"
-                        + "It does not revoke access for the token, which "
-                        + "usually is no problem if the token isn't saved "
-                        + "anywhere else. If you suspect it may still be stored "
-                        + "in other places (or even compromised) you have to go "
-                        + "to <code>twitch.tv/settings/connections</code> and "
-                        + "click 'Disconnect' next to Chatty to revoke access.",
-                        "Save Settings to file",
-                        JOptionPane.OK_CANCEL_OPTION);
+                                + Language.getString("login.removeLogin")
+                                + "<ul>"
+                                + "<li>"+Language.getString("login.removeLogin.revoke")
+                                + "<li>"+Language.getString("login.removeLogin.remove")
+                                + "</ul>"
+                                + Language.getString("login.removeLogin.note"),
+                        Language.getString("login.removeLogin.title"),
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        new String[]{Language.getString("login.removeLogin.button.revoke"),
+                            Language.getString("login.removeLogin.button.remove"),
+                            Language.getString("dialog.button.cancel")},
+                        Language.getString("login.removeLogin.button.revoke"));
                 if (result == 0) {
+                    client.api.revokeToken(client.settings.getString("token"));
+                }
+                if (result == 0 || result == 1) {
                     client.settings.setString("token", "");
                     client.settings.setBoolean("foreignToken", false);
                     client.settings.setString("username", "");
                     client.settings.setString("userid", "");
-                    resetTokenScopes();
+                    client.settings.listClear("scopes");
                     updateConnectionDialog(null);
                     tokenDialog.update("", "");
                     updateTokenScopes();
@@ -2979,6 +2998,17 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
     }
+    
+    public void msgDeleted(final User user, String targetMsgId, String msg) {
+        SwingUtilities.invokeLater(() -> {
+            channels.getChannel(user.getRoom()).userBanned(user, -2, null, targetMsgId);
+            user.addMsgDeleted(targetMsgId, msg);
+            updateUserInfoDialog(user);
+            if (client.settings.listContains("streamChatChannels", user.getChannel())) {
+                streamChat.userBanned(user, -2, null, targetMsgId);
+            }
+        });
+    }
 
     public void clearChat() {
         clearChat(null);
@@ -3877,7 +3907,7 @@ public class MainGui extends JFrame implements Runnable {
                 showTokenWarning();
             }
         }
-        else if (!tokenInfo.chat_access) {
+        else if (!tokenInfo.hasScope(TokenInfo.Scope.CHAT)) {
             result = "No chat access (required) with token.";
         }
         else {
@@ -3918,15 +3948,9 @@ public class MainGui extends JFrame implements Runnable {
             return;
         }
         if (info.valid) {
-            client.settings.setBoolean("token_chat", info.chat_access);
-            client.settings.setBoolean("token_editor", info.channel_editor);
-            client.settings.setBoolean("token_commercials", info.channel_commercials);
-            client.settings.setBoolean("token_user", info.user_read);
-            client.settings.setBoolean("token_subs", info.channel_subscriptions);
-            client.settings.setBoolean("token_follow", info.user_follows_edit);
-        }
-        else {
-            resetTokenScopes();
+            client.settings.putList("scopes", info.scopes);
+        } else {
+            client.settings.listClear("scopes");
         }
         updateTokenScopes();
     }
@@ -3935,23 +3959,11 @@ public class MainGui extends JFrame implements Runnable {
      * Updates the token scopes in the GUI based on the settings.
      */
     private void updateTokenScopes() {
-        boolean chat = client.settings.getBoolean("token_chat");
-        boolean commercials = client.settings.getBoolean("token_commercials");
-        boolean editor = client.settings.getBoolean("token_editor");
-        boolean user = client.settings.getBoolean("token_user");
-        boolean subscriptions = client.settings.getBoolean("token_subs");
-        boolean follow = client.settings.getBoolean("token_follow");
-        tokenDialog.updateAccess(chat, editor, commercials, user, subscriptions, follow);
-        adminDialog.updateAccess(editor, commercials);
-    }
-    
-    private void resetTokenScopes() {
-        client.settings.setBoolean("token_chat", false);
-        client.settings.setBoolean("token_commercials", false);
-        client.settings.setBoolean("token_editor", false);
-        client.settings.setBoolean("token_user", false);
-        client.settings.setBoolean("token_subs", false);
-        client.settings.setBoolean("token_follow", false);
+        Collection<String> scopes = client.settings.getList("scopes");
+        tokenDialog.updateAccess(scopes);
+        adminDialog.updateAccess(
+                scopes.contains(TokenInfo.Scope.EDITOR.scope),
+                scopes.contains(TokenInfo.Scope.COMMERICALS.scope));
     }
     
     public void showTokenWarning() {
@@ -4167,7 +4179,7 @@ public class MainGui extends JFrame implements Runnable {
      */
     private void requestFollowedStreams() {
         if (client.settings.getBoolean("requestFollowedStreams") &&
-                client.settings.getBoolean("token_user")) {
+                client.settings.getList("scopes").contains(TokenInfo.Scope.USERINFO.scope)) {
             client.api.getFollowedStreams(client.settings.getString("token"));
         }
     }
