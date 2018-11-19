@@ -116,6 +116,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         CHAT("Chat", Language.getString("settings.page.chat")),
         NAMES("Names", Language.getString("settings.page.names")),
         MODERATION("Moderation", Language.getString("settings.page.moderation")),
+        STREAM("Stream", Language.getString("settings.page.stream")),
         FORK("Fork", Language.getString("settings.page.fork"));
         
         public final String name;
@@ -172,6 +173,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
             Page.ADVANCED,
             Page.COMPLETION,
             Page.HISTORY,
+            Page.STREAM,
             Page.HOTKEYS,
             Page.FORK,
         }));
@@ -254,6 +256,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         cards.add(new ChatSettings(this), Page.CHAT.name);
         nameSettings = new NameSettings(this);
         cards.add(nameSettings, Page.NAMES.name);
+        cards.add(new StreamSettings(this), Page.STREAM.name);
         cards.add(new ForkSettings(this), Page.FORK.name);
 
         // Track current settings page
@@ -389,9 +392,11 @@ public class SettingsDialog extends JDialog implements ActionListener {
     }
     
     public void updateBackgroundColor() {
-        Color color = HtmlColors.decode(getStringSetting("backgroundColor"));
-        usercolorSettings.setBackgroundColor(color);
-        msgColorSettings.setBackgroundColor(color);
+        Color foreground = HtmlColors.decode(getStringSetting("foregroundColor"));
+        msgColorSettings.setDefaultForeground(foreground);
+        Color background = HtmlColors.decode(getStringSetting("backgroundColor"));
+        usercolorSettings.setDefaultBackground(background);
+        msgColorSettings.setDefaultBackground(background);
     }
     
     /**
@@ -629,7 +634,16 @@ public class SettingsDialog extends JDialog implements ActionListener {
     }
     
     protected ComboStringSetting addComboStringSetting(String name, int size, boolean editable, String[] choices) {
-        ComboStringSetting result = new ComboStringSetting(choices);
+        Map<String, String> localizedChoices = new LinkedHashMap<>();
+        for (String choice : choices) {
+            String label = Language.getString("settings.string."+name+".option."+choice, false);
+            if (label != null) {
+                localizedChoices.put(choice, label);
+            } else {
+                localizedChoices.put(choice, choice);
+            }
+        }
+        ComboStringSetting result = new ComboStringSetting(localizedChoices);
         result.setEditable(editable);
         stringSettings.put(name, result);
         return result;

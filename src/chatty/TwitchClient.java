@@ -22,6 +22,7 @@ import chatty.gui.GuiUtil;
 import chatty.gui.LaF;
 import chatty.gui.MainGui;
 import chatty.gui.components.updating.Stuff;
+import chatty.splash.Splash;
 import chatty.util.BTTVEmotes;
 import chatty.util.BotNameManager;
 import chatty.util.DateTime;
@@ -64,6 +65,8 @@ import chatty.util.commands.Parameters;
 import chatty.util.settings.Settings;
 import chatty.util.settings.SettingsListener;
 import chatty.util.srl.SpeedrunsLive;
+import java.awt.Point;
+import java.awt.SplashScreen;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
@@ -185,7 +188,6 @@ public class TwitchClient {
     private boolean fixServer = false;
     
     public TwitchClient(Map<String, String> args) {
-
         // Logging
         new Logging(this);
         Thread.setDefaultUncaughtExceptionHandler(new ErrorHandler());
@@ -198,16 +200,7 @@ public class TwitchClient {
                 +" [Classpath] "+System.getProperty("java.class.path"));
         LOGGER.info("Retina Display: "+GuiUtil.hasRetinaDisplay());
         
-        // Create after Logging is created, since that resets some stuff
-        ircLogger = new IrcLogger();
-        
-        createTestUser("tduva", "");
-        
         settings = new Settings(Chatty.getUserDataDirectory()+"settings");
-        api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
-        twitchemotes = new TwitchEmotes(new TwitchemotesListener());
-        bttvEmotes = new BTTVEmotes(new EmoteListener());
-        
         // Settings
         settingsManager = new SettingsManager(settings);
         settingsManager.defineSettings();
@@ -217,6 +210,19 @@ public class TwitchClient {
         settingsManager.overrideSettings();
         settingsManager.debugSettings();
         
+        if (settings.getBoolean("splash")) {
+            Splash.initSplashScreen(Splash.getLocation((String)settings.mapGet("windows", "main")));
+        }
+
+        // Create after Logging is created, since that resets some stuff
+        ircLogger = new IrcLogger();
+
+        createTestUser("tduva", "");
+        
+        api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
+        twitchemotes = new TwitchEmotes(new TwitchemotesListener());
+        bttvEmotes = new BTTVEmotes(new EmoteListener());
+
         initDxSettings();
         
         Language.setLanguage(settings.getString("language"));
@@ -344,6 +350,7 @@ public class TwitchClient {
     
     public void init() {
         LOGGER.info("GUI shown");
+        Splash.closeSplashScreen();
         
         // Output any cached warning messages
         warning(null);
@@ -451,7 +458,7 @@ public class TwitchClient {
         testUser = new User(name, name, Room.createRegular(channel));
         testUser.setColor("blue");
         testUser.setGlobalMod(true);
-        testUser.setBot(true);
+        //testUser.setBot(true);
         //testUser.setTurbo(true);
         //testUser.setModerator(true);
         //testUser.setSubscriber(true);

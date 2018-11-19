@@ -326,7 +326,7 @@ public class TwitchConnection {
      * for reconnecting.
      * 
      * @param server The server address to connect to
-     * @param serverPorts The server ports to connect to (comma-seperated list)
+     * @param serverPorts The server ports to connect to (comma-separated list)
      * @param username The username to use for connecting
      * @param password The password
      * @param autojoin The channels to join after connecting
@@ -1091,9 +1091,8 @@ public class TwitchConnection {
             }
             User user = userJoined(channel, login);
             updateUserFromTags(user, tags);
-            if (tags.isValue("msg-id", "resub") || tags.isValue("msg-id", "sub")
-                    || tags.isValue("msg-id", "subgift")) {
-                if (tags.isValue("msg-id", "subgift")) {
+            if (tags.isValueOf("msg-id", "resub", "sub", "subgift", "anonsubgift")) {
+                if (tags.isValueOf("msg-id", "subgift", "anonsubgift")) {
                     giftedSubCombiner.add(user, text, message, months, emotes, tags);
                 } else {
                     listener.onSubscriberNotification(user, text, message, months, emotes);
@@ -1135,12 +1134,16 @@ public class TwitchConnection {
             } else {
                 info(channel, "[Info] " + text);
             }
+            if (text.startsWith("The VIPs of this channel are")) {
+                List<String> vipsList = TwitchCommands.parseModsList(text);
+                info(channel, "There are "+vipsList.size()+" VIPs on this channel.");
+            }
         }
 
         /**
          * Counts the moderators in the /mods response and outputs the count.
          *
-         * @param text The mesasge from jtv containing the comma-seperated
+         * @param text The mesasge from jtv containing the comma-separated
          * moderator list.
          * @param channel The channel the moderators list was received on, or
          * {@literal null} if the channel is unknown

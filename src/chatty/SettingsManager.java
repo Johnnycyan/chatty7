@@ -130,7 +130,7 @@ public class SettingsManager {
         settings.addString("serverDefault", "irc.chat.twitch.tv");
         settings.addString("portDefault", "6697,6667,443,80");
 
-        // Seperate settings for commandline/temp so others can be saved
+        // Separate settings for commandline/temp so others can be saved
         settings.addString("server", "", false);
         settings.addString("port", "", false);
         
@@ -337,6 +337,7 @@ public class SettingsManager {
         settings.addBoolean("noddraw", false);
         settings.addBoolean("bufferStrategy1", false);
         settings.addBoolean("mainResizable", true);
+        settings.addBoolean("splash", true);
         
         // Tray
         settings.addBoolean("closeToTray", false);
@@ -535,6 +536,7 @@ public class SettingsManager {
         settings.addBoolean("completionAllNameTypesRestriction", true);
         settings.addString("completionTab", "both");
         settings.addString("completionTab2", "emotes");
+        settings.addString("completionSearch", "words");
 
         // Stream Chat
         settings.addLong("streamChatMessageTimeout", -1);
@@ -815,19 +817,19 @@ public class SettingsManager {
         if (Chatty.getInvalidSettingsDirectory() != null) {
             LOGGER.warning("Invalid -d dir: "+Chatty.getInvalidSettingsDirectory());
         }
-        StringBuilder result = new StringBuilder("Settings: ");
-        boolean first = true;
-        for (String setting : debugSettings) {
-            if (!first) {
-                result.append(", ");
-            } else {
-                first = false;
-            }
-            result.append(setting);
-            result.append(":");
-            result.append(settings.settingValueToString(setting));
-        }
-        LOGGER.info(result.toString());
+//        StringBuilder result = new StringBuilder("Settings: ");
+//        boolean first = true;
+//        for (String setting : debugSettings) {
+//            if (!first) {
+//                result.append(", ");
+//            } else {
+//                first = false;
+//            }
+//            result.append(setting);
+//            result.append(":");
+//            result.append(settings.settingValueToString(setting));
+//        }
+//        LOGGER.info(result.toString());
     }
     
     private void addDefaultHotkey(String version, String id, String hotkey) {

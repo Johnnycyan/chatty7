@@ -118,6 +118,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         BAN_MESSAGE, ID, ID_AUTOMOD, USERICON, IMAGE_ID, ANIMATED,
         
         HIGHLIGHT_WORD, HIGHLIGHT_LINE, EVEN, PARAGRAPH_SPACING,
+        CUSTOM_BACKGROUND,
         
         IS_REPLACEMENT, REPLACEMENT_FOR, REPLACED_WITH
     }
@@ -505,6 +506,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         if (message.highlighted) {
             setLineHighlighted(doc.getLength());
+        }
+        if (message.backgroundColor != null) {
+            setCustomBackgroundColor(doc.getLength(), message.backgroundColor);
         }
         finishLine();
     }
@@ -996,6 +1000,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private void setLineHighlighted(int offset) {
         SimpleAttributeSet attr = new SimpleAttributeSet();
         attr.addAttribute(Attribute.HIGHLIGHT_LINE, true);
+        doc.setParagraphAttributes(offset, 1, attr, false);
+    }
+    
+    private void setCustomBackgroundColor(int offset, Color color) {
+        SimpleAttributeSet attr = new SimpleAttributeSet();
+        attr.addAttribute(Attribute.CUSTOM_BACKGROUND, color);
         doc.setParagraphAttributes(offset, 1, attr, false);
     }
     
