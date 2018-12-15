@@ -148,14 +148,7 @@ public class ForkSettings extends SettingsPanel {
         fork.add(notUnderline,
                 d.makeGbc(0, 18, 3, 1, GridBagConstraints.WEST));
 
-        JLabel notUnderline_l = new JLabel("Filtered text will be replaced on:");
-        fork.add(notUnderline_l, d.makeGbc(0, 19, 1, 1, GridBagConstraints.WEST));
-        
-        JTextField notUnderline_t = d.addSimpleStringSetting("replacementEmpty", 10, true);
-        fork.add(notUnderline_t, d.makeGbc(1, 19, 2, 1, GridBagConstraints.WEST));
 
-
-        
     }
     
 }

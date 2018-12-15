@@ -4433,8 +4433,6 @@ public class MainGui extends JFrame implements Runnable {
         ForkUtil.EMOTE_CODE = client.settings.getBoolean("emoteCodeInDialog");
         ForkUtil.NOT_STRIKE = client.settings.getBoolean("useNotStrike");
         ForkUtil.REPLACEMENT_UNDERLINE = client.settings.getBoolean("replacementUnderline");
-        
-        ForkUtil.REPLACEMENT_EMPTY = client.settings.getString("replacementEmpty");
 
         COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
         COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));
