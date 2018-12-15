@@ -116,11 +116,13 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         IS_BAN_MESSAGE, BAN_MESSAGE_COUNT, TIMESTAMP, USER, IS_USER_MESSAGE,
         URL_DELETED, DELETED_LINE, EMOTICON, IS_APPENDED_INFO, INFO_TEXT, BANS,
         BAN_MESSAGE, ID, ID_AUTOMOD, USERICON, IMAGE_ID, ANIMATED,
+        APPENDED_INFO_UPDATED,
         
         HIGHLIGHT_WORD, HIGHLIGHT_LINE, EVEN, PARAGRAPH_SPACING,
         CUSTOM_BACKGROUND,
         
-        IS_REPLACEMENT, REPLACEMENT_FOR, REPLACED_WITH
+        IS_REPLACEMENT, REPLACEMENT_FOR, REPLACED_WITH, COMMAND, ACTION_BY,
+        ACTION_REASON
     }
     
     public enum MessageType {
@@ -188,19 +190,18 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         setCaret(caret);
         styles.setStyles();
         
-        if (special) {
-            updateTimer = new javax.swing.Timer(2000, new ActionListener() {
+        updateTimer = new javax.swing.Timer(500, new ActionListener() {
 
-                @Override
-                public void actionPerformed(ActionEvent e) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (special) {
                     removeOldLines();
                 }
-            });
-            updateTimer.setRepeats(true);
-            updateTimer.start();
-        } else {
-            updateTimer = null;
-        }
+                removeAbandonedModLogInfo();
+            }
+        });
+        updateTimer.setRepeats(true);
+        updateTimer.start();
         
         FixSelection.install(this);
     }
@@ -403,10 +404,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     public void printMessage(Message message, String timestamp) {
         if (message instanceof UserMessage) {
             printUserMessage((UserMessage)message, timestamp);
-        } else if (message instanceof UserNotice) {
-            printUsernotice((UserNotice)message);
-        } else if (message instanceof AutoModMessage) {
-            printAutoModMessage((AutoModMessage)message);
         }
     }
     
@@ -416,14 +413,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * 
      * @param message 
      */
-    private void printUsernotice(UserNotice message) {
+    private void printUsernotice(UserNotice message, MutableAttributeSet style) {
         closeCompactMode();
-        print(getTimePrefix(), styles.info());
+        print(getTimePrefix(), style);
         
-        MutableAttributeSet style;
+        MutableAttributeSet userStyle;
         if (message.user.getName().isEmpty()) {
             // Only dummy User attached (so no custom message attached as well)
-            style = styles.info();
+            userStyle = style;
         } else {
             /**
              * This is kind of a hack to allow this message to be clicked and
@@ -432,29 +429,29 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
              * Note: For shortening/deleting messages, everything after the User
              * element is affected, so in this case just the attached message.
              */
-            style = styles.nick(message.user, styles.info());
-            style.addAttribute(Attribute.IS_USER_MESSAGE, true);
+            userStyle = styles.nick(message.user, style);
+            userStyle.addAttribute(Attribute.IS_USER_MESSAGE, true);
         }
         
-        String text = message.text;
-        print("["+message.type+"] "+text+" ", style);
+        String text = message.infoText;
+        print("["+message.type+"] "+text+" ", userStyle);
         if (!StringUtil.isNullOrEmpty(message.attachedMessage)) {
-            print("[", styles.info());
+            print("[", style);
             // Output with emotes, but don't turn URLs into clickable links
-            printSpecials(message.attachedMessage, message.user, styles.info(), message.emotes, true, false, null, null, null);
-            print("]", styles.info());
+            printSpecialsNormal(message.attachedMessage, message.user, style, message.emotes, true, false, null, null, null);
+            print("]", style);
         }
         finishLine();
     }
     
-    private void printAutoModMessage(AutoModMessage message) {
+    private void printAutoModMessage(AutoModMessage message, AttributeSet style) {
         closeCompactMode();
         print(getTimePrefix(), styles.info());
         
-        MutableAttributeSet style = styles.nick(message.user, styles.info());
-        style.addAttribute(Attribute.ID_AUTOMOD, message.id);
-        print("[AutoMod] <"+message.user.getDisplayNick()+"> ", style);
-        print(message.text, styles.info());
+        MutableAttributeSet specialStyle = styles.nick(message.user, style);
+        specialStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
+        print("[AutoMod] <"+message.user.getDisplayNick()+"> ", specialStyle);
+        print(message.message, style);
         finishLine();
     }
 
@@ -500,7 +497,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         if (!highlighted && color == null && action && styles.actionColored()) {
             style = styles.standard(user.getDisplayColor());
         }
-        printSpecials(text, user, style, emotes, false, message.bits > 0,
+        printSpecialsNormal(text, user, style, emotes, false, message.bits > 0,
                 message.highlightMatches,
                 message.replaceMatches, message.replacement);
         
@@ -511,6 +508,175 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             setCustomBackgroundColor(doc.getLength(), message.backgroundColor);
         }
         finishLine();
+    }
+    
+    public void printInfoMessage(InfoMessage message) {
+        //-------
+        // Style
+        //-------
+        MutableAttributeSet style;
+        if (message.highlighted) {
+            style = styles.highlight(message.color);
+        } else {
+            style = styles.info(message.color);
+        }
+        
+        if (message instanceof ModLogInfo) {
+            //-------------
+            // ModLog Info
+            //-------------
+            // May be an extra message or just for adding name behind action
+            ModLogInfo modLogInfo = (ModLogInfo)message;
+            if (modLogInfo.showActionBy) {
+                // Add the mod name behind actions
+                boolean success = printModLogInfo(modLogInfo);
+                if (!success) {
+                    cachedModLogInfo.add(modLogInfo);
+                }
+            }
+            if (!message.isHidden()) {
+                // Show separate ModAction message
+                printInfoMessage2(message, style);
+            }
+        } else if (message instanceof UserNotice) {
+            printUsernotice((UserNotice) message, style);
+        } else if (message instanceof AutoModMessage) {
+            printAutoModMessage((AutoModMessage)message, style);
+        } else {
+            //--------------------
+            // Other Info Message
+            //--------------------
+            printInfoMessage2(message, style);
+            
+            String command = message.makeCommand();
+            if (command != null) {
+                setLineCommand(doc.getLength(), command);
+            }
+            
+            replayModLogInfo();
+        }
+        //-----------------
+        // Line properties
+        //-----------------
+        if (!message.isHidden()) {
+            if (message.highlighted) {
+                setLineHighlighted(doc.getLength());
+            }
+            if (message.bgColor != null) {
+                setCustomBackgroundColor(doc.getLength(), message.bgColor);
+            }
+        }
+    }
+    
+    private void printInfoMessage2(InfoMessage message, AttributeSet style) {
+        closeCompactMode();
+        print(getTimePrefix(), style);
+        printSpecialsInfo(message.text, style, message.highlightMatches);
+        finishLine();
+    }
+    
+    private final java.util.List<ModLogInfo> cachedModLogInfo = new ArrayList<>();
+    
+    // Wait for an action to occur after the ModLog has come in (ms)
+    private static final int MOD_ACTION_WAIT = 500;
+    
+    /**
+     * Cached ModLog messages, for which there hasn't been found a matching
+     * message yet, which can happen when the actual action comes in after the
+     * ModLog message (info from different connections).
+     */
+    private void replayModLogInfo() {
+        removeAbandonedModLogInfo();
+        if (cachedModLogInfo.isEmpty()) {
+            return;
+        }
+        Debugging.println("modlog", "ModLog Replay %s", cachedModLogInfo);
+        Iterator<ModLogInfo> it = cachedModLogInfo.iterator();
+        while (it.hasNext()) {
+            ModLogInfo info = it.next();
+            boolean success = printModLogInfo(info);
+            if (success) {
+                it.remove();
+            }
+        }
+        Debugging.println("modlog", "ModLog Replay After %s", cachedModLogInfo);
+    }
+    
+    /**
+     * Remove ModLogInfo objects cached for replay that are too old, and send
+     * them back for ModAction output if applicable.
+     */
+    private void removeAbandonedModLogInfo() {
+        if (cachedModLogInfo.isEmpty()) {
+            return;
+        }
+        Iterator<ModLogInfo> it = cachedModLogInfo.iterator();
+        java.util.List<ModLogInfo> print = new ArrayList<>();
+        while (it.hasNext()) {
+            ModLogInfo info = it.next();
+            if (info.age() > MOD_ACTION_WAIT) {
+                Debugging.println("modlog", "ModLogAction Abandoned: %s", info);
+                it.remove();
+                if (info.isHidden()) {
+                    // Only output if originally was hidden, so it's not already
+                    // (sent back so highlighting etc. can be applied properly)
+                    print.add(info);
+                }
+            }
+        }
+        // Don't output while in loop
+        for (ModLogInfo info : print) {
+            main.printAbandonedModLogInfo(info);
+        }
+    }
+    
+    private boolean printModLogInfo(ModLogInfo info) {
+        Element root = doc.getDefaultRootElement();
+        String command = info.makeCommand().trim();
+        Debugging.println("modlog", "ModLog Command: %s", command);
+        for (int i=root.getElementCount()-1;i>=0;i--) {
+            Element line = root.getElement(i);
+            if (info.isBanCommand()) {
+                // Bans and such can be newly applied to otherwise old messages,
+                // and it should only apply to the appended info, so it has to
+                // be handled differently from regular info messages
+                if (line.getAttributes().containsAttribute(Attribute.COMMAND, command)) {
+                    Element infoElement = getElementContainingAttributeKey(line,
+                        Attribute.IS_APPENDED_INFO);
+                    if (infoElement == null) {
+                        Debugging.println("modlog", "ModLog: No info");
+                        return true;
+                    }
+                    long updated = (Long) infoElement.getAttributes().getAttribute(Attribute.APPENDED_INFO_UPDATED);
+                    if (System.currentTimeMillis() - updated > MOD_ACTION_WAIT) {
+                         Debugging.println("modlog", "ModLog: Appended too old");
+                        // The ban might come in after this, so wait
+                        return false;
+                    }
+                    changeInfo(line, attributes -> {
+                        attributes.addAttribute(Attribute.ACTION_BY, info.data.created_by);
+                        attributes.addAttribute(Attribute.ACTION_REASON, info.getReason());
+                    });
+                    return true;
+                }
+            } else {
+                if (getTimeAgo(line) > MOD_ACTION_WAIT) {
+                     Debugging.println("modlog", "ModLog: Line too old");
+                    // If the most recent line is too old, then don't mark as
+                    // done yet, but instead wait if the matching info message
+                    // still comes in
+                    return false;
+                }
+                if (line.getAttributes().containsAttribute(Attribute.COMMAND, command)) {
+                    changeInfo(line, attributes -> {
+                        attributes.addAttribute(Attribute.ACTION_BY, info.data.created_by);
+                    });
+                    return true;
+                }
+            }
+        }
+        Debugging.println("modlog", "ModLog: Gave up");
+        return false;
     }
     
     private long getTimeAgo(Element element) {
@@ -545,21 +711,17 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param line 
      */
     private void increasePreviousBanMessage(Element line, final long duration, final String reason) {
-        changeInfo(line, new InfoChanger() {
-
-            @Override
-            public void changeInfo(MutableAttributeSet attributes) {
-                Integer count = (Integer)attributes.getAttribute(Attribute.BAN_MESSAGE_COUNT);
-                if (count == null) {
-                    // If it doesn't exist set to 2, because this will be the second
-                    // timeout this message represents
-                    count = 2;
-                } else {
-                    // Otherwise increase number and removet text of previous number
-                    count++;
-                }
-                attributes.addAttribute(Attribute.BAN_MESSAGE_COUNT, count);
+        changeInfo(line, attributes -> {
+            Integer count = (Integer) attributes.getAttribute(Attribute.BAN_MESSAGE_COUNT);
+            if (count == null) {
+                // If it doesn't exist set to 2, because this will be the second
+                // timeout this message represents
+                count = 2;
+            } else {
+                // Otherwise increase number and removet text of previous number
+                count++;
             }
+            attributes.addAttribute(Attribute.BAN_MESSAGE_COUNT, count);
         });
     }
     
@@ -598,6 +760,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             // Change attributes
             changer.changeInfo(attributes);
             attributes.addAttribute(Attribute.IS_APPENDED_INFO, true);
+            attributes.addAttribute(Attribute.APPENDED_INFO_UPDATED, System.currentTimeMillis());
             
             if (!isNew) {
                 doc.remove(start, length);
@@ -613,6 +776,17 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             String infoText = (String)attributes.getAttribute(Attribute.INFO_TEXT);
             if (infoText != null && !infoText.isEmpty()) {
                 text = StringUtil.append(text, " ", infoText);
+            }
+            
+            String actionReason = (String)attributes.getAttribute(Attribute.ACTION_REASON);
+            if (!StringUtil.isNullOrEmpty(actionReason)
+                    && styles.isEnabled(Setting.BAN_REASON_MESSAGE)) {
+                text = StringUtil.append(text, " ", "["+actionReason+"]");
+            }
+            
+            String actionBy = (String)attributes.getAttribute(Attribute.ACTION_BY);
+            if (!StringUtil.isNullOrEmpty(actionBy)) {
+                text = StringUtil.append(text, " ", "(@"+actionBy+")");
             }
             
             /**
@@ -767,8 +941,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             } else {
                 strikeThroughMessage(lineId, styles.deletedMessagesMode());
             }
+            // Set info on newest deleted line
             if (i == lines.size() - 1) {
-                setInfoText(line, banInfo);
+                setBanInfo(line, banInfo);
+                setLineCommand(line.getStartOffset(), Helper.makeBanCommand(user, duration, reason, id));
+                replayModLogInfo();
             }
             i++;
         }
@@ -780,18 +957,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param line
      * @param info 
      */
-    private void setInfoText(Element line, String info) {
+    private void setBanInfo(Element line, String info) {
         Element firstElement = line.getElement(0);
         if (firstElement != null && getTimeAgo(firstElement) > 60*1000) {
             info += "*";
         }
         final String info2 = info;
-        changeInfo(line, new InfoChanger() {
-
-            @Override
-            public void changeInfo(MutableAttributeSet attributes) {
-                attributes.addAttribute(Attribute.INFO_TEXT, info2);
-            }
+        changeInfo(line, attributes -> {
+            attributes.addAttribute(Attribute.INFO_TEXT, info2);
         });
     }
     
@@ -991,6 +1164,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     private void setLineDeleted(int offset) {
         doc.setParagraphAttributes(offset, 1, styles.deletedLine(), false);
+    }
+    
+    private void setLineCommand(int offset, String command) {
+        SimpleAttributeSet attr = new SimpleAttributeSet();
+        attr.addAttribute(Attribute.COMMAND, command);
+        doc.setParagraphAttributes(offset, 1, attr, false);
     }
     
     private void setVariableLineAttributes(int offset, boolean even, boolean updateTimestamp) {
@@ -1878,6 +2057,15 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         finishLine();
     }
 
+    private void printSpecialsInfo(String text, AttributeSet style,
+            java.util.List<Match> highlightMatches) {
+        TreeMap<Integer,Integer> ranges = new TreeMap<>();
+        HashMap<Integer,MutableAttributeSet> rangesStyle = new HashMap<>();
+        findLinks(text, ranges, rangesStyle);
+        
+        printSpecials(null, text, style, ranges, rangesStyle, highlightMatches);
+    }
+    
     /**
      * Print special stuff in the text like links and emoticons differently.
      * 
@@ -1894,7 +2082,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param ignoreLinks 
      * @param containsBits 
      */
-    protected void printSpecials(String text, User user, MutableAttributeSet style,
+    protected void printSpecialsNormal(String text, User user, MutableAttributeSet style,
             TagEmotes emotes, boolean ignoreLinks, boolean containsBits,
             java.util.List<Match> highlightMatches,
             java.util.List<Match> replacements, String replacement) {
@@ -1916,6 +2104,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             }
         }
         
+        printSpecials(user, text, style, ranges, rangesStyle, highlightMatches);
+    }
+    
+    private void printSpecials(User user, String text,
+            AttributeSet style,
+            Map<Integer, Integer> ranges,
+            Map<Integer, MutableAttributeSet> rangesStyle,
+            java.util.List<Match> highlightMatches) {
         // Actually print everything
         int lastPrintedPos = 0;
         Iterator<Entry<Integer, Integer>> rangesIt = ranges.entrySet().iterator();
@@ -1937,7 +2133,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             } else {
                 rangeText = text.substring(start, end + 1);
             }
-            print(rangeText, rangeStyle);
+            if (!rangeText.isEmpty()) {
+                print(rangeText, rangeStyle);
+            }
             lastPrintedPos = end + 1;
         }
         // If anything is left, print that as well as regular text
@@ -1945,7 +2143,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
 //            print(processText(user, text.substring(lastPrintedPos)), style);
             specialPrint(user, text, lastPrintedPos, text.length(), style, highlightMatches);
         }
-        
     }
     
     /**
@@ -1959,7 +2156,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param style
      * @param highlightMatches 
      */
-    private void specialPrint(User user, String text, int start, int end, MutableAttributeSet style, java.util.List<Match> highlightMatches) {
+    private void specialPrint(User user, String text, int start, int end, AttributeSet style, java.util.List<Match> highlightMatches) {
         if (highlightMatches != null) {
             for (Match m : highlightMatches) {
                 if (m.start < end && m.end > start) {
@@ -2006,7 +2203,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             result = Helper.filterCombiningCharacters(result, "****", filterMode);
             if (!prev.equals(result)) {
                 //LOGGER.info("Filtered combining characters: [" + prev + "] -> [" + result + "]");
-                LOGGER.info("Filtered combining characters from message by "+user.getRegularDisplayNick()+" [result: "+result+"]");
+                LOGGER.info("Filtered combining characters from message by "+user+" [result: "+result+"]");
             }
         }
         return result;
@@ -2017,7 +2214,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle) {
         if (matches != null) {
             if (StringUtil.isNullOrEmpty(replacement)) {
-                replacement = ForkUtil.REPLACEMENT_EMPTY;
+                replacement = "..";
+            } else if (replacement.equals("none")) {
+                replacement = "";
             }
             for (Match m : matches) {
                 if (!inRanges(m.start, ranges) && !inRanges(m.end, ranges)) {
@@ -3155,6 +3354,15 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             return styles.get("info");
         }
         
+        public MutableAttributeSet info(Color color) {
+            if (color != null) {
+                SimpleAttributeSet specialColor = new SimpleAttributeSet(info());
+                StyleConstants.setForeground(specialColor, color);
+                return specialColor;
+            }
+            return info();
+        }
+        
         public MutableAttributeSet compact() {
             return styles.get("special");
         }
@@ -3257,7 +3465,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
          * @param style Attributes to base the user style on
          * @return 
          */
-        public MutableAttributeSet nick(User user, MutableAttributeSet style) {
+        public MutableAttributeSet nick(User user, AttributeSet style) {
             SimpleAttributeSet userStyle;
             if (style == null) {
                 userStyle = new SimpleAttributeSet(nick());
