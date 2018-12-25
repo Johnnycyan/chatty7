@@ -2,13 +2,14 @@
 package chatty;
 
 import chatty.gui.components.updating.Version;
-import chatty.gui.HtmlColors;
+import chatty.util.colors.HtmlColors;
 import chatty.gui.WindowStateManager;
 import chatty.gui.components.settings.NotificationSettings;
 import chatty.gui.notifications.Notification;
 import chatty.util.BackupManager;
 import chatty.util.DateTime;
 import chatty.util.StringUtil;
+import chatty.util.colors.ColorCorrection;
 import chatty.util.hotkeys.Hotkey;
 import chatty.util.settings.Setting;
 import chatty.util.settings.Settings;
@@ -64,7 +65,7 @@ public class SettingsManager {
     /**
      * Defines what settings there are and their default values.
      */
-    void defineSettings() {
+    public void defineSettings() {
         
         // Additional files (in addition to the default file)
         String loginFile = Chatty.getUserDataDirectory()+"login";
@@ -243,6 +244,7 @@ public class SettingsManager {
         settings.addString("searchResultColor", "LightYellow");
         settings.addString("searchResultColor2", "#FFFF80");
         settings.addBoolean("colorCorrection", true);
+        settings.addString("nickColorCorrection", "normal");
         settings.addList("colorPresets", new ArrayList<>(), Setting.LIST);
         
         // Message Colors
@@ -611,7 +613,7 @@ public class SettingsManager {
     /**
      * Tries to load the settings from file.
      */
-    void loadSettingsFromFile() {
+    public void loadSettingsFromFile() {
         settings.loadSettingsFromJson();
     }
     
@@ -620,7 +622,7 @@ public class SettingsManager {
      * performed in (seconds). The backup manager will decide whether to
      * actually make a backup.
      */
-    void backupFiles() {
+    public void backupFiles() {
         long backupDelay = DateTime.DAY * settings.getLong("backupDelay");
         backup.performBackup((int)backupDelay, (int)settings.getLong("backupCount"));
     }
@@ -633,7 +635,7 @@ public class SettingsManager {
      * 
      * @param args Map with commandline settings, key=value pairs
      */
-    void loadCommandLineSettings(Map<String, String> args) {
+    public void loadCommandLineSettings(Map<String, String> args) {
         for (String key : args.keySet()) {
             // Go through all commandline options
             String value = args.get(key);
@@ -687,7 +689,7 @@ public class SettingsManager {
     /**
      * Override some now unused settings or change settings on version change.
      */
-    void overrideSettings() {
+    public void overrideSettings() {
         settings.setBoolean("ignoreJoinsParts", false);
         if (switchedFromVersionBefore("0.7.2")) {
             String value = settings.getString("timeoutButtons");
@@ -790,8 +792,14 @@ public class SettingsManager {
         // Turn off Highlight Background if using dark background (if not loaded
         // from the settings yet)
         Color bgColor = HtmlColors.decode(settings.getString("backgroundColor"));
-        if (HtmlColors.getBrightness(bgColor) < 128 && !settings.isValueSet("highlightBackground")) {
+        if (ColorCorrection.isDarkColor(bgColor) && !settings.isValueSet("highlightBackground")) {
             settings.setBoolean("highlightBackground", false);
+        }
+        
+        if (switchedFromVersionBefore("0.9.3-b5")) {
+            if (!settings.getBoolean("colorCorrection")) {
+                settings.setString("nickColorCorrection", "off");
+            }
         }
         
         overrideHotkeySettings();

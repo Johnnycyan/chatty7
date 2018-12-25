@@ -53,7 +53,7 @@ public class Chatty {
      * by points. May contain a single "b" for beta versions, which are counted
      * as older (so 0.8.7b4 is older than 0.8.7).
      */
-    public static final String VERSION = "0.9.3.136";
+    public static final String VERSION = "0.9.3.137";
     
     /**
      * Enable Version Checker (if you compile and distribute this yourself, you
