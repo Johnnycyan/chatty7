@@ -196,6 +196,9 @@ public class Channel extends JPanel {
     
     @Override
     public String getToolTipText() {
+        if (room.getStreamId() != null) {
+            return room.getChannel()+" ("+room.getStreamId()+")";
+        }
         return room.getChannel();
     }
     
@@ -455,8 +458,8 @@ public class Channel extends JPanel {
 
             Consumer<String> makeSearch = (String currentSearch) -> {
                 Pattern cSearch = Pattern.compile(
-                        currentSearch.substring(0, 1).toUpperCase(Locale.ENGLISH)
-                        + "(?i)" + currentSearch.substring(1)
+                        Pattern.quote(currentSearch.substring(0, 1).toUpperCase(Locale.ENGLISH))
+                        + "(?i)" + Pattern.quote(currentSearch.substring(1))
                 );
                 String searchMode = main.getSettings().getString("completionSearch");
                 for (String item : data) {
