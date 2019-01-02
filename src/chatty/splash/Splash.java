@@ -29,6 +29,7 @@ public class Splash {
     
     private static String[] getThings() {
         return new String[]{
+            "zik.one/donate",
             "Happy Birthday, Broughy!",
             "When's True 100%+?",
             "Jaffa Kree!",
