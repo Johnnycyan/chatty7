@@ -182,7 +182,7 @@ public class Channels {
     
     // TODO: Retain new status and stuff, and maybe reset new status when clicked on one of the tabs belong to the stream
     public void updateChannelTabName(Channel channel) {
-        tabs.setTitleForComponent(channel, channel.getName(), channel.getToolTipText());
+        tabs.setTitleForComponent(channel, ForkUtil.removeSharpFromTitle(channel), channel.getToolTipText());
     }
     
     /**
