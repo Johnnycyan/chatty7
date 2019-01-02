@@ -368,8 +368,10 @@ public class Channel extends JPanel {
                 return getCompletionItemsEmoji(search);
             }
 
-            if (ForkUtil.replaceWrongLanguage(search.substring(0, 1), "ru", "en").startsWith(":")) {
-                return getCompletionItemsEmoji(ForkUtil.replaceWrongLanguage(search, "ru", "en"));
+            String localPrefix = search.substring(0, 1); // Looking for ":".
+            if (ForkUtil.replaceWrongLanguage(localPrefix, "ru", "en").startsWith(":")) {
+                String localEmoteCode = search.substring(1); // Cut off ":".
+                return getCompletionItemsEmoji(ForkUtil.replaceWrongLanguage(localEmoteCode, "ru", "en"));
             }
             
             // Then check settings
