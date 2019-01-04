@@ -214,6 +214,8 @@ public class TwitchClient {
         settingsManager.overrideSettings();
         settingsManager.debugSettings();
         
+        initDxSettings();
+        
         if (settings.getBoolean("splash")) {
             Splash.initSplashScreen(Splash.getLocation((String)settings.mapGet("windows", "main")));
         }
@@ -226,8 +228,6 @@ public class TwitchClient {
         api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
         twitchemotes = new TwitchEmotes(new TwitchemotesListener());
         bttvEmotes = new BTTVEmotes(new EmoteListener());
-
-        initDxSettings();
         
         Language.setLanguage(settings.getString("language"));
         
@@ -309,13 +309,14 @@ public class TwitchClient {
         
         if (Chatty.DEBUG) {
             getSpecialUser().setEmoteSets("130,4280,33,42,19194");
-            Room testRoom =  Room.createRegular("");
+            Room testRoom =  Room.createRegular("#tduva");
             g.addUser(new User("josh", testRoom));
             g.addUser(new User("joshua", testRoom));
             User j = new User("joshimuz", "Joshimuz", testRoom);
             j.addMessage("abc", false, null);
             j.setDisplayNick("Joshimoose");
             j.setTurbo(true);
+            j.setVip(true);
             g.addUser(j);
             g.addUser(new User("jolzi", testRoom));
             g.addUser(new User("john", testRoom));
@@ -326,6 +327,7 @@ public class TwitchClient {
             g.addUser(new User("lotsofs", "LotsOfS", testRoom));
             g.addUser(new User("anders", testRoom));
             g.addUser(new User("apex1", testRoom));
+            g.addUser(new User("xfwefawf32q4543t5greger", testRoom));
             User af = new User("applefan", testRoom);
 //            Map<String, String> badges = new LinkedHashMap<>();
 //            badges.put("bits", "100");
@@ -2037,8 +2039,8 @@ public class TwitchClient {
         }
         
         @Override
-        public void receivedChannelInfo(String channel, ChannelInfo info, RequestResultCode result) {
-            g.setChannelInfo(channel, info, result);
+        public void receivedChannelInfo(String stream, ChannelInfo info, RequestResultCode result) {
+            g.setChannelInfo(stream, info, result);
         }
     
         @Override
@@ -2104,9 +2106,14 @@ public class TwitchClient {
             followerInfoNames(info);
             receivedFollowerOrSubscriberCount(info);
         }
-        
+
         private void followerInfoNames(FollowerInfo info) {
             
+        }
+        
+        @Override
+        public void receivedFollower(String stream, String username, RequestResultCode result, Follower follower) {
+            g.setFollowInfo(stream, username, result, follower);
         }
 
         @Override
@@ -2158,6 +2165,8 @@ public class TwitchClient {
             g.setRooms(info);
             roomManager.addRoomsInfo(info);
         }
+
+        
     }
 
     private class MyRoomUpdatedListener implements RoomManager.RoomUpdatedListener {

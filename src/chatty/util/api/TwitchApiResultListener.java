@@ -25,7 +25,7 @@ public interface TwitchApiResultListener {
     void receivedFollowers(FollowerInfo followerInfo);
     void newFollowers(FollowerInfo followerInfo);
     void receivedSubscribers(FollowerInfo info);
-    
+    void receivedFollower(String stream, String username, RequestResultCode result, Follower follower);
     /**
      * The correctly capitalized name for a user.
      * 

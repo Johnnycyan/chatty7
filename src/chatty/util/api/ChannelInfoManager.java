@@ -19,6 +19,8 @@ public class ChannelInfoManager {
     
     private static final Logger LOGGER = Logger.getLogger(ChannelInfoManager.class.getName());
     
+    private static final int CACHED_EXPIRE_TIME = 10*60*1000;
+    
     private final Map<String, ChannelInfo> cachedChannelInfo =
             Collections.synchronizedMap(new HashMap<String, ChannelInfo>());
     
@@ -37,7 +39,7 @@ public class ChannelInfoManager {
     public ChannelInfo getCachedChannelInfo(String stream, String id) {
         ChannelInfo info = cachedChannelInfo.get(stream);
         if (info != null) {
-            if (System.currentTimeMillis() - info.time > 600*1000) {
+            if (System.currentTimeMillis() - info.time > CACHED_EXPIRE_TIME) {
                 api.getChannelInfo(stream, id);
             }
             return info;
@@ -128,12 +130,14 @@ public class ChannelInfoManager {
             int views = JSONUtil.getInteger(root, "views", -1);
             int followers = JSONUtil.getInteger(root, "followers", -1);
             long createdAt = -1;
+            long updatedAt = -1;
             try {
                 createdAt = DateTime.parseDatetime(JSONUtil.getString(root, "created_at"));
+                updatedAt = DateTime.parseDatetime(JSONUtil.getString(root, "updated_at"));
             } catch (Exception ex) {
                 LOGGER.warning("Error parsing ChannelInfo: "+ex);
             }
-            return new ChannelInfo(name, id, status, game, createdAt, followers, views);
+            return new ChannelInfo(name, id, status, game, createdAt, followers, views, updatedAt);
         }
         catch (ParseException ex) {
             LOGGER.warning("Error parsing ChannelInfo.");

@@ -74,6 +74,13 @@ public class DateTime {
     
     public static String formatAccountAge(long time, Formatting... options) {
         if (System.currentTimeMillis() - time > DAY*1000) {
+            return ago(time, 0, 1, DateTime.H, options);
+        }
+        return ago(time, 0, 1, 0, options);
+    }
+    
+    public static String formatAccountAgeVerbose(long time, Formatting... options) {
+        if (System.currentTimeMillis() - time > DAY*1000) {
             return ago(time, 0, 2, DateTime.H, options);
         }
         return ago(time, 0, 1, 0, options);
@@ -237,7 +244,7 @@ public class DateTime {
             boolean lastOne = shown >= max && max > 0
                     || left-1 <= lowerLimit && shown > 0;
             String timeName = timeNames[i+timeNames.length-times.length];
-            if (time == 1 && verbose) {
+            if (time == 1 && verbose && !(lastOne && lastOneExact)) {
                 timeName = timeName.substring(0, timeName.length() - 1);
             }
             if (lastOne && lastOneExact) {
