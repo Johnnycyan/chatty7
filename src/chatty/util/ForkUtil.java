@@ -43,6 +43,8 @@ public class ForkUtil {
 
     public static boolean REPLACEMENT_UNDERLINE = false;
 
+    public static String FILTER_FORK_PREFIX = "ByFork";
+
     public static Map<String, String> completionLangs = new HashMap<>();
     static {
         // "Ж" and "ж" are swaped because "search" text is in lower case.

@@ -446,6 +446,8 @@ public class Highlighter {
                             appliesToType = Type.ANY;
                         } else if (part.equals("firstmsg")) {
                             firstMsg = true;
+                        } else if (part.equals(chatty.util.ForkUtil.FILTER_FORK_PREFIX)) {
+                            // Do nothing.
                         }
                     }
                 }

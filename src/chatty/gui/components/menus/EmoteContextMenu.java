@@ -115,6 +115,9 @@ public class EmoteContextMenu extends ContextMenu {
             addItem("", String.valueOf(System.identityHashCode(emote)));
             addItem("", emoteImage.getImageIcon().getDescription());
         }
+
+        addSeparator();
+        addItem("addToFilter", "Add to Filter");
     }
 
     @Override

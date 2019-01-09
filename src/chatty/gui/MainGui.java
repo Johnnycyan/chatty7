@@ -1989,6 +1989,32 @@ public class MainGui extends JFrame implements Runnable {
                 client.settings.listRemove("favoriteEmotes", emote.code);
                 emotesDialog.favoritesUpdated();
             }
+            else if (e.getActionCommand().equals("addToFilter")) {
+                String item = "";
+                String pref = "config:" + ForkUtil.FILTER_FORK_PREFIX;
+                String repl = " replacement:none reg:(";
+
+                List<String> emotes = new ArrayList<String>();
+                emotes.add(emote.code);
+
+                for (String elem: StringUtil.getStringList(client.settings.getList("filter"))) {
+                    if (elem.startsWith(pref)) {
+                        item = elem;
+                        client.settings.listRemove("filter", item);
+                        item = item.replace(pref, "").replace(repl, "").replace(")", "");
+                        for (String s: item.split("\\|")) {
+                            s = s.trim();
+                            if (emotes.indexOf(s) == -1) {
+                                emotes.add(s);
+                            }
+                        }
+                        break;
+                    }
+                }
+                item = pref + repl + String.join("|", emotes) + ")";
+                client.settings.setAdd("filter", item);
+                updateFilter();
+            }
             if (emote.hasStreamSet()) {
                 nameBasedStuff(e, emote.getStream());
             }
