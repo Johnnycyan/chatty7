@@ -56,6 +56,7 @@ import chatty.util.api.FollowerInfo;
 import chatty.util.api.RoomsInfo;
 import chatty.util.api.StreamInfo.StreamType;
 import chatty.util.api.StreamInfo.ViewerStats;
+import chatty.util.api.StreamTagManager.StreamTag;
 import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.pubsub.Message;
 import chatty.util.api.pubsub.ModeratorActionData;
@@ -242,7 +243,7 @@ public class TwitchClient {
         pubsub = new chatty.util.api.pubsub.Manager(
                 settings.getString("pubsub"), pubsubListener, api);
         
-        frankerFaceZ = new FrankerFaceZ(new EmoticonsListener(), settings);
+        frankerFaceZ = new FrankerFaceZ(new EmoticonsListener(), settings, api);
         
         ImageCache.setDefaultPath(Paths.get(Chatty.getCacheDirectory()+"img"));
         ImageCache.setCachingEnabled(settings.getBoolean("imageCache"));
@@ -320,12 +321,19 @@ public class TwitchClient {
             g.addUser(j);
             g.addUser(new User("jolzi", testRoom));
             g.addUser(new User("john", testRoom));
-            g.addUser(new User("tduva", testRoom));
+            User t = new User("tduva", testRoom);
+            t.setModerator(true);
+            g.addUser(t);
             User kb = new User("kabukibot", "Kabukibot", testRoom);
             kb.setBot(true);
             g.addUser(kb);
-            g.addUser(new User("lotsofs", "LotsOfS", testRoom));
-            g.addUser(new User("anders", testRoom));
+            User l = new User("lotsofs", "LotsOfS", testRoom);
+            l.setSubscriber(true);
+            g.addUser(l);
+            User a = new User("anders", testRoom);
+            a.setSubscriber(true);
+            a.setVip(true);
+            g.addUser(a);
             g.addUser(new User("apex1", testRoom));
             g.addUser(new User("xfwefawf32q4543t5greger", testRoom));
             User af = new User("applefan", testRoom);
@@ -1257,7 +1265,7 @@ public class TwitchClient {
                 }
             }
             g.userBanned(testUser, duration, reason, null);
-        } else if (command.equals("bantest2")) {
+        } else if (command.equals("ban")) {
             String[] split = parameter.split(" ", 3);
             int duration = -1;
             if (split.length > 1) {
@@ -1418,8 +1426,17 @@ public class TwitchClient {
         } else if (command.equals("automod")) {
             List<String> args = new ArrayList<>();
             args.add("tduva");
-            args.add("fuck and stuff like that, rather long message and whatnot Kappa b "+Debugging.count(channel));
-            g.printModerationAction(new ModeratorActionData("", "", "", room.getStream(), "twitchbot_rejected", args, "twitchbot", "TEST"+Math.random()), false);
+            if (parameter != null) {
+                args.add(parameter);
+            } else {
+                args.add("fuck and stuff like that, rather long message and whatnot Kappa b "+Debugging.count(channel));
+            }
+            g.printModerationAction(new ModeratorActionData("", "", "", room.getStream(), "twitchbot_rejected", args, "twitchbot", "TEST"), false);
+        } else if (command.equals("automod2")) {
+            List<String> args = new ArrayList<>();
+            args.add("tduva");
+            ModeratorActionData data = new ModeratorActionData("", "", "", room.getStream(), "denied_automod_message", args, "asdas", "TEST");
+            g.printModerationAction(data, false);
         } else if (command.equals("repeat")) {
             String[] split = parameter.split(" ", 2);
             int count = Integer.parseInt(split[0]);
@@ -1465,6 +1482,15 @@ public class TwitchClient {
         } else if (command.equals("clearoldsetups")) {
             Stuff.init();
             Stuff.clearOldSetups();
+        } else if (command.equals("tags")) {
+            Set<StreamTag> tags = new HashSet<>();
+            tags.add(new StreamTag("id", "name", "summary", false));
+            if (parameter != null) {
+                tags.add(new StreamTag(parameter, "name2", "summary", false));
+            }
+            api.getInvalidStreamTags(tags, (t,e) -> {
+                System.out.println(t+" "+e);
+            });
         } else if (command.equals("-")) {
             g.printSystem(Debugging.command(parameter));
         }
@@ -2837,9 +2863,7 @@ public class TwitchClient {
 
         @Override
         public void onSubscriberNotification(User user, String text, String message, int months, String emotes) {
-            //System.out.println(channel+" "+user+" "+months);
-            
-            g.printSubscriberMessage(user, text, message, months, emotes);
+            g.printSubscriberMessage(user, text, message, emotes);
             
             // May be using dummy User if from twitchnotify that doesn't contain a propery name tag
             if (user.getName().isEmpty()) {

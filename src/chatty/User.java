@@ -357,16 +357,23 @@ public class User implements Comparable {
             if (System.currentTimeMillis() - m.getTime() > BAN_INFO_WAIT) {
                 return false;
             }
+            /**
+             * Note: Only set info if not already set, as to not overwrite
+             * existing one while waiting for next message to show up (which
+             * could happen with close together bans). In this each ban message
+             * has it's own line, so appending several by strings shouldn't be
+             * necessary.
+             */
             if (m instanceof BanMessage) {
                 BanMessage bm = (BanMessage)m;
-                if (command.equals(Helper.makeBanCommand(this, bm.duration, bm.id))) {
+                if (bm.by == null && command.equals(Helper.makeBanCommand(this, bm.duration, bm.id))) {
                     messages.set(i, bm.addModLogInfo(data.created_by, ModLogInfo.getReason(data)));
                     return true;
                 }
             } else if (m instanceof MsgDeleted) {
-                MsgDeleted dm = (MsgDeleted)m;
-                if (command.equals(Helper.makeBanCommand(this, -2, dm.targetMsgId))) {
-                    messages.set(i, dm.addModLogInfo(data.created_by));
+                MsgDeleted md = (MsgDeleted)m;
+                if (md.by == null && command.equals(Helper.makeBanCommand(this, -2, md.targetMsgId))) {
+                    messages.set(i, md.addModLogInfo(data.created_by));
                     return true;
                 }
             }
@@ -638,8 +645,8 @@ public class User implements Comparable {
         
         int broadcaster = 16;
         int admin = 8;
-        int globalmod = 4;
-        int moderator = 2;
+        int moderator = 4;
+        int vip = 2;
         int subscriber = 1;
         
         int result = 0;
@@ -648,12 +655,6 @@ public class User implements Comparable {
         }
         if (u.isAdmin() || u.isStaff()) {
             result = result + admin;
-        }
-        if (this.isGlobalMod()) {
-            result = result - globalmod;
-        }
-        if (u.isGlobalMod()) {
-            result = result + globalmod;
         }
         if (this.isBroadcaster()) {
             result = result - broadcaster;
@@ -672,6 +673,12 @@ public class User implements Comparable {
         }
         if (u.isModerator()) {
             result = result + moderator;
+        }
+        if (this.isVip()) {
+            result = result - vip;
+        }
+        if (u.isVip()) {
+            result = result + vip;
         }
         if (result == 0) {
             return this.nick.compareTo(u.nick);
@@ -843,11 +850,11 @@ public class User implements Comparable {
     
     public synchronized String getModeSymbol() {
         String result = "";
-        if (isSubscriber()) {
-            result += "%";
-        }
         if (isVip()) {
             result += "!";
+        }
+        if (isSubscriber()) {
+            result += "%";
         }
         if (hasTwitchBadge("bits")) {
             result += "$";

@@ -2924,12 +2924,11 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
     
-    public void printSubscriberMessage(final User user,
-            final String text, final String message, final int months,
-            final String emotes) {
+    public void printSubscriberMessage(final User user, final String text,
+            final String message, final String emotes) {
         SwingUtilities.invokeLater(() -> {
             Emoticons.TagEmotes tagEmotes = Emoticons.parseEmotesTag(emotes);
-            SubscriberMessage m = new SubscriberMessage(user, text, message, months, tagEmotes);
+            SubscriberMessage m = new SubscriberMessage(user, text, message, tagEmotes);
 
             boolean printed = printUsernotice(m);
             if (printed) {
@@ -3329,8 +3328,10 @@ public class MainGui extends JFrame implements Runnable {
                         && data.type != ModeratorActionData.Type.UNMODDED) {
                     boolean showActions = client.settings.getBoolean("showModActions");
                     boolean showActionsRestrict = client.settings.getBoolean("showModActionsRestrict");
-                    boolean showMessage = showActions && !ownAction
-                            && !(showActionsRestrict && ModLogInfo.isBanOrInfoAssociated(data));
+                    boolean showMessage =
+                               showActions
+                            && (!ownAction || ModLogInfo.isIndirectAction(data))
+                            && !(showActionsRestrict && ModLogInfo.isAssociated(data));
                     boolean showActionby = client.settings.getBoolean("showActionBy");
                     for (Channel chan : chans) {
                         // Create for each channel, just in case (since they get
@@ -4156,8 +4157,8 @@ public class MainGui extends JFrame implements Runnable {
         client.settings.putList("gamesFavorites", new ArrayList(favorites));
     }
     
-    public void setCommunityFavorites(Map<String, String> favorites) {
-        client.settings.putMap("communityFavorites", favorites);
+    public void setStreamTagFavorites(Map<String, String> favorites) {
+        client.settings.putMap("tagsFavorites", favorites);
     }
     
     /**
@@ -4169,8 +4170,8 @@ public class MainGui extends JFrame implements Runnable {
         return new HashSet<>(client.settings.getList("gamesFavorites"));
     }
     
-    public Map<String, String> getCommunityFavorites() {
-        return client.settings.getMap("communityFavorites");
+    public Map<String, String> getStreamTagFavorites() {
+        return client.settings.getMap("tagsFavorites");
     }
     
     public void putChannelInfoResult(final RequestResultCode result) {
