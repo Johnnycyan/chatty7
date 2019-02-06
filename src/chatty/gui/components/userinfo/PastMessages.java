@@ -34,14 +34,17 @@ public class PastMessages extends JTextArea {
     
     private String makeLines(User user, String currentMessageId) {
         StringBuilder b = new StringBuilder();
-        if (user.maxNumberOfLinesReached()) {
+        if (user.linesCleared()) {
+            b.append("<some lines cleared due to user inactivity>\n");
+        }
+        if (user.maxLinesExceeded()) {
             b.append("<only last ");
             b.append(user.getMaxNumberOfLines());
             b.append(" lines are saved>\n");
         }
         List<User.Message> messages = user.getMessages();
         for (User.Message m : messages) {
-            if (m.getType() == User.Message.MESSAGE) {
+            if (m instanceof User.TextMessage) {
                 User.TextMessage tm = (User.TextMessage)m;
                 if (!StringUtil.isNullOrEmpty(currentMessageId)
                         && currentMessageId.equals(tm.id)) {
@@ -58,7 +61,7 @@ public class PastMessages extends JTextArea {
                 b.append(tm.text);
                 b.append("\n");
             }
-            else if (m.getType() == User.Message.BAN) {
+            else if (m instanceof User.BanMessage) {
                 User.BanMessage bm = (User.BanMessage)m;
                 b.append(DateTime.format(m.getTime(), TIMESTAMP)).append(">");
                 if (bm.duration > 0) {
@@ -78,7 +81,7 @@ public class PastMessages extends JTextArea {
                 }
                 b.append("\n");
             }
-            else if (m.getType() == User.Message.MSG_DELETED) {
+            else if (m instanceof User.MsgDeleted) {
                 User.MsgDeleted md = (User.MsgDeleted)m;
                 b.append(DateTime.format(m.getTime(), TIMESTAMP)).append(">");
                 b.append("Message deleted: ").append(md.msg);
@@ -87,7 +90,7 @@ public class PastMessages extends JTextArea {
                 }
                 b.append("\n");
             }
-            else if (m.getType() == User.Message.SUB) {
+            else if (m instanceof User.SubMessage) {
                 User.SubMessage sm = (User.SubMessage)m;
                 b.append(DateTime.format(m.getTime(), TIMESTAMP)).append("$ ");
                 b.append(sm.system_msg);
@@ -96,7 +99,7 @@ public class PastMessages extends JTextArea {
                 }
                 b.append("\n");
             }
-            else if (m.getType() == User.Message.INFO) {
+            else if (m instanceof User.InfoMessage) {
                 User.InfoMessage sm = (User.InfoMessage)m;
                 b.append(DateTime.format(m.getTime(), TIMESTAMP)).append("I ");
                 b.append(sm.system_msg);
@@ -105,14 +108,14 @@ public class PastMessages extends JTextArea {
                 }
                 b.append("\n");
             }
-            else if (m.getType() == User.Message.MOD_ACTION) {
+            else if (m instanceof User.ModAction) {
                 User.ModAction ma = (User.ModAction)m;
                 b.append(DateTime.format(m.getTime(), TIMESTAMP)).append(">");
                 b.append("ModAction: /");
                 b.append(ma.commandAndParameters);
                 b.append("\n");
             }
-            else if (m.getType() == User.Message.AUTO_MOD_MESSAGE) {
+            else if (m instanceof User.AutoModMessage) {
                 User.AutoModMessage ma = (User.AutoModMessage)m;
                 if (!StringUtil.isNullOrEmpty(currentMessageId)
                         && currentMessageId.equals(ma.id)) {

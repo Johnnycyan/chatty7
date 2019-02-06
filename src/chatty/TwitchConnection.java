@@ -102,6 +102,7 @@ public class TwitchConnection {
         spamProtection = new SpamProtection();
         spamProtection.setLinesPerSeconds(settings.getString("spamProtection"));
         users.setCapitalizedNames(settings.getBoolean("capitalizedNames"));
+        users.setSettings(settings);
         users.addListener(new UserManager.UserManagerListener() {
 
             @Override
@@ -125,6 +126,10 @@ public class TwitchConnection {
     
     public void simulate(String data) {
         irc.simulate(data);
+    }
+    
+    public void debugConnection() {
+        irc.debugConnection();
     }
     
     public void addChannelStateListener(ChannelStateListener listener) {
@@ -1095,6 +1100,9 @@ public class TwitchConnection {
             User user = userJoined(channel, login);
             updateUserFromTags(user, tags);
             if (tags.isValueOf("msg-id", "resub", "sub", "subgift", "anonsubgift")) {
+                if (months != -1 && !text.matches(".*\\b"+months+"\\b.*")) {
+                    text += " They've subscribed for "+months+" months!";
+                }
                 if (tags.isValueOf("msg-id", "subgift", "anonsubgift")) {
                     giftedSubCombiner.add(user, text, message, months, emotes, tags);
                 } else {
@@ -1104,6 +1112,9 @@ public class TwitchConnection {
                 listener.onUsernotice("Charity", user, text, message, emotes);
             } else if (tags.isValue("msg-id", "raid")) {
                 listener.onUsernotice("Raid", user, text, message, emotes);
+            } else if (text.equals("reward") && !message.isEmpty()) {
+                // For Bits reward text has "reward" and message what should be in text
+                listener.onUsernotice("Usernotice", user, message, null, emotes);
             } else {
                 // Just output like this if unknown, since Twitch keeps adding
                 // new messages types for this

@@ -372,6 +372,8 @@ public class Requests {
                         listener.result("Invalid: "+t);
                     }
                 });
+            } else if (responseCode == 401) {
+                listener.result("Access denied");
             } else {
                 listener.result("Error "+responseCode);
             }
@@ -383,13 +385,15 @@ public class Requests {
         newApi.add(url, "GET", api.defaultToken, (data, responseCode) -> {
             if (responseCode == 204 || responseCode == 404) {
                 listener.received(null, null);
-            } else {
+            } else if (responseCode == 200) {
                 StreamTagsResult result = StreamTagManager.parseAllTags(data);
                 if (result == null) {
-                    listener.received(null, "Tags error");
+                    listener.received(null, "Parse error");
                 } else {
                     listener.received(result.tags, url);
                 }
+            } else {
+                listener.received(null, "Error "+responseCode);
             }
         });
     }

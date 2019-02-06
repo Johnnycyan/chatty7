@@ -285,6 +285,7 @@ public class SettingsManager {
         settings.addBoolean("closeUserDialogOnAction", true);
         settings.addBoolean("openUserDialogByMouse", true);
         settings.addBoolean("reuseUserDialog", false);
+        settings.addLong("clearUserMessages", 12);
 
         // History / Favorites
         settings.addMap("channelHistory",new TreeMap(), Setting.LONG);
@@ -578,6 +579,7 @@ public class SettingsManager {
 
         // Stream Highlights
         settings.addString("streamHighlightCommand", "!highlight");
+        settings.addString("streamHighlightMatch", "status:bm");
         settings.addString("streamHighlightChannel", "");
         settings.addBoolean("streamHighlightChannelRespond", false);
         settings.addBoolean("streamHighlightMarker", true);

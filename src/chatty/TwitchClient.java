@@ -69,15 +69,12 @@ import chatty.util.settings.Settings;
 import chatty.util.settings.SettingsListener;
 import chatty.util.srl.SpeedrunsLive;
 import java.awt.Color;
-import java.awt.Point;
-import java.awt.SplashScreen;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
 import javax.swing.SwingUtilities;
 
 import java.util.Timer;
@@ -314,6 +311,9 @@ public class TwitchClient {
             g.addUser(new User("josh", testRoom));
             g.addUser(new User("joshua", testRoom));
             User j = new User("joshimuz", "Joshimuz", testRoom);
+            for (int i=0;i<99;i++) {
+                j.addMessage("abc", false, null);
+            }
             j.addMessage("abc", false, null);
             j.setDisplayNick("Joshimoose");
             j.setTurbo(true);
@@ -322,21 +322,43 @@ public class TwitchClient {
             g.addUser(new User("jolzi", testRoom));
             g.addUser(new User("john", testRoom));
             User t = new User("tduva", testRoom);
+            for (int i=0;i<100;i++) {
+                t.addMessage("abc", false, null);
+            }
             t.setModerator(true);
             g.addUser(t);
             User kb = new User("kabukibot", "Kabukibot", testRoom);
+            for (int i=0;i<80;i++) {
+                kb.addMessage("abc", false, null);
+            }
+            kb.clearMessagesIfInactive(0);
+            kb.addMessage("abc", false, null);
             kb.setBot(true);
             g.addUser(kb);
             User l = new User("lotsofs", "LotsOfS", testRoom);
+            for (int i=0;i<120;i++) {
+                l.addMessage("abc", false, null);
+            }
+            l.clearMessagesIfInactive(0);
+            for (int i=0;i<100;i++) {
+                l.addMessage("abc", false, null);
+            }
+            l.addMessage("abc", false, null);
             l.setSubscriber(true);
             g.addUser(l);
             User a = new User("anders", testRoom);
+            for (int i=0;i<120;i++) {
+                a.addMessage("abc", false, null);
+            }
             a.setSubscriber(true);
             a.setVip(true);
             g.addUser(a);
             g.addUser(new User("apex1", testRoom));
             g.addUser(new User("xfwefawf32q4543t5greger", testRoom));
             User af = new User("applefan", testRoom);
+            for (int i=0;i<101;i++) {
+                af.addMessage("abc", false, null);
+            }
 //            Map<String, String> badges = new LinkedHashMap<>();
 //            badges.put("bits", "100");
 //            af.setTwitchBadges(badges);
@@ -725,18 +747,20 @@ public class TwitchClient {
     }
 
     /**
-     * Anything entered in a channel input box is reacted to here.
+     * Directly entered into the input box or entered by Custom Commands.
      * 
      * This must be safe input (i.e. input directly by the local user) because
      * this can execute all kind of commands.
      * 
-     * @param channel
+     * @param room
+     * @param commandParameters
      * @param text 
      */
     public void textInput(Room room, String text, Parameters commandParameters) {
         if (text.isEmpty()) {
             return;
         }
+        text = g.replaceEmojiCodes(text);
         String channel = room.getChannel();
         if (text.startsWith("//")) {
             anonCustomCommand(room, text.substring(1), commandParameters);
@@ -1493,6 +1517,8 @@ public class TwitchClient {
             });
         } else if (command.equals("-")) {
             g.printSystem(Debugging.command(parameter));
+        } else if (command.equals("connection")) {
+            c.debugConnection();
         }
     }
     

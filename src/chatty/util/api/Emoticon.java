@@ -3,6 +3,7 @@ package chatty.util.api;
 
 import chatty.Helper;
 import chatty.User;
+import chatty.util.HalfWeakSet;
 import chatty.util.ImageCache;
 import chatty.util.StringUtil;
 import java.awt.Color;
@@ -18,6 +19,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -112,7 +114,7 @@ public class Emoticon {
     private volatile int height;
 
     private Matcher matcher;
-    private Set<EmoticonImage> images;
+    private HalfWeakSet<EmoticonImage> images;
     
 
     /**
@@ -391,7 +393,7 @@ public class Emoticon {
      * @return The name of the stream, or null if none is set
      * @see hasStreamSet()
      */
-    public String getStream() {
+    public synchronized String getStream() {
         return stream;
     }
     
@@ -401,7 +403,7 @@ public class Emoticon {
      * @return true if a stream name has been set, false otherwise
      * @see getStream()
      */
-    public boolean hasStreamSet() {
+    public synchronized boolean hasStreamSet() {
         return stream != null;
     }
     
@@ -456,19 +458,19 @@ public class Emoticon {
      * @param stream The name of the stream
      * @see getStream()
      */
-    public void setStream(String stream) {
+    public synchronized void setStream(String stream) {
         this.stream = stream;
     }
     
-    public void setEmotesetInfo(String info) {
+    public synchronized void setEmotesetInfo(String info) {
         this.emotesetInfo = info;
     }
     
-    public String getEmotesetInfo() {
+    public synchronized String getEmotesetInfo() {
         return emotesetInfo;
     }
     
-    public boolean hasEmotesetInfo() {
+    public synchronized boolean hasEmotesetInfo() {
         return emotesetInfo != null;
     }
     
@@ -485,8 +487,9 @@ public class Emoticon {
     }
     
     /**
-     * Get a scaled EmoticonImage for this Emoticon.
-     *
+     * Get a scaled EmoticonImage for this Emoticon. Should only be called from
+     * the EDT.
+     * 
      * @param scaleFactor Scale Factor, default (no scaling) should be 1
      * @param maxHeight Maximum height in pixels, default (no max height) should
      * be 0
@@ -495,7 +498,7 @@ public class Emoticon {
      */
     public EmoticonImage getIcon(float scaleFactor, int maxHeight, EmoticonUser user) {
         if (images == null) {
-            images = new HashSet<>();
+            images = new HalfWeakSet<>();
         }
         EmoticonImage resultImage = null;
         for (EmoticonImage image : images) {
@@ -505,14 +508,17 @@ public class Emoticon {
         }
         if (resultImage == null) {
             resultImage = new EmoticonImage(scaleFactor, maxHeight);
+            images.add(resultImage);
+        } else {
+            images.markStrong(resultImage);
         }
         resultImage.addUser(user);
-        images.add(resultImage);
         return resultImage;
     }
     
     /**
-     * Removes all currently cached images.
+     * Removes all currently cached images. Should probably be called from the
+     * EDT.
      */
     public void clearImages() {
         if (images != null) {
@@ -520,9 +526,30 @@ public class Emoticon {
         }
     }
     
+    private static final int IMAGE_EXPIRE_MINUTES = 4*60;
+    
+    public int clearOldImages() {
+        if (images != null) {
+            Set<EmoticonImage> toRemove = new HashSet<>();
+            Iterator<EmoticonImage> it = images.strongIterator();
+            while (it.hasNext()) {
+                EmoticonImage image = it.next();
+                if (image.getLastUsedAge() > IMAGE_EXPIRE_MINUTES*60*1000) {
+                    toRemove.add(image);
+                }
+            }
+            for (EmoticonImage image : toRemove) {
+                images.markWeak(image);
+            }
+            return toRemove.size();
+        }
+        return 0;
+    }
+    
     /**
      * Requests an ImageIcon to be loaded, returns the default icon at first,
-     * but starts a SwingWorker to get the actual image.
+     * but starts a SwingWorker to get the actual image. Should be called from
+     * the EDT.
      * 
      * @param user
      * @return 
@@ -906,6 +933,7 @@ public class Emoticon {
         private boolean loadingError = false;
         private volatile int loadingAttempts = 0;
         private long lastLoadingAttempt;
+        private long lastUsed;
         
         public EmoticonImage(float scaleFactor, int maxHeight) {
             this.scaleFactor = scaleFactor;
@@ -921,6 +949,7 @@ public class Emoticon {
          * @return 
          */
         public ImageIcon getImageIcon() {
+            lastUsed = System.currentTimeMillis();
             if (icon == null) {
                 /**
                  * Note: The temporary image (as well as the actual image) are
@@ -938,6 +967,10 @@ public class Emoticon {
                 }
             }
             return icon;
+        }
+        
+        public long getLastUsedAge() {
+            return System.currentTimeMillis() - lastUsed;
         }
         
         /**
