@@ -269,6 +269,9 @@ public class MainGui extends JFrame implements Runnable {
         // Tray/Notifications
         trayIcon = new TrayIconManager(createImage("app_main_16.png"));
         trayIcon.addActionListener(new TrayMenuListener());
+        if (client.settings.getBoolean("trayIconAlways")) {
+            trayIcon.setIconVisible(true);
+        }
         notificationWindowManager = new NotificationWindowManager<>(this);
         notificationWindowManager.setNotificationActionListener(new MyNotificationActionListener());
         notificationManager = new NotificationManager(this, client.settings, client.addressbook);
@@ -1395,7 +1398,11 @@ public class MainGui extends JFrame implements Runnable {
         public void actionPerformed(ActionEvent e) {
             String cmd = e.getActionCommand();
             if (cmd == null || cmd.equals("show")) {
-                makeVisible();
+                if (isMinimized()) {
+                    makeVisible();
+                } else {
+                    minimizeToTray();
+                }
             }
             else if (cmd.equals("exit")) {
                 exit();
@@ -4625,11 +4632,18 @@ public class MainGui extends JFrame implements Runnable {
     
     private class MainWindowListener extends WindowAdapter {
         
+        private boolean liveStreamsHidden;
+        
         @Override
         public void windowStateChanged(WindowEvent e) {
             if (e.getComponent() == MainGui.this) {
                 saveState(e.getComponent());
                 if (isMinimized()) {
+                    if (liveStreamsDialog.isVisible()
+                            && client.settings.getBoolean("hideStreamsOnMinimize")) {
+                        liveStreamsDialog.setVisible(false);
+                        liveStreamsHidden = true;
+                    }
                     if (client.settings.getBoolean("minimizeToTray")) {
                         minimizeToTray();
                     }
@@ -4637,6 +4651,10 @@ public class MainGui extends JFrame implements Runnable {
                     // Only cleanup from tray if not minimized, when minimized
                     // cleanup should never be done
                     cleanupAfterRestoredFromTray();
+                    if (liveStreamsHidden) {
+                        liveStreamsDialog.setVisible(true);
+                        liveStreamsHidden = false;
+                    }
                 }
             }
         }
@@ -4683,7 +4701,8 @@ public class MainGui extends JFrame implements Runnable {
      * Remove tray icon if applicable.
      */
     private void cleanupAfterRestoredFromTray() {
-        if (client.settings.getLong("nType") != NotificationSettings.NOTIFICATION_TYPE_TRAY) {
+        if (client.settings.getLong("nType") != NotificationSettings.NOTIFICATION_TYPE_TRAY
+                && !client.settings.getBoolean("trayIconAlways")) {
             trayIcon.setIconVisible(false);
         }
     }
