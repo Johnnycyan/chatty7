@@ -591,6 +591,15 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
         
+        addMenuAction("dialog.favorites", "Dialog: Favorites / History (toggle)",
+                KeyEvent.VK_F, new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                toggleFavoritesDialog();
+            }
+        });
+        
         addMenuAction("dialog.updates", "Dialog: Updates",
                 KeyEvent.VK_U, new AbstractAction() {
 
@@ -1458,8 +1467,6 @@ public class MainGui extends JFrame implements Runnable {
                 UrlOpener.openUrlPrompt(MainGui.this, Chatty.WEBSITE, true);
             } else if (cmd.equals("forkwebsite")) {
                 UrlOpener.openUrlPrompt(MainGui.this, Chatty.FORK_WEBSITE, true);
-            } else if (cmd.equals("favoritesDialog")) {
-                openFavoritesDialogToJoin("");
             } else if (cmd.equals("unhandledException")) {
                 String[] array = new String[0];
                 String a = array[1];
@@ -2589,6 +2596,14 @@ public class MainGui extends JFrame implements Runnable {
             return favoritesDialog.getChannels();
         }
         return new HashSet<>();
+    }
+    
+    private void toggleFavoritesDialog() {
+        if (favoritesDialog.isVisible()) {
+            favoritesDialog.setVisible(false);
+        } else {
+            openFavoritesDialogToJoin("");
+        }
     }
     
     private void openFavoritesDialogToJoin(String channel) {
@@ -4705,6 +4720,12 @@ public class MainGui extends JFrame implements Runnable {
                 && !client.settings.getBoolean("trayIconAlways")) {
             trayIcon.setIconVisible(false);
         }
+    }
+    
+    public void showPopupMessage(String text) {
+        SwingUtilities.invokeLater(() -> {
+            JOptionPane.showMessageDialog(this, text);
+        });
     }
     
     /**

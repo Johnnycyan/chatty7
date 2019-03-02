@@ -70,11 +70,14 @@ import chatty.util.settings.SettingsListener;
 import chatty.util.srl.SpeedrunsLive;
 import java.awt.Color;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import java.util.Timer;
@@ -244,7 +247,7 @@ public class TwitchClient {
         
         ImageCache.setDefaultPath(Paths.get(Chatty.getCacheDirectory()+"img"));
         ImageCache.setCachingEnabled(settings.getBoolean("imageCache"));
-        ImageCache.clearOldFiles();
+        ImageCache.deleteExpiredFiles();
         EmoticonSizeCache.loadFromFile();
 
         usercolorManager = new UsercolorManager(settings);
@@ -1003,6 +1006,20 @@ public class TwitchClient {
         else if (command.equals("openjavadir")) {
             MiscUtil.openFolder(new File(System.getProperty("java.home")), g);
         }
+        else if (command.equals("showfallbackfontdir")) {
+            Path path = Paths.get(System.getProperty("java.home"), "lib", "fonts", "fallback");
+            g.printSystem("Fallback font directory (may not exist yet): "+path);
+        }
+        else if (command.equals("openfallbackfontdir")) {
+            Path path = Paths.get(System.getProperty("java.home"), "lib", "fonts", "fallback");
+            if (Files.exists(path)) {
+                MiscUtil.openFolder(path.toFile(), g);
+            } else {
+                path = path.getParent();
+                g.showPopupMessage("Fallback font folder does not exist. Create a folder called 'fallback' in '"+path+"'.");
+                MiscUtil.openFolder(path.toFile(), g);
+            }
+        }
         else if (command.equals("copy")) {
             MiscUtil.copyToClipboard(parameter);
         }
@@ -1122,12 +1139,23 @@ public class TwitchClient {
         }
         else if (command.equals("clearimagecache")) {
             g.printLine("Clearing image cache (this can take a few seconds)");
-            ImageCache.clearCache(null);
-            g.printLine("Image cache cleared.");
+            int result = ImageCache.clearCache(null);
+            if (result == -1) {
+                g.printLine("Failed clearing image cache.");
+            } else {
+                g.printLine(String.format("Deleted %d image cache files",
+                        result));
+            }
         }
         else if (command.equals("clearemotecache")) {
-            ImageCache.clearCache("emote_"+parameter);
-            g.printLine("Emoticon image cache for type "+parameter+" cleared.");
+            g.printLine("Clearing Emoticon image cache for type "+parameter+".");
+            int result = ImageCache.clearCache("emote_"+parameter);
+            if (result == -1) {
+                g.printLine("Failed clearing image cache.");
+            } else {
+                g.printLine(String.format("Deleted %d image cache files",
+                        result));
+            }
         }
         
         //------
@@ -1519,6 +1547,8 @@ public class TwitchClient {
             g.printSystem(Debugging.command(parameter));
         } else if (command.equals("connection")) {
             c.debugConnection();
+        } else if (command.equals("clearoldcachefiles")) {
+            ImageCache.deleteExpiredFiles();
         }
     }
     
