@@ -175,9 +175,6 @@ public class ForkUtil {
         if (user.setAdmin("admin".equals(userType))) {
             changed = true;
         }
-        if (user.setGlobalMod("global_mod".equals(userType))) {
-            changed = true;
-        }
         
         user.setId(tags.get("user-id"));
     }

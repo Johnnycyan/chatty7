@@ -310,7 +310,7 @@ public class TwitchClient {
         
         if (Chatty.DEBUG) {
             getSpecialUser().setEmoteSets("130,4280,33,42,19194");
-            Room testRoom =  Room.createRegular("#tduva");
+            Room testRoom =  Room.createRegular("");
             g.addUser(new User("josh", testRoom));
             g.addUser(new User("joshua", testRoom));
             User j = new User("joshimuz", "Joshimuz", testRoom);
@@ -427,8 +427,6 @@ public class TwitchClient {
             
         }
         
-        new UpdateTimer(g);
-        
         // Shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(new Shutdown(this)));
         
@@ -496,7 +494,6 @@ public class TwitchClient {
     private void createTestUser(String name, String channel) {
         testUser = new User(name, name, Room.createRegular(channel));
         testUser.setColor(new Color(94, 0, 211));
-        testUser.setGlobalMod(true);
         //testUser.setBot(true);
         //testUser.setTurbo(true);
         //testUser.setModerator(true);
@@ -1033,6 +1030,13 @@ public class TwitchClient {
                 g.printLine("Invalid parameters: /echo <message>");
             }
         }
+        else if (command.equals("echoall")) {
+            if (parameter != null) {
+                g.printLineAll(parameter);
+            } else {
+                g.printLine("Invalid parameters: /echoall <message>");
+            }
+        }
         else if (command.equals("uptime")) {
             g.printSystem("Chatty has been running for "+Chatty.uptime());
         }
@@ -1346,7 +1350,7 @@ public class TwitchClient {
         } else if (command.equals("testspam")) {
             g.printLine("test" + spamProtection.getAllowance() + spamProtection.tryMessage());
         } else if (command.equals("spamprotectioninfo")) {
-            g.printSystem("Spam Protection: "+c.getSpamProtectionInfo());
+            g.printSystem("Spam Protection: "+spamProtection);
         } else if (command.equals("tsv")) {
             testStreamInfo.set("Title", "Game", Integer.parseInt(parameter), -1, StreamType.LIVE);
         } else if (command.equals("tsvs")) {

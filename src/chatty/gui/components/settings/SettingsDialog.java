@@ -612,9 +612,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
     }
     
     protected SimpleBooleanSetting addSimpleBooleanSetting(String name, String description, String tooltipText) {
-        if (tooltipText != null && !tooltipText.isEmpty()) {
-            tooltipText = "<html><body>"+StringUtil.addLinebreaks(tooltipText, 70, true);
-        }
+        tooltipText = SettingsUtil.addTooltipLinebreaks(tooltipText);
         SimpleBooleanSetting result = new SimpleBooleanSetting(description, tooltipText);
         booleanSettings.put(name,result);
         return result;
@@ -810,6 +808,14 @@ public class SettingsDialog extends JDialog implements ActionListener {
         table.setPreferredSize(new Dimension(width, height));
         mapSettings.put(name, table);
         return table;
+    }
+    
+    protected JLabel createLabel(String settingName) {
+        String text = Language.getString("settings.label."+settingName);
+        String tip = Language.getString("settings.label."+settingName+".tip", false);
+        JLabel label = new JLabel(text);
+        label.setToolTipText(SettingsUtil.addTooltipLinebreaks(tip));
+        return label;
     }
     
     protected void clearHistory() {

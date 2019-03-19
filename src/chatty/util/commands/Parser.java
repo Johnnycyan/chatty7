@@ -190,6 +190,12 @@ public class Parser {
         else if (type.equals("rand")) {
             return rand(isRequired);
         }
+        else if (type.equals("randnum")) {
+            return randNum(isRequired);
+        }
+        else if (type.equals("datetime")) {
+            return datetime(isRequired);
+        }
         else {
             error("Invalid function '"+type+"'", 0);
             return null;
@@ -292,6 +298,32 @@ public class Parser {
         }
         expect(")");
         return new Rand(isRequired, params);
+    }
+    
+    private Item randNum(boolean isRequired) throws ParseException {
+        expect("(");
+        Item a = param();
+        Item b = null;
+        if (accept(",")) {
+            b = param();
+        }
+        expect(")");
+        return new RandNum(isRequired, a, b);
+    }
+    
+    private Item datetime(boolean isRequired) throws ParseException {
+        expect("(");
+        Item format = param();
+        Item timezone = null;
+        Item locale = null;
+        if (accept(",")) {
+            timezone = param();
+        }
+        if (accept(",")) {
+            locale = param();
+        }
+        expect(")");
+        return new DateTime(format, timezone, locale, isRequired);
     }
     
     private Replacement replacement(boolean isRequired) throws ParseException {

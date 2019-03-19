@@ -193,6 +193,12 @@ public class Channels {
         tabs.addTab(defaultChannel);
     }
     
+    /**
+     * 
+     * @param room Must not be null
+     * @param type
+     * @return 
+     */
     private Channel createChannel(Room room, Channel.Type type) {
         Channel channel = new Channel(room,type,gui,styleManager, contextMenuListener);
         channel.setUserlistWidth(defaultUserlistWidth, minUserlistWidth);
@@ -216,6 +222,21 @@ public class Channels {
     }
     
     public Collection<Channel> channels() {
+        return channels.values();
+    }
+    
+    /**
+     * Includes the defaultChannel that is there when no actual channel has been
+     * added yet.
+     * 
+     * @return 
+     */
+    public Collection<Channel> allChannels() {
+        if (channels.isEmpty() && defaultChannel != null) {
+            Collection<Channel> result = new ArrayList<>();
+            result.add(defaultChannel);
+            return result;
+        }
         return channels.values();
     }
     
@@ -274,7 +295,7 @@ public class Channels {
      * Gets the Channel object for the given channel name. If none exists, the
      * channel is automatically added.
      * 
-     * @param channel
+     * @param room Must not be null, but can be Room.EMPTY
      * @param type
      * @return 
      */
