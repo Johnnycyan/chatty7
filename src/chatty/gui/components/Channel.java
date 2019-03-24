@@ -267,6 +267,7 @@ public class Channel extends JPanel {
             "dir", "wdir", "openDir", "openWdir",
             "showBackupDir", "openBackupDir", "showDebugDir", "openDebugDir",
             "showTempDir", "openTempDir", "showJavaDir", "openJavaDir",
+            "showFallbackFontDir", "openFallbackFontDir",
             "clearChat", "refresh", "changeToken", "testNotification", "server",
             "set", "add", "clearSetting", "remove", "customCompletion",
             "clearStreamChat", "getStreamChatSize", "setStreamChatSize", "streamChatTest", "openStreamChat",

@@ -319,7 +319,6 @@ public class MainGui extends JFrame implements Runnable {
         menu = new MainMenu(menuListener,menuListener, linkLabelListener);
         setJMenuBar(menu);
 
-        state.update();
         addListeners();
         pack();
         
@@ -834,6 +833,8 @@ public class MainGui extends JFrame implements Runnable {
                 if (!guiCreated) {
                     return;
                 }
+                
+                startUpdatingState();
                 
                 channels.setInitialFocus();
                 
@@ -3602,6 +3603,15 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
     
+    public void startUpdatingState() {
+        state.update(false);
+        javax.swing.Timer timer = new javax.swing.Timer(5000, e -> {
+            state.update(false);
+        });
+        timer.setRepeats(true);
+        timer.start();
+    }
+    
     /**
      * Manages updating the current state, mainly the titles and menus.
      */
@@ -3616,14 +3626,6 @@ public class MainGui extends JFrame implements Runnable {
          * Update state no faster than this amount of milliseconds.
          */
         private static final int UPDATE_STATE_DELAY = 500;
-
-        private StateUpdater() {
-            javax.swing.Timer timer = new javax.swing.Timer(5000, e -> {
-                update(false);
-            });
-            timer.setRepeats(true);
-            timer.start();
-        }
         
         /**
          * Update the title and other things based on the current state and
