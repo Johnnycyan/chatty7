@@ -7,12 +7,10 @@ build_script:
 
 artifacts:
   - path: '\build\releases\*.zip'
+  - path: '\build\releases\*.exe'
 
 after_build:
   - win_standalone.bat
 
 cache:
   - C:\Users\appveyor\.gradle
-
-#test_script:
-#  - gradlew test
