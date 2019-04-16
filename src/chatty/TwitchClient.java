@@ -1566,7 +1566,7 @@ public class TwitchClient {
     
     public void anonCustomCommand(Room room, CustomCommand command, Parameters parameters) {
         if (command.hasError()) {
-            g.printLine("Custom command invalid: "+command.getError());
+            g.printLine("Parse error: "+command.getSingleLineError());
             return;
         }
         if (room == null) {
