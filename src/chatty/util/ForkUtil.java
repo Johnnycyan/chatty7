@@ -99,7 +99,6 @@ public class ForkUtil {
     public static String getIdChannel(String channel) {
         try {
             String urlId = "https://api.twitch.tv/kraken/channels/" + channel.substring(1) + "?client_id=" + Chatty.CLIENT_ID;
-            System.out.println("HEH!");
             System.out.println(urlId);
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(readUrl(urlId));
@@ -115,8 +114,10 @@ public class ForkUtil {
     public static List<String> getRecentMessages(String channel) {
         try {
             String channelId = getIdChannel(channel);
-            String urlId = "https://tmi.twitch.tv/api/rooms/" + channelId + "/recent_messages?client_id=" + Chatty.CLIENT_ID;
-            System.out.println("HEH!");
+            // Old API.
+            // String urlId = "https://tmi.twitch.tv/api/rooms/" + channelId + "/recent_messages?client_id=" + Chatty.CLIENT_ID;
+            // New custom API from RAnders00.
+            String urlId = "https://recent-messages.robotty.de/api/v2/recent-messages/" + channel.substring(1) + "?clearchatToNotice=true";
             System.out.println(urlId);
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(readUrl(urlId));
