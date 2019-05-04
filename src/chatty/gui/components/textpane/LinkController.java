@@ -168,8 +168,8 @@ public class LinkController extends MouseAdapter {
                 return;
             }
         }
-        
-        if (e.getClickCount() == 1 && SwingUtilities.isLeftMouseButton(e)) {
+        boolean isMiddle = SwingUtilities.isMiddleMouseButton(e);
+        if (e.getClickCount() == 1 && SwingUtilities.isLeftMouseButton(e) || isMiddle) {
             Element element = getElement(e);
             if (element != null) {
                 handleSingleLeftClick(e, element);
