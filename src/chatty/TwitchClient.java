@@ -336,6 +336,7 @@ public class TwitchClient {
             }
             kb.clearMessagesIfInactive(0);
             kb.addMessage("abc", false, null);
+            kb.setDisplayNick("reallyLongDisplayNickAndStuffBlahNeedsToBeLonger");
             kb.setBot(true);
             g.addUser(kb);
             User l = new User("lotsofs", "LotsOfS", testRoom);
@@ -2660,7 +2661,13 @@ public class TwitchClient {
     private class Messages implements TwitchConnection.ConnectionListener {
 
         private void checkModLogListen(User user) {
+            Debugging.println("pubsub", "%s/%s==%s/%s",
+                    user.hasChannelModeratorRights(),
+                    user.getName(),
+                    c.getUsername(),
+                    user.getStream());
             if (user.hasChannelModeratorRights() && user.getName().equals(c.getUsername()) && user.getStream() != null) {
+                Debugging.println("pubsub", "Listen");
                 pubsub.setLocalUsername(c.getUsername());
                 pubsub.listenModLog(user.getStream(), settings.getString("token"));
             }

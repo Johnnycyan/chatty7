@@ -17,6 +17,7 @@ import chatty.util.settings.Settings;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -571,6 +572,17 @@ public class SettingsDialog extends JDialog implements ActionListener {
         return gbc;
     }
     
+    protected GridBagConstraints makeNoGapGbc(int x, int y, int w, int h, int anchor) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = x;
+        gbc.gridy = y;
+        gbc.gridwidth = w;
+        gbc.gridheight = h;
+        gbc.insets = new Insets(0,0,0,0);
+        gbc.anchor = anchor;
+        return gbc;
+    }
+    
     protected GridBagConstraints makeGbcCloser(int x, int y, int w, int h, int anchor) {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = x;
@@ -826,6 +838,19 @@ public class SettingsDialog extends JDialog implements ActionListener {
         JLabel label = new JLabel(text);
         label.setToolTipText(SettingsUtil.addTooltipLinebreaks(tip));
         return label;
+    }
+    
+    protected JPanel createPanel(String settingName, JComponent settingComponent) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = makeGbc(0, 0, 1, 1);
+        // Make sure to only have space between the two components, since other
+        // spacing will be added when this panel is added to the layout
+        gbc.insets = new Insets(0, 0, 0, gbc.insets.right);
+        panel.add(createLabel(settingName), gbc);
+        gbc = makeGbc(1, 0, 1, 1);
+        gbc.insets = new Insets(0, gbc.insets.left, 0, 0);
+        panel.add(settingComponent, gbc);
+        return panel;
     }
     
     protected void clearHistory() {
