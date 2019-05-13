@@ -9,6 +9,7 @@ import chatty.util.StringUtil;
 import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticons;
 import chatty.util.settings.Settings;
+import chatty.util.ForkUtil;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.Image;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javax.swing.ImageIcon;
 
@@ -47,6 +49,10 @@ public class ChannelCompletion implements AutoCompletionServer {
         this.main = main;
         this.input = input;
         this.users = users;
+    }
+
+    private String rus(String str) {
+        return ForkUtil.replaceWrongLanguage(str, "ru", "en");
     }
     
     private final Set<String> commands = new TreeSet<>(Arrays.asList(new String[]{
@@ -194,8 +200,24 @@ public class ChannelCompletion implements AutoCompletionServer {
             }
             return getCompletionItemsEmoji(search);
         }
+
         if (!emotePrefix.isEmpty() && prefix.endsWith(emotePrefix)) {
             return getCompletionItemsEmotes(search, emotePrefix);
+        }
+
+        String localPrefix = rus(search.substring(0, 1)); // Looking for ":".
+        String localSearch = rus(search.substring(1));
+        if (localPrefix.endsWith(":")) {
+            if (emotePrefix.equals(":")) {
+                CompletionItems items = getCompletionItemsEmotes(localSearch, ":");
+                items.append(getCompletionItemsEmoji(localSearch));
+                return items;
+            }
+            return getCompletionItemsEmoji(localSearch);
+        }
+
+        if (!emotePrefix.isEmpty() && localPrefix.endsWith(emotePrefix)) {
+            return getCompletionItemsEmotes(localSearch, emotePrefix);
         }
 
         // Then check settings
@@ -327,26 +349,36 @@ public class ChannelCompletion implements AutoCompletionServer {
         );
         String searchMode = main.getSettings().getString("completionSearch");
         Set<String> added = new HashSet<>();
-        for (T item : data) {
-            String itemString = getString.apply(item);
-            if (added.contains(itemString)) {
-                continue;
+
+        Consumer<String> makeSearch = (String currentSearch) -> {
+            for (T item : data) {
+                String itemString = getString.apply(item);
+                if (added.contains(itemString)) {
+                    continue;
+                }
+                String lc = StringUtil.toLowerCase(itemString);
+                if (lc.startsWith(currentSearch)) {
+                    matched.add(item);
+                    added.add(itemString);
+                } else if (searchMode.equals("words")
+                        && !input.getCompleteToCommonPrefix()
+                        && cSearch.matcher(itemString).find()) {
+                    containing.add(item);
+                    added.add(itemString);
+                } else if (searchMode.equals("anywhere")
+                        && lc.contains(currentSearch)) {
+                    containing.add(item);
+                    added.add(itemString);
+                }
             }
-            String lc = StringUtil.toLowerCase(itemString);
-            if (lc.startsWith(search)) {
-                matched.add(item);
-                added.add(itemString);
-            } else if (searchMode.equals("words")
-                    && !input.getCompleteToCommonPrefix()
-                    && cSearch.matcher(itemString).find()) {
-                containing.add(item);
-                added.add(itemString);
-            } else if (searchMode.equals("anywhere")
-                    && lc.contains(search)) {
-                containing.add(item);
-                added.add(itemString);
-            }
+        };
+
+        makeSearch.accept(search);
+        String localSearch = rus(search);
+        if (!localSearch.equals("")) {
+            makeSearch.accept(localSearch);
         }
+
         Collections.sort(matched, comparator);
         Collections.sort(containing, comparator);
         matched.addAll(containing);
@@ -364,23 +396,27 @@ public class ChannelCompletion implements AutoCompletionServer {
         Set<User> regularMatched = new HashSet<>();
         Set<User> customMatched = new HashSet<>();
         Set<User> localizedMatched = new HashSet<>();
-        for (User user : users.getData()) {
-            boolean matched = false;
-            if (user.getName().startsWith(search)) {
-                matched = true;
-                regularMatched.add(user);
-            }
-            if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(search)) {
-                matched = true;
-                localizedMatched.add(user);
-            }
-            if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(search)) {
-                matched = true;
-                customMatched.add(user);
-            }
 
-            if (matched) {
-                matchedUsers.add(user);
+        String[] str = {rus(search), search};
+        for (String localSearch : str) {
+            for (User user : users.getData()) {
+                boolean matched = false;
+                if (user.getName().startsWith(localSearch)) {
+                    matched = true;
+                    regularMatched.add(user);
+                }
+                if (!user.hasRegularDisplayNick() && StringUtil.toLowerCase(user.getDisplayNick()).startsWith(localSearch)) {
+                    matched = true;
+                    localizedMatched.add(user);
+                }
+                if (user.hasCustomNickSet() && StringUtil.toLowerCase(user.getCustomNick()).startsWith(localSearch)) {
+                    matched = true;
+                    customMatched.add(user);
+                }
+
+                if (matched) {
+                    matchedUsers.add(user);
+                }
             }
         }
         switch (main.getSettings().getString("completionSorting")) {
