@@ -626,6 +626,7 @@ public class SettingsManager {
         settings.addString("colorBannedHighlightedMessage", "#323232");
         settings.addBoolean("addAtToMentions", false);
         settings.addBoolean("replacementUnderline", false);
+        settings.addBoolean("skipFullFiltered", false);
     }
     
     /**

@@ -491,6 +491,13 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             printCompact("IGNORED", user);
             return;
         }
+        if (!ForkUtil.PRINT_FULL_FILTERED) {
+            String temp = localApplyReplacements(message.text, message.replaceMatches, message.replacement);
+            temp = styles.isEnabled(Setting.MENTIONS) ? replaceMentions(temp) : temp;
+            if (temp.trim().isEmpty()) {
+                return;
+            }
+        }
 
         Color color = message.color;
         boolean action = message.action;
@@ -2305,6 +2312,44 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             }
         }
         return result;
+    }
+
+    private String replaceMentions(String text) {
+        for (MentionCheck check : lastUsers.getItems()) {
+            Matcher m = check.matcher.reset(text);
+            ArrayList<String> list = new ArrayList<String>();
+            while (m.find()) {
+                int start = m.start();
+                int end = m.end();
+                list.add(ForkUtil.safeSubstring(text, start, end));
+            }
+            for (String str : list) {
+                text = text.replaceFirst("[@]{0,1}" + str + "[,]{0,1}", " ");
+            }
+        }
+        return text;
+    }
+
+    private String localApplyReplacements(String text, java.util.List<Match> matches,
+            String replacement) {
+        if (matches != null) {
+            String resultText = text;
+            if (replacement.equals("none")) {
+                replacement = "";
+            } else {
+                return text;
+            }
+            ArrayList<String> list = new ArrayList<String>();
+            for (Match m : matches) {
+                String replacedText = ForkUtil.safeSubstring(text, m.start, m.end);
+                list.add(replacedText);
+            }
+            for (String str : list) {
+                resultText = resultText.replaceFirst(Pattern.quote(str), replacement);
+            }
+            return resultText;
+        }
+        return text;
     }
     
     private void applyReplacements(String text, java.util.List<Match> matches,

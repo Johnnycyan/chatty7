@@ -42,6 +42,7 @@ public class ForkUtil {
     public static Color COLOR_BANNED_HIGHLIGHT_MESSAGE = new Color(50, 50, 50);
 
     public static boolean REPLACEMENT_UNDERLINE = false;
+    public static boolean PRINT_FULL_FILTERED = true;
 
     public static String FILTER_FORK_PREFIX = "ByFork";
 
@@ -196,6 +197,12 @@ public class ForkUtil {
             if (reader != null)
                 reader.close();
         }
+    }
+
+    public static String safeSubstring(final String str, final int start, final int end) {
+        return str.substring(
+                Math.max(0, start),
+                Math.min(end, str.length()));
     }
     
 }

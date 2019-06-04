@@ -148,6 +148,13 @@ public class ForkSettings extends SettingsPanel {
         fork.add(notUnderline,
                 d.makeGbc(0, 18, 3, 1, GridBagConstraints.WEST));
 
+        JCheckBox skipFiltered = d.addSimpleBooleanSetting(
+                "skipFullFiltered",
+                "Skip completely filtered messages. (Expetimental!)",
+                "...");
+        fork.add(skipFiltered,
+                d.makeGbc(0, 19, 3, 1, GridBagConstraints.WEST));
+
 
     }
     
