@@ -1462,6 +1462,8 @@ public class TwitchClient {
             pubsub.connect();
         } else if (command.equals("psdisconnect")) {
             pubsub.disconnect();
+        } else if (command.equals("psreconnect")) {
+            pubsub.reconnect();
         } else if (command.equals("modaction")) {
             String by = "Blahfasel";
             String action = "timeout";
@@ -2092,6 +2094,14 @@ public class TwitchClient {
                         User bannedUser = c.getUser(channel, bannedUsername);
                         bannedUser.addBanInfo(data);
                         g.updateUserinfo(bannedUser);
+                    }
+                    String unbannedUsername = ModLogInfo.getUnbannedUsername(data);
+                    if (unbannedUsername != null) {
+                        // Add info to unbanned user
+                        User unbannedUser = c.getUser(channel, unbannedUsername);
+                        int type = User.UnbanMessage.getType(data.moderation_action);
+                        unbannedUser.addUnban(type, data.created_by);
+                        g.updateUserinfo(unbannedUser);
                     }
                 }
             }

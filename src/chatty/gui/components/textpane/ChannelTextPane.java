@@ -14,11 +14,14 @@ import chatty.gui.UrlOpener;
 import chatty.gui.MainGui;
 import chatty.User;
 import chatty.gui.Highlighter.Match;
+import chatty.gui.components.Channel;
 import chatty.util.api.usericons.Usericon;
 import chatty.gui.components.menus.ContextMenuListener;
+import chatty.gui.emoji.EmojiUtil;
 import chatty.util.DateTime;
 import chatty.util.ForkUtil;
 import chatty.util.Debugging;
+import chatty.util.MiscUtil;
 import chatty.util.RingBuffer;
 import chatty.util.StringUtil;
 import chatty.util.TwitchEmotes.Emoteset;
@@ -112,6 +115,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private static final Matcher urlMatcher = Helper.getUrlPattern().matcher("");
     
     public MainGui main;
+    private Channel channel;
 
     protected LinkController linkController = new LinkController();
     private static StyleServer styleServer;
@@ -156,7 +160,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         SHOW_TOOLTIPS, BOTTOM_MARGIN,
         
         DISPLAY_NAMES_MODE,
-        MENTIONS, MENTIONS_BOLD, MENTIONS_UNDERLINE, MENTIONS_COLORED,
+        MENTIONS, MENTIONS_INFO,
         HIGHLIGHT_HOVERED_USER, HIGHLIGHT_MATCHES_ALL, USERCOLOR_BACKGROUND
     }
     
@@ -242,6 +246,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     public void setMouseClickedListener(MouseClickedListener listener) {
         linkController.setMouseClickedListener(listener);
+    }
+    
+    public void setChannel(Channel channel) {
+        this.channel = channel;
+        linkController.setChannel(channel);
     }
     
     private void setHoveredUser(User user) {
@@ -472,10 +481,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         closeCompactMode();
         print(getTimePrefix(), style);
         
-        MutableAttributeSet specialStyle = styles.user(message.user, style);
-        specialStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
-        print("[AutoMod] <"+message.user.getDisplayNick()+">", specialStyle);
-        print(" "+message.message, style);
+        MutableAttributeSet userStyle = styles.user(message.user, style);
+        userStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
+        // Should be the same as the start of the "text" in the AutoModMessage,
+        // so highlight matches are displayed properly
+        String startText = "[AutoMod] <"+message.user.getDisplayNick()+">";
+        print(startText, userStyle);
+        printSpecialsInfo(" "+message.message, style,
+                Match.shiftMatchList(message.highlightMatches, -startText.length()));
         finishLine();
     }
 
@@ -2155,30 +2168,26 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         finishLine();
     }
 
+    /**
+     * For info messages. Only applys links and mentions.
+     */
     private void printSpecialsInfo(String text, AttributeSet style,
             java.util.List<Match> highlightMatches) {
         TreeMap<Integer,Integer> ranges = new TreeMap<>();
         HashMap<Integer,MutableAttributeSet> rangesStyle = new HashMap<>();
+        
         findLinks(text, ranges, rangesStyle, style);
         
+        if (styles.isEnabled(Setting.MENTIONS_INFO)) {
+            findMentions(text, ranges, rangesStyle, style, Setting.MENTIONS_INFO);
+        }
+        
+        // Actually output it
         printSpecials(null, text, style, ranges, rangesStyle, highlightMatches);
     }
     
     /**
-     * Print special stuff in the text like links and emoticons differently.
-     * 
-     * First a map of all special stuff that can be found in the text is built,
-     * in a way that stuff doesn't overlap with previously found stuff.
-     * 
-     * Then all the special stuff in this map is printed accordingly, while
-     * printing the stuff inbetween with regular style.
-     * 
-     * @param text 
-     * @param user 
-     * @param style 
-     * @param emotes 
-     * @param ignoreLinks 
-     * @param containsBits 
+     * For user messages. Applys replacements, links, emotes, bits, mentions.
      */
     protected void printSpecialsNormal(String text, User user, MutableAttributeSet style,
             TagEmotes emotes, boolean ignoreLinks, boolean containsBits,
@@ -2203,9 +2212,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
         
         if (styles.isEnabled(Setting.MENTIONS)) {
-            findMentions(text, ranges, rangesStyle, style);
+            findMentions(text, ranges, rangesStyle, style, Setting.MENTIONS);
         }
         
+        // Actually output it
         printSpecials(user, text, style, ranges, rangesStyle, highlightMatches);
     }
     
@@ -2402,7 +2412,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private void findMentions(String text,
             Map<Integer, Integer> ranges,
             Map<Integer, MutableAttributeSet> rangesStyle,
-            AttributeSet baseStyle) {
+            AttributeSet baseStyle,
+            Setting setting) {
         Set<User> alreadyChecked = new HashSet<>();
         for (MentionCheck check : lastUsers.getItems()) {
             if (alreadyChecked.contains(check.user)) {
@@ -2415,7 +2426,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 int end = m.end() - 1;
                 if (!inRanges(start, ranges) && !inRanges(end, ranges)) {
                     ranges.put(start, end);
-                    rangesStyle.put(start, styles.mention(check.user, baseStyle));
+                    rangesStyle.put(start, styles.mention(check.user, baseStyle, setting));
                 }
             }
         }
@@ -2436,51 +2447,35 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private void findEmoticons(String text, User user, Map<Integer, Integer> ranges,
             Map<Integer, MutableAttributeSet> rangesStyle, TagEmotes tagEmotes) {
-        boolean f = false;
-        if (DateTime.isAprilFirst()) {
-            char a = (char)(System.currentTimeMillis() / 20000 % 26 + 97);
-            boolean fName = user.getName().charAt(0) == a;
-
-            int b = (int)(System.currentTimeMillis() / 100000 % 100);
-
-            f = (fName || fCount > 0) && b < 80;
-
-            if (f) {
-                fCount--;
-            } else {
-                Random rand = new Random(System.currentTimeMillis() / 20000);
-                fCount = rand.nextInt(800) - 800 + b;
-            }
-
-            Debugging.println("f", a+" "+b+" "+fCount+" "+f);
-        }
         
-        findEmoticons(user, main.emoticons.getCustomEmotes(), text, ranges, rangesStyle, f);
-        findEmoticons(user, main.emoticons.getEmoji(), text, ranges, rangesStyle, f);
+        findEmoticons(user, main.emoticons.getCustomEmotes(), text, ranges, rangesStyle);
+        if (Debugging.isEnabled("emoji2") || EmojiUtil.mightContainEmoji(text)) {
+            findEmoticons(user, main.emoticons.getEmoji(), text, ranges, rangesStyle);
+        }
         
         if (tagEmotes != null) {
             // Add emotes from tags
             Map<Integer, Emoticon> emoticonsById = main.emoticons.getEmoticonsById();
-            addTwitchTagsEmoticons(user, emoticonsById, text, ranges, rangesStyle, tagEmotes, f);
+            addTwitchTagsEmoticons(user, emoticonsById, text, ranges, rangesStyle, tagEmotes);
         }
         
         // Emoteset based
         for (Integer set : user.getEmoteSet()) {
             HashSet<Emoticon> emoticons = main.emoticons.getEmoticons(set);
-            findEmoticons(emoticons, text, ranges, rangesStyle, f);
+            findEmoticons(emoticons, text, ranges, rangesStyle);
         }
         
         // Global emotes
         if (tagEmotes == null) {
             Set<Emoticon> emoticons = main.emoticons.getGlobalTwitchEmotes();
-            findEmoticons(emoticons, text, ranges, rangesStyle, f);
+            findEmoticons(emoticons, text, ranges, rangesStyle);
         }
         Set<Emoticon> emoticons = main.emoticons.getOtherGlobalEmotes();
-        findEmoticons(emoticons, text, ranges, rangesStyle, f);
+        findEmoticons(emoticons, text, ranges, rangesStyle);
         
         // Channel based (may also have a emoteset restriction)
         HashSet<Emoticon> channelEmotes = main.emoticons.getEmoticons(user.getStream());
-        findEmoticons(user, channelEmotes, text, ranges, rangesStyle, f);
+        findEmoticons(user, channelEmotes, text, ranges, rangesStyle);
     }
     
     /**
@@ -2494,7 +2489,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     private void addTwitchTagsEmoticons(User user, Map<Integer, Emoticon> emoticons, String text,
             Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle,
-            TagEmotes emotesDef, boolean f) {
+            TagEmotes emotesDef) {
         if (emotesDef == null) {
             return;
         }
@@ -2552,7 +2547,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                         main.emoticons.addTempEmoticon(emoticon);
                     }
                     if (!main.emoticons.isEmoteIgnored(emoticon)) {
-                        addEmoticon(emoticon, start, end, ranges, rangesStyle, f);
+                        addEmoticon(emoticon, start, end, ranges, rangesStyle);
                     }
                 }
             }
@@ -2567,13 +2562,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     }
     
     private void findEmoticons(Set<Emoticon> emoticons, String text,
-            Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle, boolean f) {
-        findEmoticons(null, emoticons, text, ranges, rangesStyle, f);
+            Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle) {
+        findEmoticons(null, emoticons, text, ranges, rangesStyle);
     }
     
     private void findEmoticons(User user, Set<Emoticon> emoticons, String text,
-            Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle,
-            boolean f) {
+            Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle) {
         // Find emoticons
         for (Emoticon emoticon : emoticons) {
             // Check the text for every single emoticon
@@ -2597,7 +2591,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 // For Emoji, check for text style variation selector
                 boolean textEmoji = emoticon.type == Emoticon.Type.EMOJI && m.group().endsWith("\uFE0E");
                 if (!textEmoji) {
-                    addEmoticon(emoticon, start, end, ranges, rangesStyle, f);
+                    addEmoticon(emoticon, start, end, ranges, rangesStyle);
                 }
             }
         }
@@ -2624,7 +2618,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                         continue;
                     }
                     boolean ignored = main.emoticons.isEmoteIgnored(emote);
-                    if (!ignored && addEmoticon(emote, start, end - bitsLength, ranges, rangesStyle, false)) {
+                    if (!ignored && addEmoticon(emote, start, end - bitsLength, ranges, rangesStyle)) {
                         // Add emote
                         addFormattedText(emote.color, end - bitsLength + 1, end, ranges, rangesStyle);
                     } else {
@@ -2640,11 +2634,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private boolean addEmoticon(Emoticon emoticon, int start, int end,
             Map<Integer, Integer> ranges,
-            Map<Integer, MutableAttributeSet> rangesStyle, boolean f) {
+            Map<Integer, MutableAttributeSet> rangesStyle) {
         if (!inRanges(start, ranges) && !inRanges(end, ranges)) {
             if (emoticon.getIcon(this) != null) {
                 ranges.put(start, end);
-                MutableAttributeSet attr = styles.emoticon(emoticon, f);
+                MutableAttributeSet attr = styles.emoticon(emoticon);
                 // Add an extra attribute, making this Style unique
                 // (else only one icon will be output if two of the same
                 // follow in a row)
@@ -3436,10 +3430,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addSetting(Setting.PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, false);
             addSetting(Setting.EMOTICONS_SHOW_ANIMATED, false);
             addSetting(Setting.SHOW_TOOLTIPS, true);
-            addSetting(Setting.MENTIONS, true);
-            addSetting(Setting.MENTIONS_BOLD, true);
-            addSetting(Setting.MENTIONS_UNDERLINE, false);
-            addSetting(Setting.MENTIONS_COLORED, false);
+            addNumericSetting(Setting.MENTIONS, 0, 0, 200);
+            addNumericSetting(Setting.MENTIONS_INFO, 0, 0, 200);
             addSetting(Setting.HIGHLIGHT_MATCHES_ALL, true);
             addNumericSetting(Setting.USERCOLOR_BACKGROUND, 1, 0, 200);
             addNumericSetting(Setting.FILTER_COMBINING_CHARACTERS, 1, 0, 2);
@@ -3731,15 +3723,17 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             return userStyle;
         }
         
-        public MutableAttributeSet mention(User user, AttributeSet style) {
+        public MutableAttributeSet mention(User user, AttributeSet style,
+                Setting setting) {
+            int settingValue = numericSettings.get(setting);
             SimpleAttributeSet mentionStyle = new SimpleAttributeSet(style);
-            if (isEnabled(Setting.MENTIONS_BOLD)) {
+            if (MiscUtil.biton(settingValue, 1)) {
                 StyleConstants.setBold(mentionStyle, true);
             }
-            if (isEnabled(Setting.MENTIONS_UNDERLINE)) {
+            if (MiscUtil.biton(settingValue, 2)) {
                 StyleConstants.setUnderline(mentionStyle, true);
             }
-            if (isEnabled(Setting.MENTIONS_COLORED)) {
+            if (MiscUtil.biton(settingValue, 3)) {
                 StyleConstants.setForeground(mentionStyle, getUserColor(user));
             }
             mentionStyle.addAttribute(Attribute.MENTION, user);
@@ -3782,6 +3776,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         }
         
         public boolean isEnabled(Setting setting) {
+            if (setting == Setting.MENTIONS || setting == Setting.MENTIONS_INFO) {
+                return MiscUtil.biton(numericSettings.get(setting), 0);
+            }
             return settings.get(setting);
         }
         
@@ -3814,11 +3811,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
          * @param emoticon
          * @return 
          */
-        public MutableAttributeSet emoticon(Emoticon emoticon, boolean f) {
+        public MutableAttributeSet emoticon(Emoticon emoticon) {
             // Does this need any other attributes e.g. standard?
             SimpleAttributeSet emoteStyle = new SimpleAttributeSet();
             EmoticonImage emoteImage = emoticon.getIcon(
-                    emoticonScaleFactor(), emoticonMaxHeight(), ChannelTextPane.this, f);
+                    emoticonScaleFactor(), emoticonMaxHeight(), ChannelTextPane.this);
             StyleConstants.setIcon(emoteStyle, emoteImage.getImageIcon());
             
             emoteStyle.addAttribute(Attribute.EMOTICON, emoteImage);
