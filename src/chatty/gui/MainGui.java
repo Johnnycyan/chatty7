@@ -2387,6 +2387,8 @@ public class MainGui extends JFrame implements Runnable {
                 return true;
             }
             printSystem("Invalid parameters.");
+        } else if (command.equals("popoutchannel")) {
+            channels.popoutActiveChannel();
         } else {
             return false;
         }
