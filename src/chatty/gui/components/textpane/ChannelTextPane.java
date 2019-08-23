@@ -147,7 +147,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private boolean newlineRequired = false;
     
     public enum Setting {
-        TIMESTAMP_ENABLED, EMOTICONS_ENABLED, AUTO_SCROLL, USERICONS_ENABLED, 
+        TIMESTAMP_ENABLED, EMOTICONS_ENABLED, AUTO_SCROLL, USERICONS_ENABLED,
         
         SHOW_BANMESSAGES, COMBINE_BAN_MESSAGES, DELETE_MESSAGES,
         DELETED_MESSAGES_MODE, BAN_DURATION_APPENDED, BAN_REASON_APPENDED,
@@ -157,7 +157,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         EMOTICON_MAX_HEIGHT, EMOTICON_SCALE_FACTOR, BOT_BADGE_ENABLED,
         FILTER_COMBINING_CHARACTERS, PAUSE_ON_MOUSEMOVE,
         PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, EMOTICONS_SHOW_ANIMATED,
-        SHOW_TOOLTIPS, BOTTOM_MARGIN,
+        SHOW_TOOLTIPS, SHOW_TOOLTIP_IMAGES, BOTTOM_MARGIN,
         
         DISPLAY_NAMES_MODE,
         MENTIONS, MENTIONS_INFO,
@@ -448,7 +448,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     private void printUsernotice(UserNotice message, MutableAttributeSet style) {
         closeCompactMode();
-        print(getTimePrefix(), style);
+        printTimestamp(style);
         
         MutableAttributeSet userStyle;
         if (message.user.getName().isEmpty()) {
@@ -479,7 +479,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private void printAutoModMessage(AutoModMessage message, AttributeSet style) {
         closeCompactMode();
-        print(getTimePrefix(), style);
+        printTimestamp(style);
         
         MutableAttributeSet userStyle = styles.user(message.user, style);
         userStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
@@ -538,9 +538,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             style = styles.standard(color);
         }
         if (timestamp == null) {
-            print(getTimePrefix(), style);
+            printTimestamp(style);
         } else {
-            print(getTimePrefixFromString(timestamp), styles.standard(color));
+            printTimestamp(style, timestamp);
         }
         printUser(user, action, message.whisper, message.id, background);
         
@@ -624,7 +624,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private void printInfoMessage2(InfoMessage message, AttributeSet style) {
         closeCompactMode();
-        print(getTimePrefix(), style);
+        printTimestamp(style);
         printSpecialsInfo(message.text, style, message.highlightMatches);
         finishLine();
     }
@@ -1032,7 +1032,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 increasePreviousBanMessage(prevMessage, duration, reason);
             } else {
                 closeCompactMode();
-                print(getTimePrefix(), styles.banMessage(user, message));
+                printTimestamp(styles.banMessage(user, message));
                 print(user.getCustomNick(), styles.user(user, styles.info()));
                 print(" "+message, styles.info());
                 finishLine();
@@ -2081,7 +2081,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         if (startCompactMode(type)) {
             // If compact mode has actually been started for this print,
             // print prefix first
-            print(getTimePrefix(), styles.compact());
+            printTimestamp(styles.compact());
             print(type+": ", styles.compact());
             seperator = "";
         }
@@ -2164,7 +2164,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private void printLine(String line, MutableAttributeSet style) {
         // Close compact mode, because this is definately a new line (timestamp)
         closeCompactMode();
-        print(getTimePrefix()+line,style);
+        printTimestamp(style);
+        print(line,style);
         finishLine();
     }
 
@@ -2762,13 +2763,18 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     /**
      * Makes the time prefix.
      * 
-     * @return 
+     * @param style
      */
-    protected String getTimePrefix() {
+    protected void printTimestamp(AttributeSet style) {
         if (styles.timestampFormat() != null) {
-            return DateTime.currentTime(styles.timestampFormat())+" ";
+            print(DateTime.currentTime(styles.timestampFormat())+" ", styles.timestamp(style));
         }
-        return "";
+    }
+
+    protected void printTimestamp(AttributeSet style, String timestamp) {
+        if (styles.timestampFormat() != null) {
+            print(getTimePrefixFromString(timestamp), styles.timestamp(style));
+        }
     }
 
     protected String getTimePrefixFromString(String timestamp) {
@@ -3211,7 +3217,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         /**
          * Styles that are get from the StyleServer
          */
-        private final String[] baseStyles = new String[]{"standard","special","info","base","highlight","paragraph"};
+        private final String[] baseStyles = new String[]{"standard","timestamp","special","info","base","highlight","paragraph"};
         /**
          * Stores the styles
          */
@@ -3430,6 +3436,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addSetting(Setting.PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, false);
             addSetting(Setting.EMOTICONS_SHOW_ANIMATED, false);
             addSetting(Setting.SHOW_TOOLTIPS, true);
+            addSetting(Setting.SHOW_TOOLTIP_IMAGES, true);
             addNumericSetting(Setting.MENTIONS, 0, 0, 200);
             addNumericSetting(Setting.MENTIONS_INFO, 0, 0, 200);
             addSetting(Setting.HIGHLIGHT_MATCHES_ALL, true);
@@ -3445,6 +3452,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addNumericSetting(Setting.HIGHLIGHT_HOVERED_USER, 0, 0, 4);
             timestampFormat = styleServer.getTimestampFormat();
             linkController.setPopupEnabled(settings.get(Setting.SHOW_TOOLTIPS));
+            linkController.setPopupImagesEnabled(settings.get(Setting.SHOW_TOOLTIP_IMAGES));
             linkController.setUserHoverHighlightMode(getInt(Setting.HIGHLIGHT_HOVERED_USER));
         }
         
@@ -3581,6 +3589,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         public MutableAttributeSet standard() {
             return styles.get("standard");
+        }
+        
+        public AttributeSet timestamp(AttributeSet style) {
+            SimpleAttributeSet modified = new SimpleAttributeSet(style);
+            modified.addAttributes(styles.get("timestamp"));
+            return modified;
         }
         
         public MutableAttributeSet banMessage(User user, String message) {

@@ -179,6 +179,8 @@ public class SettingsManager {
         // Chat Appearance
         settings.addString("font","Consolas");
         settings.addLong("fontSize",14);
+        settings.addBoolean("timestampFontEnabled", false);
+        settings.addString("timestampFont", "Consolas 14");
         settings.addString("inputFont", "Dialog 14");
         settings.addString("userlistFont", "Dialog Bold 12");
         settings.addLong("lineSpacing", 2);
@@ -194,6 +196,7 @@ public class SettingsManager {
         settings.addLong("displayNamesMode", DISPLAY_NAMES_MODE_BOTH);
         settings.addLong("displayNamesModeUserlist", DISPLAY_NAMES_MODE_CAPITALIZED);
         settings.addBoolean("showImageTooltips", true);
+        settings.addBoolean("showTooltipImages", true);
         settings.addLong("mentions", 3);
         settings.addLong("mentionsInfo", 3);
         settings.addLong("markHoveredUser", chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS);
@@ -237,6 +240,8 @@ public class SettingsManager {
         settings.addString("backgroundColor2","#EAEAEA");
         settings.addBoolean("messageSeparator", false);
         settings.addString("separatorColor", "#DFDFDF");
+        settings.addBoolean("timestampColorEnabled", false);
+        settings.addString("timestampColor", "#111111");
         settings.addString("infoColor","#001480");
         settings.addString("compactColor","#A0A0A0");
         settings.addString("inputBackgroundColor","White");
@@ -289,6 +294,7 @@ public class SettingsManager {
                 + "Delete=/delete $$(msg-id)");
         settings.addString("banReasons", "Spam\nPosting Bad Links\nBan Evasion\n"
                                 + "Hate / Harassment\nSpoilers / Backseat Gaming");
+        settings.addString("banReasonsHotkey", "");
         settings.addString("userContextMenu", "");
         settings.addString("channelContextMenu", "");
         settings.addString("streamsContextMenu", "");
@@ -393,6 +399,7 @@ public class SettingsManager {
         settings.addMap("bufferSizes", new HashMap<>(), Setting.LONG);
 
         settings.addString("liveStreamsSorting", "recent");
+        settings.addBoolean("liveStreamsSortingFav", true);
         settings.addLong("historyRange", 0);
         settings.addBoolean("historyVerticalZoom", false);
 

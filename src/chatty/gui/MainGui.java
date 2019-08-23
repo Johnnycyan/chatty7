@@ -85,7 +85,9 @@ import chatty.util.settings.SettingsListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JCheckBoxMenuItem;
@@ -255,7 +257,7 @@ public class MainGui extends JFrame implements Runnable {
         GuiUtil.installEscapeCloseOperation(favoritesDialog);
         joinDialog = new JoinDialog(this);
         GuiUtil.installEscapeCloseOperation(joinDialog);
-        liveStreamsDialog = new LiveStreamsDialog(contextMenuListener);
+        liveStreamsDialog = new LiveStreamsDialog(contextMenuListener, client.channelFavorites);
         setLiveStreamsWindowIcons();
         //GuiUtil.installEscapeCloseOperation(liveStreamsDialog);
         EmoteContextMenu.setEmoteManager(emoticons);
@@ -1222,7 +1224,10 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     private void updateLiveStreamsDialog() {
-        liveStreamsDialog.setSorting(client.settings.getString("liveStreamsSorting"));
+        liveStreamsDialog.setSorting(
+                client.settings.getString("liveStreamsSorting"),
+                client.settings.getBoolean("liveStreamsSortingFav")
+        );
     }
     
     private void updateHistoryRange() {
@@ -1489,6 +1494,8 @@ public class MainGui extends JFrame implements Runnable {
             } else if (cmd.equals("unhandledException")) {
                 String[] array = new String[0];
                 String a = array[1];
+            } else if (cmd.equals("errorTest")) {
+                Logger.getLogger(MainGui.class.getName()).log(Level.SEVERE, null, new ArrayIndexOutOfBoundsException(2));
             } else if (cmd.equals("addressbook")) {
                 openAddressbook(null);
             } else if (cmd.equals("srlRaces")) {
@@ -1829,6 +1836,10 @@ public class MainGui extends JFrame implements Runnable {
                 client.api.manualRefreshStreams();
                 state.update(true);
             }
+            if (cmd.equals("sortOption_favFirst")) {
+                JCheckBoxMenuItem item = (JCheckBoxMenuItem)e.getSource();
+                client.settings.setBoolean("liveStreamsSortingFav", item.isSelected());
+            }
         }
         
         /**
@@ -1904,7 +1915,25 @@ public class MainGui extends JFrame implements Runnable {
             if (cmd.equals("join")) {
                 makeVisible();
                 client.joinChannels(new HashSet<>(channels));
-            } 
+            }
+            else if (cmd.equals("favoriteChannel")) {
+                for (String chan : channels) {
+                    client.channelFavorites.addFavorite(chan);
+                }
+                /**
+                 * Manually update data when changed from the outside, instead
+                 * of just using ChannelFavorites change listener (since changes
+                 * through the favoritesDialog itself get handled differently
+                 * but would also cause additional updates).
+                 */
+                favoritesDialog.updateData();
+            }
+            else if (cmd.equals("unfavoriteChannel")) {
+                for (String chan : channels) {
+                    client.channelFavorites.removeFavorite(chan);
+                }
+                favoritesDialog.updateData();
+            }
         }
         
         private void streamStuff(ActionEvent e, Collection<String> streams) {
@@ -2205,7 +2234,11 @@ public class MainGui extends JFrame implements Runnable {
 
         @Override
         public void emoteClicked(Emoticon emote, MouseEvent e) {
-            openEmotesDialogEmoteDetails(emote);
+            if (e.isControlDown()) {
+                insert(Emoticons.toWriteable(emote.code), true);
+            } else {
+                openEmotesDialogEmoteDetails(emote);
+            }
         }
 
         @Override
@@ -2550,7 +2583,8 @@ public class MainGui extends JFrame implements Runnable {
     
     private void openEmotesDialogChannelEmotes(String channel) {
         client.requestChannelEmotes(channel);
-        openEmotesDialog(channel);
+        openEmotesDialog(null);
+        emotesDialog.setTempStream(channel);
         emotesDialog.showChannelEmotes();
     }
     
@@ -4471,8 +4505,8 @@ public class MainGui extends JFrame implements Runnable {
                 channels.updateUserlistSettings();
             }
             if (type == Setting.STRING) {
-                if (setting.equals("timeoutButtons")) {
-                    userInfoDialog.setUserDefinedButtonsDef((String) value);
+                if (setting.equals("timeoutButtons") || setting.equals("banReasonsHotkey")) {
+                    userInfoDialog.setUserDefinedButtonsDef(client.settings.getString("timeoutButtons"));
                 } else if (setting.equals("token")) {
                     client.api.setToken((String)value);
                 } else if (setting.equals("emoji")) {
@@ -4505,7 +4539,8 @@ public class MainGui extends JFrame implements Runnable {
                     emotesDialog.setEmoteScale(((Long)value).intValue());
                 }
             }
-            if (setting.equals("liveStreamsSorting")) {
+            if (setting.equals("liveStreamsSorting")
+                    || setting.equals("liveStreamsSortingFav")) {
                 updateLiveStreamsDialog();
             }
             if (setting.equals("historyRange")) {
@@ -4618,6 +4653,10 @@ public class MainGui extends JFrame implements Runnable {
             data = data.substring(endOfTags+1);
         }
 
+        if (!tags.containsKey("display-name")) {
+            return false;
+        }
+
         User user = client.getUser(channel, tags.get("display-name"));
         ForkUtil.updateUserFromTags(user, tags);
         String emotesTag = tags.get("emotes");
@@ -4633,7 +4672,17 @@ public class MainGui extends JFrame implements Runnable {
         textMsg = textMsg.replaceAll("\u0001ACTION ", "");
         textMsg = textMsg.replaceAll("\u0001", "");
 
-        long messageSentTimestamp = Long.parseLong(tags.get("tmi-sent-ts"));
+        String t = "tmi-sent-ts";
+        String r = "rm-received-ts";
+        String tmi;
+        if (tags.containsKey(t)) {
+            tmi = tags.get(t);
+        } else if (tags.containsKey(r)) {
+            tmi = tags.get(r);
+        } else {
+            tmi = System.currentTimeMillis() + "";
+        }
+        long messageSentTimestamp = Long.parseLong(tmi);
 
         // Check for duplicates.
         List<User.Message> messagesOfUser = user.getMessages();              
@@ -4662,7 +4711,7 @@ public class MainGui extends JFrame implements Runnable {
             printLine(client.roomManager.getRoom(channel), "[Begin of recent messages.]");
         }
 
-        this.printMessage(user, textMsg, action, emotesTag, bits, id, tags.get("tmi-sent-ts"));
+        this.printMessage(user, textMsg, action, emotesTag, bits, id, tmi);
         return true;
     }
     
@@ -4824,7 +4873,7 @@ public class MainGui extends JFrame implements Runnable {
 
             @Override
             public void run() {
-                int result = errorMessage.show(error, previous);
+                int result = errorMessage.show(error, previous, client.getOpenChannels().size());
                 if (result == ErrorMessage.QUIT) {
                     exit();
                 }

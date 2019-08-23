@@ -44,6 +44,7 @@ import chatty.util.StringUtil;
 import chatty.util.TwitchEmotes;
 import chatty.util.TwitchEmotes.EmotesetInfo;
 import chatty.util.TwitchEmotes.TwitchEmotesListener;
+import chatty.util.TwitchEmotesApi;
 import chatty.util.Webserver;
 import chatty.util.api.AutoModCommandHelper;
 import chatty.util.api.ChatInfo;
@@ -237,6 +238,7 @@ public class TwitchClient {
         api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
         twitchemotes = new TwitchEmotes(new TwitchemotesListener());
         bttvEmotes = new BTTVEmotes(new EmoteListener());
+        TwitchEmotesApi.api.setTwitchApi(api);
         
         Language.setLanguage(settings.getString("language"));
         
@@ -495,6 +497,8 @@ public class TwitchClient {
     private void createTestUser(String name, String channel) {
         testUser = new User(name, name, Room.createRegular(channel));
         testUser.setColor(new Color(94, 0, 211));
+        // Force color correction for longer userinfo color label
+        testUser.setColor(new Color(255, 255, 255));
         //testUser.setColor(new Color(0,216,107));
         //testUser.setBot(true);
         //testUser.setTurbo(true);
@@ -932,7 +936,7 @@ public class TwitchClient {
             commandReconnect();
         }
         else if (command.equals("connection")) {
-            g.printLine(c.getConnectionInfo());
+            g.printLine(room, c.getConnectionInfo());
         }
         else if (command.equals("join")) {
             commandJoinChannel(parameter);
@@ -1027,9 +1031,9 @@ public class TwitchClient {
         }
         else if (command.equals("echo")) {
             if (parameter != null) {
-                g.printLine(parameter);
+                g.printLine(room, parameter);
             } else {
-                g.printLine("Invalid parameters: /echo <message>");
+                g.printLine(room, "Invalid parameters: /echo <message>");
             }
         }
         else if (command.equals("echoall")) {
