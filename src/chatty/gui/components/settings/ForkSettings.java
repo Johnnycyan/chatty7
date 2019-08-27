@@ -2,6 +2,7 @@
 package chatty.gui.components.settings;
 
 import chatty.Chatty;
+import chatty.lang.Language;
 import java.awt.GridBagConstraints;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -154,6 +155,13 @@ public class ForkSettings extends SettingsPanel {
                 "...");
         fork.add(skipFiltered,
                 d.makeGbc(0, 19, 3, 1, GridBagConstraints.WEST));
+
+        JCheckBox coloredNamesInUserlist = d.addSimpleBooleanSetting(
+            "displayColoredNamesInUserlist",
+            Language.getString("settings.label.displayColoredNamesInUserlist"),
+            "");
+        fork.add(coloredNamesInUserlist,
+            d.makeGbc(0, 20, 3, 1, GridBagConstraints.WEST));
 
 
     }
