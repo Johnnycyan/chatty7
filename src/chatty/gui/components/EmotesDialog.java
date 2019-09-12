@@ -864,6 +864,13 @@ public class EmotesDialog extends JDialog {
                     turboEmotes.add(emoteset);
                 } else if (emoteset != Emoticon.SET_GLOBAL) {
                     EmotesetInfo info = emotesetInfo.get(emoteset);
+                    if (info == null) {
+                        /**
+                         * Get cached if already available (otherwise no info
+                         * while waiting for request, if any emoteset changed).
+                         */
+                        info = TwitchEmotesApi.api.getBySet(emoteset);
+                    }
                     if (info != null) {
                         if (info.stream_name == null) {
                             // No stream name, probably special emoteset
@@ -1204,8 +1211,8 @@ public class EmotesDialog extends JDialog {
             }
             String featured = emote.subType == Emoticon.SubType.EVENT ? " (Featured)" : "";
             addInfo(panel2, Language.getString("emotesDialog.details.type"), emote.type.toString()+featured);
-            if (emote.numericId > Emoticon.ID_UNDEFINED) {
-                addInfo(panel2, Language.getString("emotesDialog.details.id"), ""+emote.numericId);
+            if (emote.type == Emoticon.Type.TWITCH || emote.type == Emoticon.Type.FFZ) {
+                addInfo(panel2, Language.getString("emotesDialog.details.id"), emote.stringId);
             }
             if (!emote.hasGlobalEmoteset()) {
                 int emoteset = TwitchEmotesApi.getSet(emote, emotesetInfo);
@@ -1217,7 +1224,8 @@ public class EmotesDialog extends JDialog {
                     if (emotesetInfo != null && emotesetInfo.product != null) {
                         info += " ("+emotesetInfo.product+")";
                     }
-                    addInfo(panel2, "Emoteset:", info);
+                    String orig = TwitchEmotesApi.isModified(emote) ? "Orig. " : "";
+                    addInfo(panel2, orig+"Emoteset:", info);
                 } else {
                     addInfo(panel2, "Emoteset:", "unknown");
                 }

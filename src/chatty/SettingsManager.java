@@ -365,6 +365,7 @@ public class SettingsManager {
         settings.addBoolean("closeToTray", false);
         settings.addBoolean("minimizeToTray", false);
         settings.addBoolean("trayIconAlways", false);
+        settings.addBoolean("singleClickTrayOpen", true);
         
         // Window State
         settings.addMap("windows", new HashMap<>(), Setting.STRING);
@@ -515,6 +516,7 @@ public class SettingsManager {
         settings.addList("highlightBlacklist", new ArrayList(), Setting.STRING);
         settings.addBoolean("highlightMatches", true);
         settings.addBoolean("highlightMatchesAll", true);
+        settings.addBoolean("highlightByPoints", true);
 
         // Ignore
         settings.addList("ignore", new ArrayList(), Setting.STRING);

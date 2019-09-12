@@ -1427,14 +1427,28 @@ public class MainGui extends JFrame implements Runnable {
     
     private class TrayMenuListener implements ActionListener {
 
+        private final ElapsedTime lastEvent = new ElapsedTime();
+        
         @Override
         public void actionPerformed(ActionEvent e) {
             String cmd = e.getActionCommand();
-            if (cmd == null || cmd.equals("show")) {
-                if (isMinimized()) {
-                    makeVisible();
-                } else {
-                    minimizeToTray();
+            if (cmd == null
+                    || cmd.equals("show")
+                    || cmd.equals("doubleClick")
+                    || (cmd.equals("singleClick") && client.settings.getBoolean("singleClickTrayOpen"))) {
+                /**
+                 * Prevent hiding/showing too quickly, for example when both the
+                 * mouse listener and the action listener fire (could also be
+                 * platform dependent).
+                 */
+                if (lastEvent.millisElapsed(80)) {
+                    lastEvent.set();
+                    if (isMinimized()) {
+                        makeVisible();
+                    }
+                    else {
+                        minimizeToTray();
+                    }
                 }
             }
             else if (cmd.equals("exit")) {
@@ -2047,13 +2061,13 @@ public class MainGui extends JFrame implements Runnable {
                 url = TwitchUrl.makeFFZUrl();
             } else if (e.getActionCommand().equals("emoteId")) {
                 if (emote.type == Emoticon.Type.FFZ) {
-                    url = TwitchUrl.makeFFZUrl(emote.numericId);
+                    url = TwitchUrl.makeFFZEmoteUrl(emote.stringId);
                 } else if (emote.type == Emoticon.Type.TWITCH) {
-                    url = TwitchUrl.makeTwitchemotesUrl(emote.numericId);
+                    url = TwitchUrl.makeTwitchemotesUrl(emote.stringId);
                 }
             } else if (e.getActionCommand().equals("emoteCreator")) {
                 if (emote.type == Emoticon.Type.FFZ) {
-                    url = TwitchUrl.makeFFZUrl(emote.creator);
+                    url = TwitchUrl.makeFFZUserUrl(emote.creator);
                 } else if (emote.creator.equals("Twemoji")) {
                     url = "https://github.com/twitter/twemoji";
                 }
@@ -2883,26 +2897,22 @@ public class MainGui extends JFrame implements Runnable {
      */
 
     //For timestamp
-    public void printMessage(User user, String text, boolean action,
-            String emotes, int bits, String id) {
-        printMessage(user, text, action, emotes, bits, id, null);
+    public void printMessage(User user, String text, boolean action) {
+        printMessage(user, text, action, MsgTags.EMPTY, null);
+    }
+    public void printMessage(User user, String text, boolean action, MsgTags tags) {
+        printMessage(user, text, action, tags, null);
     }
     //For timestamp
-    
-    public void printMessage(User user, String text, boolean action,
-            String emotes, int bits) {
-        printMessage(user, text, action, emotes, bits, null, null);
-    }
-    
-    public void printMessage(final User user,
-            final String text, final boolean action, final String emotes,
-            final int origBits, final String id, final String timestamp) {
+
+    public void printMessage(User user, String text, boolean action, MsgTags tags, final String timestamp) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
                 Channel chan;
                 String channel = user.getChannel();
                 boolean whisper = false;
+                int origBits = tags.getBits();
                 
                 // Disable Cheer emotes altogether if disabled in the settings
                 int bits = origBits;
@@ -2936,7 +2946,7 @@ public class MainGui extends JFrame implements Runnable {
                 
                 boolean isOwnMessage = isOwnUsername(user.getName()) || (whisper && action);
                 boolean ignoredUser = (userIgnored(user, whisper) && !isOwnMessage);
-                boolean ignored = checkMsg(ignoreList, "ignore", text, user, isOwnMessage) || ignoredUser;
+                boolean ignored = checkMsg(ignoreList, "ignore", text, user, tags, isOwnMessage) || ignoredUser;
                 
                 if (!ignored || client.settings.getBoolean("logIgnored")) {
                     client.chatLog.message(chan.getFilename(), user, text, action);
@@ -2946,10 +2956,15 @@ public class MainGui extends JFrame implements Runnable {
                 List<Match> highlightMatches = null;
                 if ((client.settings.getBoolean("highlightIgnored") || !ignored)
                         && !client.settings.listContains("noHighlightUsers", user.getName())) {
-                    highlighted = checkMsg(highlighter, "highlight", text, user, isOwnMessage);
+                    highlighted = checkMsg(highlighter, "highlight", text, user, tags, isOwnMessage);
+                }
+                if (!highlighted) {
+                    highlighted = tags.isHighlightedMessage() && client.settings.getBoolean("highlightByPoints");
+                    // Irregular highlight, so reset last match
+                    highlighter.resetLastMatchVariables();
                 }
                 
-                TagEmotes tagEmotes = Emoticons.parseEmotesTag(emotes);
+                TagEmotes tagEmotes = Emoticons.parseEmotesTag(tags.getRawEmotes());
                 
                 // Do stuff if highlighted, without printing message
                 if (highlighted) {
@@ -2961,7 +2976,7 @@ public class MainGui extends JFrame implements Runnable {
                     } else {
                         channels.setChannelNewMessage(chan);
                     }
-                    notificationManager.highlight(user, text,
+                    notificationManager.highlight(user, text, tags,
                             highlighter.getLastMatchNoNotification(),
                             highlighter.getLastMatchNoSound(),
                             isOwnMessage, whisper, origBits > 0);
@@ -2969,7 +2984,7 @@ public class MainGui extends JFrame implements Runnable {
                     if (whisper) {
                         notificationManager.whisper(user, text, isOwnMessage);
                     } else {
-                        notificationManager.message(user, text, isOwnMessage,
+                        notificationManager.message(user, text, tags, isOwnMessage,
                                 origBits > 0);
                     }
                     if (!isOwnMessage) {
@@ -3000,13 +3015,14 @@ public class MainGui extends JFrame implements Runnable {
                         printInfo(chan, InfoMessage.createInfo("Own message ignored."));
                     }
                 } else {
-                    boolean hasReplacements = checkMsg(filter, "filter", text, user, isOwnMessage);
+                    boolean hasReplacements = checkMsg(filter, "filter", text, user, tags, isOwnMessage);
 
                     // Print message, but determine how exactly
-                    UserMessage message = new UserMessage(user, text, tagEmotes, id, bits,
+                    UserMessage message = new UserMessage(user, text, tagEmotes, tags.getId(), bits,
                             highlightMatches,
                             hasReplacements ? filter.getLastTextMatches() : null,
                             hasReplacements ? filter.getLastReplacement() : null);
+                    message.pointsHl = tags.isHighlightedMessage();
                     
                     // Custom color
                     if (highlighted) {
@@ -3014,7 +3030,7 @@ public class MainGui extends JFrame implements Runnable {
                         message.backgroundColor = highlighter.getLastMatchBackgroundColor();
                     }
                     if (!highlighted || client.settings.getBoolean("msgColorsPrefer")) {
-                        ColorItem colorItem = msgColorManager.getMsgColor(user, text);
+                        ColorItem colorItem = msgColorManager.getMsgColor(user, text, tags);
                         if (!colorItem.isEmpty()) {
                             message.color = colorItem.getForegroundIfEnabled();
                             message.backgroundColor = colorItem.getBackgroundIfEnabled();
@@ -3038,10 +3054,11 @@ public class MainGui extends JFrame implements Runnable {
                 
                 // Stuff independent of highlight/ignore
                 if (timestamp == null) {
-                    user.addMessage(processMessage(text), action, id);
+                    user.addMessage(processMessage(text), action, tags.getId());
                 } else {
-                    user.addMessage(processMessage(text), action, id, timestamp);
+                    user.addMessage(processMessage(text), action, tags.getId(), timestamp);
                 }
+                // Update User
                 if (highlighted) {
                     user.setHighlighted();
                 }
@@ -3108,27 +3125,27 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     private boolean checkHighlight(HighlightItem.Type type, String text,
-            String channel, Addressbook ab, User user, Highlighter hl,
+            String channel, Addressbook ab, User user, MsgTags tags, Highlighter hl,
             String setting, boolean isOwnMessage) {
         if (client.settings.getBoolean(setting + "Enabled")) {
             if (client.settings.getBoolean(setting + "OwnText") ||
                     !isOwnMessage) {
-                return hl.check(type, text, channel, ab, user);
+                return hl.check(type, text, channel, ab, user, tags);
             }
         }
         return false;
     }
     
     private boolean checkMsg(Highlighter hl, String setting, String text,
-            User user, boolean isOwnMessage) {
+            User user, MsgTags tags, boolean isOwnMessage) {
         return checkHighlight(HighlightItem.Type.REGULAR, text, null, null,
-                user, hl, setting, isOwnMessage);
+                user, tags, hl, setting, isOwnMessage);
     }
     
     private boolean checkInfoMsg(Highlighter hl, String setting, String text,
             String channel, Addressbook ab) {
         return checkHighlight(HighlightItem.Type.INFO, text, channel, ab, null,
-                hl, setting, false);
+                null, hl, setting, false);
     }
     
     protected void ignoredMessagesCount(String channel, String message) {
@@ -4659,9 +4676,6 @@ public class MainGui extends JFrame implements Runnable {
 
         User user = client.getUser(channel, tags.get("display-name"));
         ForkUtil.updateUserFromTags(user, tags);
-        String emotesTag = tags.get("emotes");
-        String id = tags.get("id");
-        int bits = tags.getInteger("bits", 0);
         String separator = "PRIVMSG " + channel + " :";
 
         boolean action = false;
@@ -4711,7 +4725,7 @@ public class MainGui extends JFrame implements Runnable {
             printLine(client.roomManager.getRoom(channel), "[Begin of recent messages.]");
         }
 
-        this.printMessage(user, textMsg, action, emotesTag, bits, id, tmi);
+        this.printMessage(user, textMsg, action, tags, tmi);
         return true;
     }
     

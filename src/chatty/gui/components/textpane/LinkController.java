@@ -753,6 +753,9 @@ public class LinkController extends MouseAdapter {
         String info;
         if (!usericon.metaTitle.isEmpty()) {
             info = POPUP_HTML_PREFIX+"Badge: "+usericon.metaTitle;
+        } else if (usericon.type == Usericon.Type.HL) {
+            // Customize text since not really a badge
+            info = POPUP_HTML_PREFIX+usericon.type.label;
         } else {
             info = POPUP_HTML_PREFIX+"Badge: "+usericon.type.label;
         }
