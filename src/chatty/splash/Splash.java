@@ -31,7 +31,7 @@ public class Splash {
         return new String[]{
             "zik.one/donate",
             "Happy Birthday, Broughy!",
-            "Top 5 is always possible",
+            "Top 5 is always possible!",
             "When's True 100%+?",
             "Oh hey, thanks!",
             "Carl Carl, dude dude, man!",

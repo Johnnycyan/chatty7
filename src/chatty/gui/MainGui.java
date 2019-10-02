@@ -1662,9 +1662,7 @@ public class MainGui extends JFrame implements Runnable {
             }
             else if (cmd.startsWith("command")) {
                 Parameters parameters = Parameters.create(user.getRegularDisplayNick());
-                parameters.put("nick", user.getName());
-                parameters.put("msg", user.getMessageText(msgId));
-                parameters.put("msg-id", msgId);
+                Helper.addUserParameters(user, msgId, autoModMsgId, parameters);
                 parameters.put("automod-msg-id", autoModMsgId);
                 customCommand(user.getRoom(), e, parameters);
             } else if (cmd.equals("copyNick")) {
@@ -2225,7 +2223,7 @@ public class MainGui extends JFrame implements Runnable {
             if (e.isControlDown() && command.length() > 1) {
                 CustomCommand customCommand;
                 Parameters parameters = Parameters.create(user.getRegularDisplayNick());
-                parameters.put("msg-id", msgId);
+                Helper.addUserParameters(user, msgId, autoModMsgId, parameters);
                 if (command.contains(" ")) {
                     // Assume that something containing a space is direct Custom Command
                     customCommand = CustomCommand.parse(command);
@@ -2346,6 +2344,10 @@ public class MainGui extends JFrame implements Runnable {
         } else if (command.equals("channelinfo")) {
             openChannelInfoDialog();
         } else if (command.equals("userinfo")) {
+            parameter = StringUtil.trim(parameter);
+            if (StringUtil.isNullOrEmpty(parameter)) {
+                parameter = client.settings.getString("username");
+            }
             User user = client.getExistingUser(channel, parameter);
             if (user != null) {
                 openUserInfoDialog(user, null, null);
@@ -2963,8 +2965,6 @@ public class MainGui extends JFrame implements Runnable {
                 // Do stuff if highlighted, without printing message
                 if (highlighted) {
                     highlightMatches = highlighter.getLastTextMatches();
-                    highlightedMessages.addMessage(channel, user, text, action,
-                            tagEmotes, bits, whisper, highlightMatches);
                     if (!highlighter.getLastMatchNoNotification()) {
                         channels.setChannelHighlighted(chan);
                     } else {
@@ -3019,30 +3019,33 @@ public class MainGui extends JFrame implements Runnable {
                     message.pointsHl = tags.isHighlightedMessage();
                     
                     // Custom color
-                    if (tags.isHighlightedMessage() && client.settings.getBoolean("highlightByPoints")) {
-                        message.color = HtmlColors.decode(client.settings.getString("highlightColor"));
-                        message.backgroundColor = HtmlColors.decode(client.settings.getString("highlightBackgroundColor"));
-                    }
+                    boolean hlByPoints = tags.isHighlightedMessage() && client.settings.getBoolean("highlightByPoints");
                     if (highlighted) {
                         message.color = highlighter.getLastMatchColor();
                         message.backgroundColor = highlighter.getLastMatchBackgroundColor();
                     }
-                    if (!highlighted || client.settings.getBoolean("msgColorsPrefer")) {
+                    if (!(highlighted || hlByPoints) || client.settings.getBoolean("msgColorsPrefer")) {
                         ColorItem colorItem = msgColorManager.getMsgColor(user, text, tags);
                         if (!colorItem.isEmpty()) {
                             message.color = colorItem.getForegroundIfEnabled();
                             message.backgroundColor = colorItem.getBackgroundIfEnabled();
                         }
                     }
-
+                    
                     message.whisper = whisper;
                     message.action = action;
-                    if (highlighted) {
-                        message.highlighted = highlighted;
+                    if (highlighted || hlByPoints) {
+                        // Only set message.highlighted instead of highlighted
+                        // if hlByPoints, since that would affect other stuff as
+                        // well
+                        message.highlighted = true;
                     } else if (ignored && ignoreMode == IgnoredMessages.MODE_COMPACT) {
                         message.ignored_compact = true;
                     }
                     chan.printMessage(message, timestamp);
+                    if (highlighted) {
+                        highlightedMessages.addMessage(channel, message);
+                    }
                     if (client.settings.listContains("streamChatChannels", channel)) {
                         streamChat.printMessage(message);
                     }
@@ -3310,7 +3313,6 @@ public class MainGui extends JFrame implements Runnable {
                     message.highlightMatches = highlighter.getLastTextMatches();
                     message.color = highlighter.getLastMatchColor();
                     message.bgColor = highlighter.getLastMatchBackgroundColor();
-                    highlightedMessages.addInfoMessage(channel.getChannel(), message.text);
 
                     if (!highlighter.getLastMatchNoNotification()) {
                         channels.setChannelHighlighted(channel);
@@ -3330,6 +3332,10 @@ public class MainGui extends JFrame implements Runnable {
                         message.color = colorItem.getForegroundIfEnabled();
                         message.bgColor = colorItem.getBackgroundIfEnabled();
                     }
+                }
+                // After colors and everything is set
+                if (highlighted) {
+                    highlightedMessages.addInfoMessage(channel.getChannel(), message);
                 }
             }
             channel.printInfoMessage(message);

@@ -23,7 +23,7 @@ import java.util.Set;
  * 
  * @author tduva
  */
-public class User implements Comparable {
+public class User implements Comparable<User> {
     
     private static final NamedColor[] defaultColors = {
         new NamedColor("Red", 255, 0, 0),
@@ -484,6 +484,26 @@ public class User implements Comparable {
         return msg != null ? msg.text : null;
     }
     
+    public synchronized AutoModMessage getAutoModMessage(String msgId) {
+        if (msgId == null) {
+            return null;
+        }
+        for (Message msg : lines) {
+            if (msg instanceof AutoModMessage) {
+                AutoModMessage autoModMsg = (AutoModMessage) msg;
+                if (msgId.equals(autoModMsg.id)) {
+                    return autoModMsg;
+                }
+            }
+        }
+        return null;
+    }
+    
+    public String getAutoModMessageText(String msgId) {
+        AutoModMessage msg = getAutoModMessage(msgId);
+        return msg != null ? msg.message : null;
+    }
+    
     public synchronized int clearMessagesIfInactive(long duration) {
         if (!lines.isEmpty()
                 && System.currentTimeMillis() - getLastLineTime() >= duration) {
@@ -740,12 +760,7 @@ public class User implements Comparable {
     }
 
     @Override
-    public synchronized int compareTo(Object o) {
-        if (!(o instanceof User)) {
-            return 0;
-        }
-        User u = (User)o;
-        
+    public synchronized int compareTo(User u) {
         int broadcaster = 16;
         int admin = 8;
         int moderator = 4;

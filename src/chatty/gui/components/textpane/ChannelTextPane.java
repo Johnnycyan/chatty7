@@ -117,7 +117,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private Channel channel;
 
     protected LinkController linkController = new LinkController();
-    private static StyleServer styleServer;
+    private final StyleServer styleServer;
     
     private final RingBuffer<MentionCheck> lastUsers = new RingBuffer<>(300);
     
@@ -181,7 +181,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     public ChannelTextPane(MainGui main, StyleServer styleServer, boolean special, boolean startAtBottom) {
         lineSelection = new LineSelection(main.getUserListener());
-        ChannelTextPane.styleServer = styleServer;
+        this.styleServer = styleServer;
         this.main = main;
         this.setBackground(BACKGROUND_COLOR);
         this.addMouseListener(linkController);
@@ -2447,7 +2447,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     private void findEmoticons(String text, User user, Map<Integer, Integer> ranges,
             Map<Integer, MutableAttributeSet> rangesStyle, TagEmotes tagEmotes) {
         
-        findEmoticons(user, main.emoticons.getCustomEmotes(), text, ranges, rangesStyle);
+        Set<String> accessToSets = user.isLocalUser() ? main.emoticons.getLocalEmotesets() : null;
+        findEmoticons(user, main.emoticons.getCustomEmotes(), text, ranges, rangesStyle, accessToSets);
         if (Debugging.isEnabled("emoji2") || EmojiUtil.mightContainEmoji(text)) {
             findEmoticons(user, main.emoticons.getEmoji(), text, ranges, rangesStyle);
         }
@@ -2561,10 +2562,16 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private void findEmoticons(User user, Set<Emoticon> emoticons, String text,
             Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle) {
+        findEmoticons(user, emoticons, text, ranges, rangesStyle, null);
+    }
+    
+    private void findEmoticons(User user, Set<Emoticon> emoticons, String text,
+            Map<Integer, Integer> ranges, Map<Integer, MutableAttributeSet> rangesStyle,
+            Set<String> accessToSets) {
         // Find emoticons
         for (Emoticon emoticon : emoticons) {
             // Check the text for every single emoticon
-            if (!emoticon.matchesUser(user)) {
+            if (!emoticon.matchesUser(user, accessToSets)) {
                 continue;
             }
             if (main.emoticons.isEmoteIgnored(emoticon)) {
@@ -2595,7 +2602,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             Map<Integer, MutableAttributeSet> rangesStyle,
             User user) {
         for (CheerEmoticon emote : emotes) {
-            if (!emote.matchesUser(user)) {
+            if (!emote.matchesUser(user, null)) {
                 // CONTINUE
                 continue;
             }
