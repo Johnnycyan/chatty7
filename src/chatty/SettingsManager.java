@@ -438,9 +438,6 @@ public class SettingsManager {
         //==============
         // Notifications
         //==============
-        settings.addString("highlightNotification", "either");
-        settings.addString("statusNotification", "either");
-        settings.addBoolean("ignoreOfflineNotifications", false);
         settings.addBoolean("requestFollowedStreams", true);
         
         settings.addLong("nType", NotificationSettings.NOTIFICATION_TYPE_CUSTOM);
@@ -453,6 +450,7 @@ public class SettingsManager {
         settings.addBoolean("nActivity", false);
         settings.addLong("nActivityTime", 10);
         settings.addString("nCommand", "");
+        settings.addBoolean("nHideOnStart", false);
 
         settings.addList("notifications", getDefaultNotificationSettingValue(), Setting.LIST);
         settings.addList("nColorPresets", new ArrayList<>(), Setting.LIST);
@@ -944,8 +942,8 @@ public class SettingsManager {
      * @return 
      */
     private List<List> getDefaultNotificationSettingValue() {
-        String hl = settings.getString("highlightNotification");
-        String st = settings.getString("statusNotification");
+        String hl = "either";
+        String st = "either";
         
         Notification.Builder hlNew = new Notification.Builder(Notification.Type.HIGHLIGHT);
         hlNew.setForeground(Color.BLACK);
@@ -956,9 +954,6 @@ public class SettingsManager {
         stNew.setForeground(Color.BLACK);
         stNew.setBackground(HtmlColors.decode("#FFFFF0"));
         stNew.setDesktopEnabled(convertOldState(st));
-        if (settings.getBoolean("ignoreOfflineNotifications")) {
-            stNew.setOptions(Arrays.asList("noOffline"));
-        }
         
         List<List> result = new ArrayList<>();
         result.add(new Notification(hlNew).toList());
