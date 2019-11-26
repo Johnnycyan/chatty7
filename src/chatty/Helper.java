@@ -378,6 +378,13 @@ public class Helper {
         return HTMLSPECIALCHARS_ENCODE.replace(s);
     }
     
+    public static String prepareForHtml(String s) {
+        if (s == null) {
+            return null;
+        }
+        return htmlspecialchars_encode(s).replaceAll(" ", "&nbsp;").replaceAll("\n", "<br />");
+    }
+    
     private static final Pattern EMOJI_VARIATION_SELECTOR = Pattern.compile("[\uFE0E\uFE0F]");
     
     /**
@@ -561,13 +568,14 @@ public class Helper {
     }
     
     public static String systemInfo() {
-        return String.format("Java: %s (%s / %s) OS: %s (%s/%s)",
+        return String.format("Java: %s (%s / %s) OS: %s (%s/%s) Locale: %s",
                 System.getProperty("java.version"),
                 System.getProperty("java.vendor"),
                 System.getProperty("java.home"),
                 System.getProperty("os.name"),
                 System.getProperty("os.version"),
-                System.getProperty("os.arch"));
+                System.getProperty("os.arch"),
+                Locale.getDefault());
     }
     
     /**

@@ -1,6 +1,7 @@
 
 package chatty.gui.components;
 
+import chatty.gui.LaF;
 import chatty.gui.components.completion.AutoCompletion;
 import chatty.gui.components.completion.AutoCompletionServer;
 import chatty.util.colors.ColorCorrectionNew;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
@@ -52,7 +54,6 @@ public class ChannelEditBox extends JTextArea implements KeyListener,
         this.addKeyListener(this);
         setLineWrap(true);
         setWrapStyleWord(true);
-        setBorder(new JTextField().getBorder());
         getDocument().putProperty("filterNewlines", true);
         this.setFocusTraversalKeysEnabled(false);
         getDocument().addDocumentListener(this);
@@ -74,6 +75,21 @@ public class ChannelEditBox extends JTextArea implements KeyListener,
                 selection = getSelectedText() != null;
             }
         });
+    }
+    
+    /**
+     * Need to update for setting LaF, since this text area should always use
+     * a text field type border.
+     */
+    @Override
+    public void updateUI() {
+        super.updateUI();
+        if (LaF.getInputBorder() != null) {
+            setBorder(LaF.getInputBorder());
+        }
+        else {
+            setBorder(UIManager.getBorder("TextField.border"));
+        }
     }
     
     @Override

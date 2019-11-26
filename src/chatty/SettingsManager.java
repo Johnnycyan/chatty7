@@ -139,7 +139,7 @@ public class SettingsManager {
         settings.addBoolean("membershipEnabled", true);
         settings.addString("pubsub", "wss://pubsub-edge.twitch.tv");
         
-        settings.addLong("maxReconnectionAttempts", 40);
+        settings.addLong("maxReconnectionAttempts", -1);
 
         // Auto-join channels
         settings.addString("channel", "");
@@ -172,7 +172,12 @@ public class SettingsManager {
         settings.addString("lafTheme","Default");
         settings.addMap("lafCustomTheme", new HashMap<>(), Setting.STRING);
         settings.addLong("lafFontScale", 100);
-        
+        settings.addString("lafForeground", "#B4BEB9");
+        settings.addString("lafBackground", "#323433");
+        settings.addLong("lafGradient", 5);
+        settings.addLong("lafVariant", 0);
+        settings.addString("lafStyle", "regular");
+        settings.addString("lafScroll", "default");
         settings.addString("language", "");
         
         settings.addLong("dialogFontSize", -1);
@@ -305,6 +310,7 @@ public class SettingsManager {
         settings.addBoolean("closeUserDialogOnAction", true);
         settings.addBoolean("openUserDialogByMouse", true);
         settings.addBoolean("reuseUserDialog", false);
+        settings.addString("userDialogTimestamp", "[HH:mm:ss]");
         settings.addLong("clearUserMessages", 12);
 
         // History / Favorites

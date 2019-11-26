@@ -131,8 +131,7 @@ public class Channels {
      */
     public void setChannelHighlighted(Channel channel) {
         if (getActiveTab() != channel) {
-            tabs.setForegroundForComponent(channel, LaF.isDarkTheme() ?
-                    MainGui.COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK : MainGui.COLOR_NEW_HIGHLIGHTED_MESSAGE);
+            tabs.setForegroundForComponent(channel, LaF.getTabForegroundHighlight());
             highlighted.add(channel);
         }
     }
@@ -145,8 +144,7 @@ public class Channels {
      */
     public void setChannelNewMessage(Channel channel) {
         if (getActiveTab() != channel && !highlighted.contains(channel)) {
-            tabs.setForegroundForComponent(channel, LaF.isDarkTheme() ?
-                    MainGui.COLOR_NEW_MESSAGE_DARK : MainGui.COLOR_NEW_MESSAGE);
+            tabs.setForegroundForComponent(channel, LaF.getTabForegroundUnread());
         }
     }
     

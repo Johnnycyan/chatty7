@@ -13,12 +13,12 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
-import java.awt.Frame;
+import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.MouseInfo;
@@ -29,16 +29,18 @@ import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyVetoException;
 import java.beans.VetoableChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.InputMap;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -60,7 +62,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultEditorKit;
 import javax.swing.text.Document;
 import javax.swing.text.DocumentFilter;
-import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 
 /**
@@ -517,7 +518,21 @@ public class GuiUtil {
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.META_DOWN_MASK), DefaultEditorKit.selectAllAction);
     }
     
-    public static void showCommandNotification(String commandText, String title,
+    /**
+     * Executes a process with the given commandText, with some parameters
+     * replaced. The resulting command will be split into arguments by spaces,
+     * although sections can be quoted to group them together. Escaped quotes
+     * (\") are ignored.
+     * 
+     * If the commandText isn't a valid CustomCommand, nothing will be executed.
+     * 
+     * @param commandText A command in CustomCommand format
+     * @param title The title of the notification
+     * @param message The message of the notification
+     * @param channel The associated channel (may be null)
+     * @return A result message intended for output to the user while testing
+     */
+    public static String showCommandNotification(String commandText, String title,
             String message, String channel) {
         CustomCommand command = CustomCommand.parse(commandText);
 
@@ -525,8 +540,16 @@ public class GuiUtil {
         param.put("title", title.replace("\"", "\\\""));
         param.put("message", message.replace("\"", "\\\""));
         param.put("channel", channel);
-
-        ProcessManager.execute(command.replace(param), "Notification");
+        param.put("chan", channel);
+        
+        if (command.hasError()) {
+            LOGGER.warning("Notification command error: "+command.getSingleLineError());
+            return "Error: "+command.getSingleLineError();
+        } else {
+            String resultCommand = command.replace(param);
+            ProcessManager.execute(resultCommand, "Notification");
+            return "Running: "+resultCommand;
+        }
     }
     
     /**
@@ -669,6 +692,17 @@ public class GuiUtil {
                         target.getPreferredSize().width,
                         source.getPreferredSize().height
                 ));
+    }
+    
+    public static ImageIcon getScaledIcon(Icon icon, int w, int h) {
+        BufferedImage img = new BufferedImage(
+                icon.getIconWidth(),
+                icon.getIconHeight(),
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        icon.paintIcon(null, g, 0, 0);
+        g.dispose();
+        return new ImageIcon(img.getScaledInstance(w, h, Image.SCALE_SMOOTH));
     }
     
 }
