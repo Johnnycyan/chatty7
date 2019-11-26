@@ -72,20 +72,6 @@ public class ForkSettings extends SettingsPanel {
         fork.add(new JLabel(" hours. (Max 500 hours.)"),
                 d.makeGbc(2, 5, 1, 1, GridBagConstraints.WEST));
 
-        fork.add(new JLabel("Color of tab title when channel has new message:"),
-                d.makeGbc(0, 8, 1, 1, GridBagConstraints.WEST));
-        
-        fork.add(d.addSimpleStringSetting(
-                "colorNewMessage", 10, true),
-                d.makeGbc(1, 8, 2, 1, GridBagConstraints.WEST));
-
-        fork.add(new JLabel("Color of tab title when you was mentioned:"),
-                d.makeGbc(0, 9, 1, 1, GridBagConstraints.WEST));
-        
-        fork.add(d.addSimpleStringSetting(
-                "colorNewHighlightedMessage", 10, true),
-                d.makeGbc(1, 9, 2, 1, GridBagConstraints.WEST));
-
         Map<String, String> mentionNicknameOptions = new HashMap<>();
         mentionNicknameOptions.put("normal", "Localized nickname");
         mentionNicknameOptions.put("real", "Real nickname");

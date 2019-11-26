@@ -637,8 +637,6 @@ public class SettingsManager {
         settings.addBoolean("removeSharp", true);
         settings.addString("playerPath", "");
         settings.addLong("checkVersionInterval", 8);
-        settings.addString("colorNewMessage", "#C80000");
-        settings.addString("colorNewHighlightedMessage", "#FF5000");
         settings.addBoolean("printAboutCheckingVersion", true);
         settings.addString("mentionByNickname", "normal");
         settings.addBoolean("emoteCodeInDialog", true);

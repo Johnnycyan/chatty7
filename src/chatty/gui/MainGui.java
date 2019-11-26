@@ -4639,13 +4639,7 @@ public class MainGui extends JFrame implements Runnable {
         ForkUtil.REPLACEMENT_UNDERLINE = client.settings.getBoolean("replacementUnderline");
         ForkUtil.PRINT_FULL_FILTERED = !client.settings.getBoolean("skipFullFiltered");
 
-        // COLOR_NEW_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(200,0,0));
-        // COLOR_NEW_HIGHLIGHTED_MESSAGE = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,80,0));
         ForkUtil.COLOR_BANNED_HIGHLIGHT_MESSAGE = HtmlColors.decode(client.settings.getString("colorBannedHighlightedMessage"), new Color(50, 50, 50));
-
-        // COLOR_NEW_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewMessage"), new Color(255,80,80));
-        // COLOR_NEW_HIGHLIGHTED_MESSAGE_DARK = HtmlColors.decode(client.settings.getString("colorNewHighlightedMessage"), new Color(255,180,40));
-
         Chatty.PLAYER_PATH =  client.settings.getString("playerPath");
 
         if (client.settings.getLong("checkVersionInterval") <= 1) {
