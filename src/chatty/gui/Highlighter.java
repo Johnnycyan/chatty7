@@ -284,7 +284,8 @@ public class Highlighter {
         public enum Type {
             REGULAR("Regular chat messages"),
             INFO("Info messages"),
-            ANY("Any type of message");
+            ANY("Any type of message"),
+            TEXT_MATCH_TEST("Only match text, any message type");
             
             public final String description;
             
@@ -306,9 +307,16 @@ public class Highlighter {
              */
             private final Object infoData;
             
-            private Item(String info, Object infoData) {
+            private final boolean matchesOnText;
+            
+            private Item(String info, Object infoData, boolean matchesOnText) {
                 this.info = info;
                 this.infoData = infoData;
+                this.matchesOnText = matchesOnText;
+            }
+            
+            private Item(String info, Object infoData) {
+                this(info, infoData, false);
             }
             
             @Override
@@ -581,7 +589,7 @@ public class Highlighter {
                             // Do nothing.
                         }
                         else if (part.equals("url")) {
-                            matchItems.add(new Item("Contains URL", null) {
+                            matchItems.add(new Item("Contains URL", null, true) {
                                 
                                 @Override
                                 public boolean matches(String text, Blacklist blacklist, String channel, Addressbook ab, User user, MsgTags tags) {
@@ -842,7 +850,7 @@ public class Highlighter {
                 String completePattern = patternPrefixes.get(prefix).apply(value);
                 Pattern compiled = compilePattern(completePattern);
                 if (type.equals("+")) {
-                    matchItems.add(new Item("Additional regex (" + prefix.substring(0, prefix.length() - 1) + ")", compiled) {
+                    matchItems.add(new Item("Additional regex (" + prefix.substring(0, prefix.length() - 1) + ")", compiled, true) {
 
                         @Override
                         public boolean matches(String text, Blacklist blacklist, String channel, Addressbook ab, User user, MsgTags tags) {
@@ -851,7 +859,7 @@ public class Highlighter {
                     });
                 }
                 else {
-                    matchItems.add(new Item("Not matching regex (" + prefix.substring(0, prefix.length() - 1) + ")", compiled) {
+                    matchItems.add(new Item("Not matching regex (" + prefix.substring(0, prefix.length() - 1) + ")", compiled, true) {
 
                         @Override
                         public boolean matches(String text, Blacklist blacklist, String channel, Addressbook ab, User user, MsgTags tags) {
@@ -1064,6 +1072,10 @@ public class Highlighter {
             return matches(Type.ANY, text, blacklist, null);
         }
         
+        public boolean matchesTest(String text, Blacklist blacklist) {
+            return matches(Type.TEXT_MATCH_TEST, text, blacklist, null);
+        }
+        
         public boolean matches(Type type, String text, User user, MsgTags tags) {
             return matches(type, text, null, null, null, user, tags);
         }
@@ -1108,7 +1120,7 @@ public class Highlighter {
             // Type
             //------
             if (type != appliesToType && appliesToType != Type.ANY
-                    && type != Type.ANY) {
+                    && type != Type.ANY && type != Type.TEXT_MATCH_TEST) {
                 return false;
             }
             
@@ -1136,6 +1148,9 @@ public class Highlighter {
             
 //            System.out.println(raw);
             for (Item item : matchItems) {
+                if (type == Type.TEXT_MATCH_TEST && !item.matchesOnText) {
+                    continue;
+                }
                 boolean match = item.matches(text, blacklist, channel, ab, user, tags);
 //                System.out.println(item);
                 if (!match) {

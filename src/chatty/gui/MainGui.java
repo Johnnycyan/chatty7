@@ -140,7 +140,7 @@ public class MainGui extends JFrame implements Runnable {
     private SRL srl;
     private LivestreamerDialog livestreamerDialog;
     private UpdateDialog updateDialog;
-    private NewsDialog newsDialog;
+    //private NewsDialog newsDialog;
     private EmotesDialog emotesDialog;
     private FollowersDialog followerDialog;
     private FollowersDialog subscribersDialog;
@@ -290,7 +290,7 @@ public class MainGui extends JFrame implements Runnable {
         srl = new SRL(this, client.speedrunsLive, contextMenuListener);
         livestreamerDialog = new LivestreamerDialog(this, linkLabelListener, client.settings);
         updateDialog = new UpdateDialog(this, linkLabelListener, client.settings,() -> exit());
-        newsDialog = new NewsDialog(this, client.settings);
+        //newsDialog = new NewsDialog(this, client.settings);
         
         client.settings.addSettingChangeListener(new MySettingChangeListener());
         client.settings.addSettingsListener(new MySettingsListener());
@@ -326,6 +326,7 @@ public class MainGui extends JFrame implements Runnable {
             client.bttvEmotes.requestEmotes("$global$", false);
         }
         OtherBadges.requestBadges(r -> client.usericonManager.setThirdPartyIcons(r), false);
+        ChattyMisc.request();
         
         // Window states
         windowStateManager = new WindowStateManager(this, client.settings);
@@ -844,7 +845,7 @@ public class MainGui extends JFrame implements Runnable {
                 // it can be centered on it correctly, if that is necessary
                 reopenWindows();
                 
-                newsDialog.autoRequestNews(true);
+                //newsDialog.autoRequestNews(true);
                 
                 client.init();
             }
@@ -997,7 +998,7 @@ public class MainGui extends JFrame implements Runnable {
         "showJoinsParts", "ontop", "showModMessages", "attachedWindows",
         "simpleTitle", "globalHotkeysEnabled", "mainResizable", "streamChatResizable",
         "titleShowUptime", "titleShowViewerCount", "titleShowChannelState",
-        "titleLongerUptime"
+        "titleLongerUptime", "titleConnections"
     };
     
     /**
@@ -1406,7 +1407,7 @@ public class MainGui extends JFrame implements Runnable {
                 }
             } else if (type.equals("announcement")) {
                 if (ref.equals("show")) {
-                    newsDialog.showDialog();
+                    //newsDialog.showDialog();
                 }
             }
         }
@@ -1484,7 +1485,7 @@ public class MainGui extends JFrame implements Runnable {
             } else if (cmd.equals("about")) {
                 openHelp("");
             } else if (cmd.equals("news")) {
-                newsDialog.showDialog();
+                //newsDialog.showDialog();
             } else if (cmd.equals("settings")) {
                 getSettingsDialog().showSettings();
             } else if (cmd.equals("saveSettings")) {
@@ -3867,13 +3868,19 @@ public class MainGui extends JFrame implements Runnable {
 
             String title = stateText;
 
+            String secondaryConnectionsStatus = "";
+            if (client.settings.getBoolean("titleConnections")) {
+                secondaryConnectionsStatus = client.getSecondaryConnectionsStatus();
+            }
+            if (!secondaryConnectionsStatus.isEmpty()) {
+                secondaryConnectionsStatus = " [" + secondaryConnectionsStatus + "]";
+            }
+            
             // Stream Info
             if (!channelName.isEmpty()) {
                 boolean hideCounts = !client.settings.getBoolean("titleShowViewerCount");
-                String chanNameText = ForkUtil.removeSharpFromTitle(channel);
-                if (client.isWhisperAvailable() && !client.settings.getBoolean("removeWFromTitle")) {
-                    chanNameText += " [W]";
-                }
+                String chanNameText = ForkUtil.removeSharpFromTitle(channelName);
+                chanNameText += secondaryConnectionsStatus;
                 if (!title.isEmpty()) {
                     title += " - ";
                 }
@@ -3933,8 +3940,8 @@ public class MainGui extends JFrame implements Runnable {
                     title += chanState;
                     title += topic;
                 }
-            } else if (client.isWhisperAvailable() && !client.settings.getBoolean("removeWFromTitle")) {
-                title += " [W]";
+            } else {
+                title += secondaryConnectionsStatus;
             }
 
             title += " - Chatty";

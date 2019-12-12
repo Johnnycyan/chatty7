@@ -3017,19 +3017,19 @@ public class TwitchClient {
         
         public void onRawReceived(String text) {
             if (settings.getBoolean("debugLogIrc")) {
-                g.printDebugIrc(">> " + text);
+                g.printDebugIrc("--> " + text);
             }
             if (settings.getBoolean("debugLogIrcFile")) {
-                IRC_LOGGER.info(">> " + text);
+                IRC_LOGGER.info("--> " + text);
             }
         }
         
         public void onRawSent(String text) {
             if (settings.getBoolean("debugLogIrc")) {
-                g.printDebugIrc("<<< " + text);
+                g.printDebugIrc("<-- " + text);
             }
             if (settings.getBoolean("debugLogIrcFile")) {
-                IRC_LOGGER.info("SENT: " + text);
+                IRC_LOGGER.info("<-- " + text);
             }
         }
         
@@ -3073,8 +3073,10 @@ public class TwitchClient {
 
     }
     
-    public boolean isWhisperAvailable() {
-        return w.isAvailable();
+    public String getSecondaryConnectionsStatus() {
+        return String.format("%s%s",
+                frankerFaceZ.isWsConnected() ? "F" : "",
+                pubsub.isConnected() ? "M" : "");
     }
     
     private class MyWhisperListener implements WhisperListener {
