@@ -42,13 +42,6 @@ public class ForkSettings extends SettingsPanel {
         fork.add(removeSharp,
                 d.makeGbc(0, 1, 3, 1, GridBagConstraints.WEST));
 
-        JCheckBox removeW = d.addSimpleBooleanSetting(
-                "removeWFromTitle",
-                "Remove [W] from title.",
-                "[W] is just showing your whisper status. Is it really needed?");
-        fork.add(removeW,
-                d.makeGbc(0, 2, 3, 1, GridBagConstraints.WEST));
-
         JCheckBox printCheck = d.addSimpleBooleanSetting(
                 "printAboutCheckingVersion",
                 "Print about checking new version.",

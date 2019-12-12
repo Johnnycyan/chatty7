@@ -3879,7 +3879,7 @@ public class MainGui extends JFrame implements Runnable {
             // Stream Info
             if (!channelName.isEmpty()) {
                 boolean hideCounts = !client.settings.getBoolean("titleShowViewerCount");
-                String chanNameText = ForkUtil.removeSharpFromTitle(channelName);
+                String chanNameText = ForkUtil.removeSharpFromTitle(channel);
                 chanNameText += secondaryConnectionsStatus;
                 if (!title.isEmpty()) {
                     title += " - ";
