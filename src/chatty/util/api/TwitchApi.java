@@ -80,7 +80,7 @@ public class TwitchApi {
                     req.request.run();
                 }
             }
-        }, CachedBulkManager.NONE);
+        }, "[Api] ", CachedBulkManager.NONE);
     }
     
     private static class Req {
@@ -206,10 +206,6 @@ public class TwitchApi {
                 }
             }, stream);
         }
-    }
-
-    public void getChatInfo(String stream) {
-        requests.requestChatInfo(stream);
     }
     
     public void getFollowers(String stream) {

@@ -417,10 +417,7 @@ public class LinkController extends MouseAdapter {
         EmoticonImage emoteImage = getEmoticonImage(element);
         Usericon usericon = getUsericon(element);
         JPopupMenu m = null;
-        if (selectedText != null) {
-            m = new TextSelectionMenu(selectedText);
-        }
-        else if (user != null) {
+        if (user != null) {
             m = new UserContextMenu(user, getMsgId(element),
                     getAutoModMsgId(element), contextMenuListener);
         }
@@ -432,6 +429,9 @@ public class LinkController extends MouseAdapter {
         }
         else if (usericon != null) {
             m = new UsericonContextMenu(usericon, contextMenuListener);
+        }
+        else if (selectedText != null) {
+            m = new TextSelectionMenu(selectedText);
         }
         else {
             if (defaultContextMenu == null) {

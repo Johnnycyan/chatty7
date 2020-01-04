@@ -465,6 +465,7 @@ public class SettingsManager {
         settings.addBoolean("tips", true);
         settings.addLong("lastTip", 0);
         
+        settings.addList("readEvents", new ArrayList<>(), Setting.STRING);
 
         //=====================
         // Basic Chat Behaviour
@@ -557,7 +558,7 @@ public class SettingsManager {
         settings.addString("logPath", "");
         settings.addString("logSplit", "never");
         settings.addBoolean("logSubdirectories", false);
-        settings.addString("logTimestamp", "[HH:mm:ss]");
+        settings.addString("logTimestamp", "[yyyy-MM-dd HH:mm:ss]");
         settings.addBoolean("logLockFiles", true);
         
         // TAB Completion
@@ -597,6 +598,7 @@ public class SettingsManager {
         settings.addString("cmTemplate", "{user}: {message}");
         settings.addBoolean("cmHighlightedOnly", false);
 
+        // Chat rules API removed, but keep this for now
         settings.addBoolean("rulesAutoShow", true);
         settings.addList("rulesShown", new HashSet(), Setting.STRING);
 
