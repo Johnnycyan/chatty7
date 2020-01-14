@@ -2,10 +2,7 @@
 package chatty.lang;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +20,8 @@ public class Language {
     
     private static final Logger LOGGER = Logger.getLogger(Language.class.getName());
 
+    private static final boolean DEBUG = false;
+    
     private static ResourceBundle strings;
     
     /**
@@ -95,7 +94,13 @@ public class Language {
                 LOGGER.warning("Missing string key: "+key);
                 return "?";
             }
+            if (DEBUG) {
+                return "{"+key+"}";
+            }
             return null;
+        }
+        if (DEBUG) {
+            return "["+strings.getString(key)+"]";
         }
         return strings.getString(key);
     }
@@ -162,7 +167,13 @@ public class Language {
                 LOGGER.warning("Missing string key: "+key);
                 return "?";
             }
+            if (DEBUG) {
+                return "{"+key+"}";
+            }
             return null;
+        }
+        if (DEBUG) {
+            return "["+MessageFormat.format(strings.getString(key), arguments)+"]";
         }
         return MessageFormat.format(strings.getString(key), arguments);
     }

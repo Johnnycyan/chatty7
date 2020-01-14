@@ -1529,8 +1529,6 @@ public class MainGui extends JFrame implements Runnable {
             } else if (cmd.startsWith("room:")) {
                 String channel = cmd.substring("room:".length());
                 client.joinChannel(channel);
-            } else if (cmd.equals("refreshRooms")) {
-                loadRooms(true);
             } else if (cmd.equals("dialog.chattyInfo")) {
                 openEventLog(1);
             }
@@ -1551,8 +1549,6 @@ public class MainGui extends JFrame implements Runnable {
                         highlightedMessages.getDisplayedCount(),
                         ignoredMessages.getNewCount(),
                         ignoredMessages.getDisplayedCount());
-            } else if (e.getSource() == menu.channels) {
-                loadRooms(false);
             }
         }
 
@@ -1564,50 +1560,6 @@ public class MainGui extends JFrame implements Runnable {
         public void menuCanceled(MenuEvent e) {
         }
     
-    }
-    
-    /**
-     * Output "no rooms" message when forcing refresh. This isn't perfect, if
-     * another request causes setRooms() to be called it might only output that
-     * one, but shouldn't be too bad. Also it's kind of weird having it like
-     * this, but it seems more straightforward than the alternatives.
-     */
-    private boolean forcedRoomsRefresh = false;
-    
-    public void setRooms(RoomsInfo info) {
-        SwingUtilities.invokeLater(() -> {
-            //System.out.println(channels.getActiveChannel().getStreamName());
-            if (Objects.equals(channels.getActiveChannel().getStreamName(), info.stream)) {
-                menu.setRooms(info.rooms);
-            }
-            if (info.hasRooms() || forcedRoomsRefresh) {
-                printLineByOwnerChannel(Helper.toChannel(info.stream), info.makeInfo());
-            }
-            if (info.rooms != null) {
-                for (Room room : info.rooms) {
-                    if (room.hasTopic() && channels.isChannel(room.getChannel())) {
-                        printLine(room, room.getTopicText());
-                    }
-                }
-            }
-            forcedRoomsRefresh = false;
-        });
-    }
-
-    private void loadRooms(boolean forceRefresh) {
-        if (forceRefresh) {
-            forcedRoomsRefresh = true;
-        }
-        String channel = channels.getActiveChannel().getOwnerChannel();
-        if (!Helper.isRegularChannel(channel) && forceRefresh) {
-            printSystem("[ChatRooms] Invalid channel");
-        }
-        RoomsInfo cached = client.roomManager.getRoomsInfo(channel, forceRefresh);
-        if (cached != null) {
-            menu.setRooms(cached.rooms);
-        } else {
-            menu.setRooms(null);
-        }
     }
     
     public void updateRoom(Room room) {
@@ -1958,7 +1910,8 @@ public class MainGui extends JFrame implements Runnable {
                 firstStream = streams.iterator().next();
             }
             if (cmd.equals("stream") || cmd.equals("streamPopout")
-                    || cmd.equals("streamPopoutOld") || cmd.equals("profile")) {
+                    || cmd.equals("streamPopoutOld") || cmd.equals("profile")
+                    || cmd.equals("streamChat")) {
                 List<String> urls = new ArrayList<>();
                 for (String stream : streams) {
                     String url;
@@ -1971,6 +1924,9 @@ public class MainGui extends JFrame implements Runnable {
                             break;
                         case "streamPopout":
                             url = TwitchUrl.makeTwitchPlayerUrl(stream);
+                            break;
+                        case "streamChat":
+                            url = TwitchUrl.makeTwitchChatUrl(stream);
                             break;
                         default:
                             url = TwitchUrl.makeTwitchStreamUrl(stream, true);
