@@ -67,6 +67,7 @@ import chatty.util.chatlog.ChatLog;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
 import chatty.util.irc.MsgTags;
+import chatty.util.settings.FileManager;
 import chatty.util.settings.Settings;
 import chatty.util.settings.SettingsListener;
 import chatty.util.srl.SpeedrunsLive;
@@ -206,21 +207,24 @@ public class TwitchClient {
                 +" [Settings Directory] "+Chatty.getUserDataDirectory()
                 +" [Classpath] "+System.getProperty("java.class.path"));
         
-        settings = new Settings(Chatty.getUserDataDirectory()+"settings");
         // Settings
-        settingsManager = new SettingsManager(settings);
+        settingsManager = new SettingsManager();
+        settings = settingsManager.settings;
         settingsManager.defineSettings();
         settingsManager.loadSettingsFromFile();
-        settingsManager.backupFiles();
         settingsManager.loadCommandLineSettings(args);
         settingsManager.overrideSettings();
         settingsManager.debugSettings();
+        settingsManager.backupFiles();
+        settingsManager.startAutoSave(this);
         
         Helper.setDefaultTimezone(settings.getString("timezone"));
         
         addressbook = new Addressbook(Chatty.getUserDataDirectory()+"addressbook",
             Chatty.getUserDataDirectory()+"addressbookImport.txt", settings);
-        addressbook.loadFromFile();
+        if (!addressbook.loadFromSettings()) {
+            addressbook.loadFromFile();
+        }
         addressbook.setSomewhatUniqueCategories(settings.getString("abUniqueCats"));
         if (settings.getBoolean("abAutoImport")) {
             addressbook.enableAutoImport();
@@ -478,7 +482,10 @@ public class TwitchClient {
             settings.setString("currentVersion", Chatty.VERSION);
             // Changed version, so should check for update properly again
             settings.setString("updateAvailable", "");
-            g.openReleaseInfo();
+            if (settingsManager.getLoadSuccess()) {
+                // Don't bother user if settings were probably corrupted
+                g.openReleaseInfo();
+            }
         }
     }
     
@@ -593,6 +600,10 @@ public class TwitchClient {
     
     public User getExistingUser(String channel, String name) {
         return c.getExistingUser(channel, name);
+    }
+    
+    public User getLocalUser(String channel) {
+        return c.getExistingUser(channel, c.getUsername());
     }
     
     public void clearUserList() {
@@ -1874,7 +1885,7 @@ public class TwitchClient {
     }
     
     public void commandAddStreamHighlight(Room room, String parameter) {
-        g.printLine(room, streamHighlights.addHighlight(room.getOwnerChannel(), parameter));
+        g.printLine(room, streamHighlights.addHighlight(room.getOwnerChannel(), parameter, null));
     }
     
     public void commandOpenStreamHighlights(Room room) {
@@ -2631,7 +2642,7 @@ public class TwitchClient {
      */
     public void exit() {
         shuttingDown = true;
-        saveSettings(true);
+        saveSettings(true, false);
         logAllViewerstats();
         c.disconnect();
         frankerFaceZ.disconnectWs();
@@ -2647,10 +2658,10 @@ public class TwitchClient {
      * @param onExit If true, this will save the settings only if they haven't
      * already been saved with this being true before
      */
-    public void saveSettings(boolean onExit) {
+    public List<FileManager.SaveResult> saveSettings(boolean onExit, boolean force) {
         if (onExit) {
             if (settingsAlreadySavedOnExit) {
-                return;
+                return null;
             }
             settingsAlreadySavedOnExit = true;
         }
@@ -2663,10 +2674,10 @@ public class TwitchClient {
             g.saveWindowStates();
         }
         // Actually write settings to file
-        if (!onExit || !settings.getBoolean("dontSaveSettings")) {
-            addressbook.saveToFile();
-            settings.saveSettingsToJson();
+        if (force || !settings.getBoolean("dontSaveSettings")) {
+            return settings.saveSettingsToJson(force);
         }
+        return null;
     }
     
     private class SettingSaveListener implements SettingsListener {

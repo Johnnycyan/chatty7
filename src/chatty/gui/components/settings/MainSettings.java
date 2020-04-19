@@ -7,6 +7,7 @@ import chatty.gui.components.LinkLabel;
 import chatty.lang.Language;
 import chatty.util.MiscUtil;
 import chatty.util.StringUtil;
+import chatty.util.settings.FileManager;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Window;
@@ -37,7 +38,7 @@ public class MainSettings extends SettingsPanel {
 
         JPanel startSettingsPanel = addTitledPanel(Language.getString("settings.section.startup"), 0);
         JPanel languagePanel = addTitledPanel(Language.getString("settings.section.language"), 1);
-        JPanel dirPanel = addTitledPanel(Language.getString("settings.section.directory"), 2);
+        JPanel dirPanel = addTitledPanel(Language.getString("settings.section.settings"), 2);
         
         GridBagConstraints gbc;
         
@@ -103,7 +104,7 @@ public class MainSettings extends SettingsPanel {
                 gbc);
         
         //==========================
-        // Directory
+        // Settings
         //==========================
         String dirInfo = Language.getString("settings.directory.default");
         if (Chatty.getSettingsDirectoryInfo() != null) {
@@ -138,6 +139,24 @@ public class MainSettings extends SettingsPanel {
             gbc.weightx = 1;
             dirPanel.add(invalidDir, gbc);
         }
+
+        JButton openBackupButton = new JButton(Language.getString("settings.backup.button.open"));
+        openBackupButton.addActionListener(e -> {
+            FileManager fm = d.settings.getFileManager();
+            BackupManager mg = new BackupManager(d, fm);
+            mg.setModal(true);
+            mg.pack();
+            mg.setLocationRelativeTo(d);
+            /**
+             * Pause saving because session backup shouldn't be changed while
+             * viewing backups
+             */
+            fm.setSavingPaused(true);
+            mg.open();
+            fm.setSavingPaused(false);
+        });
+        gbc = d.makeGbc(0, 4, 2, 1);
+        dirPanel.add(openBackupButton, gbc);
     }
     
     public static Map<String, String> getLanguageOptions() {
@@ -176,6 +195,7 @@ public class MainSettings extends SettingsPanel {
             display.setEditable(false);
             
             JButton changeButton = new JButton(Language.getString("dialog.button.change"));
+            changeButton.setMargin(GuiUtil.SMALL_BUTTON_INSETS);
             changeButton.addActionListener(e -> {
                 change(parent);
             });

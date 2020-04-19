@@ -58,6 +58,20 @@ public class StringUtil {
         return join(items, delimiter, start, -1);
     }
     
+    /**
+     * Join the items in the given Collection.
+     * 
+     * @param items The Collection
+     * @param delimiter The delimiter, put in between items
+     * @param start The index of the first item to include in the result,
+     * negative values are interpreted as 0, values larger than the Collection
+     * will simply result in an empty result
+     * @param end The index after the last item to include in the result,
+     * negative values or values larger than the Collection will include all
+     * items after the start (when start is 0, then this is the amount of items
+     * included)
+     * @return The resulting String (never null)
+     */
     public static String join(Collection<?> items, String delimiter, int start, int end) {
         if (items == null || items.isEmpty()) {
             return "";
@@ -408,8 +422,12 @@ public class StringUtil {
         return result;
     }
     
-    public static final NullComparator NULL_COMPARATOR = new NullComparator();
+    public static String[] splitLines(String input) {
+        return input.split("\r\n|\n|\r");
+    }
     
+    public static final NullComparator NULL_COMPARATOR = new NullComparator();
+
     private static class NullComparator implements Comparator<String> {
 
         @Override
@@ -451,6 +469,13 @@ public class StringUtil {
             return null;
         }
         return input[ThreadLocalRandom.current().nextInt(input.length)];
+    }
+    
+    public static int getLength(String content) {
+        if (content == null) {
+            return 0;
+        }
+        return content.length();
     }
     
     public static final void main(String[] args) {

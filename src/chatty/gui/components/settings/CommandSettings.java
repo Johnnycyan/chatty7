@@ -177,13 +177,24 @@ public class CommandSettings extends SettingsPanel {
         userDialogButtons.setLinkLabelListener(d.getLinkLabelListener());
         menus.add(userDialogButtons, gbc);
         
+        gbc = d.makeGbc(0, 4, 1, 1);
+        gbc.anchor = GridBagConstraints.EAST;
+        menus.add(d.createLabel("textContextMenu"), gbc);
+        
+        gbc = d.makeGbc(1, 4, 1, 1);
+        EditorStringSetting textContextMenu = d.addEditorStringSetting(
+                "textContextMenu", 20, true, "Edit Text Selection Context Menu", true,
+                getInfo("textMenu"), menuTester);
+        textContextMenu.setLinkLabelListener(d.getLinkLabelListener());
+        menus.add(textContextMenu, gbc);
     }
     
     public static void showCommandInfoPopup(Component parent, CustomCommand command) {
         String message = "<p style='font-family:sans-serif;'>This shows how the "
                 + "parser understands the part to be executed. It may not be "
                 + "very obvious what it means, but it can be helpful for "
-                + "debugging.</p><br />";
+                + "debugging. If no error is shown here, it's at least formally "
+                + "correct.</p><br />";
         if (command == null) {
             message += "No command.";
         } else if (command.hasError()) {

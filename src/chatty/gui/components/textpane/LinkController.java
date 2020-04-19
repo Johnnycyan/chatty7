@@ -57,6 +57,7 @@ import javax.swing.Timer;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
+import javax.swing.text.JTextComponent;
 import javax.swing.text.StyledDocument;
 import javax.swing.text.html.HTML;
 
@@ -431,7 +432,7 @@ public class LinkController extends MouseAdapter {
             m = new UsericonContextMenu(usericon, contextMenuListener);
         }
         else if (selectedText != null) {
-            m = new TextSelectionMenu(selectedText);
+            m = new TextSelectionMenu((JTextComponent)e.getSource(), false);
         }
         else {
             if (defaultContextMenu == null) {

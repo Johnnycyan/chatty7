@@ -185,6 +185,12 @@ public class Parser {
         else if (type.equals("replace")) {
             return replace(isRequired);
         }
+        else if (type.equals("is")) {
+            return is(isRequired);
+        }
+        else if (type.equals("get")) {
+            return get(isRequired);
+        }
         else {
             error("Invalid function '"+type+"'", 0);
             return null;
@@ -355,6 +361,24 @@ public class Parser {
         }
         expect(")");
         return new Replace(item, search, replace, isRequired, type);
+    }
+    
+    private Item is(boolean isRequired) throws ParseException {
+        expect("(");
+        Item item = param();
+        expect(")");
+        return new Is(item, isRequired);
+    }
+    
+    private Item get(boolean isRequired) throws ParseException {
+        expect("(");
+        Item item = param();
+        Item item2 = null;
+        if (accept(",")) {
+            item2 = param();
+        }
+        expect(")");
+        return new Get(item, item2, isRequired);
     }
     
     private Replacement replacement(boolean isRequired) throws ParseException {
