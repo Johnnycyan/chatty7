@@ -80,7 +80,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Logger;
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import java.util.Timer;
@@ -2666,18 +2665,24 @@ public class TwitchClient {
             settingsAlreadySavedOnExit = true;
         }
         
-        LOGGER.info("Saving settings..");
-        System.out.println("Saving settings..");
-        
         // Prepare saving settings
         if (g != null && g.guiCreated) {
             g.saveWindowStates();
         }
         // Actually write settings to file
         if (force || !settings.getBoolean("dontSaveSettings")) {
+            LOGGER.info("Saving settings..");
+            System.out.println("Saving settings..");
             return settings.saveSettingsToJson(force);
         }
+        else {
+            LOGGER.info("Not saving settings (disabled)");
+        }
         return null;
+    }
+    
+    public List<FileManager.SaveResult> manualBackup() {
+        return settingsManager.fileManager.manualBackup();
     }
     
     private class SettingSaveListener implements SettingsListener {
