@@ -56,6 +56,7 @@ import chatty.gui.components.menus.CommandMenuItems;
 import chatty.gui.components.menus.ContextMenuHelper;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.components.menus.EmoteContextMenu;
+import chatty.gui.components.menus.StreamChatContextMenu;
 import chatty.gui.components.menus.TextSelectionMenu;
 import chatty.gui.components.settings.NotificationSettings;
 import chatty.gui.components.settings.SettingsDialog;
@@ -299,6 +300,7 @@ public class MainGui extends JFrame implements Runnable {
         
         streamChat = new StreamChat(this, styleManager, contextMenuListener,
             client.settings.getBoolean("streamChatBottom"));
+        StreamChatContextMenu.client = client;
         
         moderationLog = new ModerationLog(this);
         autoModDialog = new AutoModDialog(this, client.api, client);
@@ -352,7 +354,7 @@ public class MainGui extends JFrame implements Runnable {
             GuiUtil.installTextComponentFocusWorkaround();
         }
         
-        ToolTipManager.sharedInstance().setInitialDelay(300);
+        ToolTipManager.sharedInstance().setInitialDelay(555);
         ToolTipManager.sharedInstance().setDismissDelay(20*1000);
         
         guiCreated = true;
@@ -1055,6 +1057,7 @@ public class MainGui extends JFrame implements Runnable {
         CommandMenuItems.setCommands(CommandMenuItems.MenuType.USER, client.settings.getString("userContextMenu"));
         CommandMenuItems.setCommands(CommandMenuItems.MenuType.STREAMS, client.settings.getString("streamsContextMenu"));
         CommandMenuItems.setCommands(CommandMenuItems.MenuType.TEXT, client.settings.getString("textContextMenu"));
+        CommandMenuItems.setCommands(CommandMenuItems.MenuType.ADMIN, client.settings.getString("adminContextMenu"));
         TextSelectionMenu.update();
         ContextMenuHelper.livestreamerQualities = client.settings.getString("livestreamerQualities");
         ContextMenuHelper.enableLivestreamer = client.settings.getBoolean("livestreamer");
@@ -2380,6 +2383,10 @@ public class MainGui extends JFrame implements Runnable {
             if (!UrlOpener.openUrlPrompt(getActiveWindow(), parameter, true)) {
                 printLine("Failed to open URL (none specified or invalid).");
             }
+        } else if (command.equals("openfile")) {
+            MiscUtil.openFile(parameter, getActiveWindow());
+        } else if (command.equals("openfileprompt")) {
+            MiscUtil.openFilePrompt(parameter, getActiveWindow());
         } else if (command.equals("openfollowers")) {
             openFollowerDialog();
         } else if (command.equals("opensubscribers")) {
@@ -4567,6 +4574,8 @@ public class MainGui extends JFrame implements Runnable {
                     Sound.setDeviceName((String)value);
                 } else if (setting.equals("userDialogTimestamp")) {
                     userInfoDialog.setTimestampFormat(styleManager.makeTimestampFormat("userDialogTimestamp", null));
+                } else if (setting.equals("streamChatLogos")) {
+                    client.updateStreamChatLogos();
                 }
             }
             if (type == Setting.LIST) {
@@ -4580,6 +4589,8 @@ public class MainGui extends JFrame implements Runnable {
                     updateFilter();
                 } else if (setting.equals("hotkeys")) {
                     hotkeyManager.loadFromSettings(client.settings);
+                } else if (setting.equals("streamChatChannels")) {
+                    client.updateStreamChatLogos();
                 }
             }
             if (type == Setting.LONG) {
@@ -4632,7 +4643,8 @@ public class MainGui extends JFrame implements Runnable {
                     || setting.equals("userContextMenu")
                     || setting.equals("livestreamerQualities")
                     || setting.equals("streamsContextMenu")
-                    || setting.equals("textContextMenu")) {
+                    || setting.equals("textContextMenu")
+                    || setting.equals("adminContextMenu")) {
                 updateCustomContextMenuEntries();
             }
             else if (setting.equals("chatScrollbarAlways") || setting.equals("userlistWidth")) {

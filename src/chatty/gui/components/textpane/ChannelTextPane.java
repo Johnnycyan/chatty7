@@ -179,11 +179,13 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     
     private final javax.swing.Timer updateTimer;
     
+    private final boolean isStreamChat;
+    
     public ChannelTextPane(MainGui main, StyleServer styleServer) {
         this(main, styleServer, false, true);
     }
     
-    public ChannelTextPane(MainGui main, StyleServer styleServer, boolean special, boolean startAtBottom) {
+    public ChannelTextPane(MainGui main, StyleServer styleServer, boolean isStreamChat, boolean startAtBottom) {
         lineSelection = new LineSelection(main.getUserListener());
         this.styleServer = styleServer;
         this.main = main;
@@ -211,7 +213,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (special) {
+                if (isStreamChat) {
                     removeOldLines();
                 }
                 removeAbandonedModLogInfo();
@@ -221,6 +223,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         updateTimer.start();
         
         FixSelection.install(this);
+        this.isStreamChat = isStreamChat;
     }
     
     /**
@@ -1962,7 +1965,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      */
     private void printUserIcons(User user, boolean pointsHl) {
         boolean botBadgeEnabled = styles.isEnabled(Setting.BOT_BADGE_ENABLED);
-        java.util.List<Usericon> badges = user.getBadges(botBadgeEnabled, pointsHl);
+        java.util.List<Usericon> badges = user.getBadges(botBadgeEnabled, pointsHl, isStreamChat);
         if (badges != null) {
             for (Usericon badge : badges) {
                 if (badge.image != null && !badge.removeBadge) {

@@ -334,6 +334,7 @@ public class SettingsManager {
         settings.addString("streamsContextMenu", "");
         settings.addString("textContextMenu", "-\n" +
                 "Translate=/openUrlPrompt https://translate.google.com/#view=home&op=translate&sl=auto&tl=en&text=$$urlencode($(msg))");
+        settings.addString("adminContextMenu", "!title=!title $(title)\n!game=!game $(game)");
         
         settings.addBoolean("closeUserDialogOnAction", true);
         settings.addBoolean("openUserDialogByMouse", true);
@@ -575,6 +576,7 @@ public class SettingsManager {
         // Chat Logging
         settings.addString("logMode", "always");
         settings.addBoolean("logMessage", true);
+        settings.addString("logMessageTemplate", "$(timestamp) <$(full-nick2)>$if(action,*) $(msg)");
         settings.addBoolean("logMod", true);
         settings.addBoolean("logJoinPart", false);
         settings.addBoolean("logBan", true);
@@ -616,6 +618,8 @@ public class SettingsManager {
         settings.addList("streamChatChannels", new ArrayList(), Setting.STRING);
         settings.addBoolean("streamChatBottom", true);
         settings.addBoolean("streamChatResizable", true);
+        // Size (String in case <width>x<height> needs to be added later or something)
+        settings.addString("streamChatLogos", "22");
 
         // Whispering
         settings.addBoolean("whisperEnabled", false);
