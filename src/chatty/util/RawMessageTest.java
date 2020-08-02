@@ -49,6 +49,13 @@ public class RawMessageTest {
         if (type.equals("subextend")) {
             return "@badge-info=subscriber/1;badges=staff/1,subscriber/0,premium/1;color=;display-name=Test;emotes=;flags=;id=abc;login=test;mod=0;msg-id=extendsub;msg-param-sub-benefit-end-month=4;msg-param-sub-plan=1000;msg-param-cumulative-months=16;room-id=123;subscriber=1;system-msg=Test\\sextended\\stheir\\sTier\\s1\\ssubscription\\sthrough\\sApril!;tmi-sent-ts=123;user-id=123;user-type=staff :tmi.twitch.tv USERNOTICE "+channel;
         }
+        if (type.equals("submsg")) {
+            return "@badge-info=subscriber/31;badges=subscriber/24;color=;display-name=Test;emotes=;flags=;id=abc;mod=0;room-id=123;subscriber=1;tmi-sent-ts=123;turbo=0;user-id=123;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :abc blah";
+        }
+        if (type.equals("submsg2")) {
+            // #cirno_tv
+            return "@badge-info=subscriber/31;badges=subscriber/2024,bits/5000;client-nonce=abc;color=#4AADFF;display-name=Test;emotes=;flags=;id=abc;mod=0;room-id=123;subscriber=1;tmi-sent-ts=123;turbo=0;user-id=123;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :Abc";
+        }
         if (type.equals("bits")) {
             return "@badges=bits/1000;bits=1;color=#FF7F50;display-name=tduvaTest;emotes=;id=123;mod=0;subscriber=0;turbo=0;user-type= :tduvatest!tduvatest@tduvatest.tmi.twitch.tv PRIVMSG "+channel+" :"+options;
         }
@@ -108,6 +115,18 @@ public class RawMessageTest {
         }
         if (type.equals("femote")) {
             return "@badge-info=subscriber/22;badges=subscriber/18;color=#420000;display-name=Test;emotes=300580752:0-7/300580752_HF:9-19;flags=;id=abc;mod=0;room-id=0;subscriber=1;tmi-sent-ts=123;turbo=0;user-id=123;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :cohhLick cohhLick_HF so tasty";
+        }
+        if (type.equals("validemoterange")) {
+            return "@color=#420000;display-name=Test;emotes=425618:0-2;flags=;id=abc;mod=0;room-id=0;turbo=0;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :1234";
+        }
+        if (type.equals("invalidemoterange")) {
+            return "@color=#420000;display-name=Test;emotes=425618:1-4;flags=;id=abc;mod=0;room-id=0;turbo=0;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :1234";
+        }
+        if (type.equals("invalidemoterange2")) {
+            return "@color=#420000;display-name=Test;emotes=425618:0-4;flags=;id=abc;mod=0;room-id=0;turbo=0;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :1234";
+        }
+                if (type.equals("invalidemoterange3")) {
+            return "@color=#420000;display-name=Test;emotes=425618:0-5;flags=;id=abc;mod=0;room-id=0;turbo=0;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :1234";
         }
         if (type.equals("hl")) {
             return "@badge-info=subscriber/19;badges=subscriber/12,premium/1;color=;display-name=Test;emotes=300737210:11-18/300737204:20-27;flags=;id=123;mod=0;msg-id=highlighted-message;room-id=123;subscriber=1;tmi-sent-ts=123;turbo=0;user-id=123;user-type= :test!test@test.tmi.twitch.tv PRIVMSG "+channel+" :hello chat itmejpM1 itmejpM3 , just testing this highlight popup to see how glitzy this post will get";

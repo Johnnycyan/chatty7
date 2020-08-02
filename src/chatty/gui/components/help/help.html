@@ -5,7 +5,7 @@
         <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 <body>
-    <h1><a name="top">Chatty (Version: 0.12)</a></h1>
+    <h1><a name="top">Chatty (Version: 0.13-b1)</a></h1>
     <table>
         <tr>
             <td valign="top">
@@ -1489,8 +1489,7 @@ MiniK   http://static-cdn.jtvnw.net/emoticons/v1/25/1.0     set:793 id:3287</pre
             via "Main - Save..")</dd>
         
         <dt><code>-cd</code></dt>
-        <dd>Use current working directory (usually the directory you
-                start Chatty from) for saving/loading settings and other files.
+        <dd>Use current working directory as settings directory.
                 This can be useful to make Chatty more portable or use several
                 different setting files on the same computer.
                 <a href="help-guide_folders.html">More information..</a></dd>
@@ -1498,7 +1497,11 @@ MiniK   http://static-cdn.jtvnw.net/emoticons/v1/25/1.0     set:793 id:3287</pre
         <dt><code>-d &lt;dir&gt;</code></dt>
         <dd>Same as <code>-cd</code>, except that you directly specify the
             settings directory to use. The specified directory has to already
-            exist.</dd>
+            exist (even if you just created an empty directory for it).</dd>
+        
+        <dt><code>-portable</code></dt>
+        <dd>Creates a directory called "portable_settings" next to where the
+            "Chatty.jar" is located and uses that as settings directory.</dd>
         
         <dt><code>-set:&lt;settingName&gt; &lt;setting value&gt;</code></dt>
         <dd>Change any setting that can be edited via the <code>/set</code>
@@ -1518,6 +1521,12 @@ MiniK   http://static-cdn.jtvnw.net/emoticons/v1/25/1.0     set:793 id:3287</pre
             no instance of Chatty will be able to start.</dd>
         <dd>Currently only the <code>-channel</code> parameter is used when 
             forwarded to an already running instance (joining the channel).</dd>
+        
+        <dt><code>-cc &lt;name&gt; [parameters]</code></dt>
+        <dd>Execute the Custom Command with the given name on start. The
+            parameters are optional. When used in combination with
+            <code>-single</code>, the command will be executed on the already
+            running instance.</dd>
     </dl>
 
     <h2>
