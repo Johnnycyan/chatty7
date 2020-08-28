@@ -630,6 +630,11 @@ public class GuiUtil {
         });
     }
     
+    public static void resetFocusTraversalKeys(Component comp) {
+        comp.setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, null);
+        comp.setFocusTraversalKeys(KeyboardFocusManager.BACKWARD_TRAVERSAL_KEYS, null);
+    }
+    
     public static void focusTest() {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addVetoableChangeListener(new VetoableChangeListener() {
 
@@ -729,6 +734,25 @@ public class GuiUtil {
     
     public static ImageIcon getIcon(Object o, String name) {
         return new ImageIcon(Toolkit.getDefaultToolkit().createImage(o.getClass().getResource(name)));
+    }
+    
+    /**
+     * Combine the two given icons horizontally into a new icon.
+     * 
+     * @param a The left icon in the resulting icon
+     * @param b The right icon in the resulting icon
+     * @param space Space between the icons in pixels
+     * @return The new icon
+     */
+    public static ImageIcon combineIcons(ImageIcon a, ImageIcon b, int space) {
+        int width = a.getIconWidth() + b.getIconWidth() + space;
+        int height = Math.max(a.getIconHeight(), b.getIconHeight());
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.drawImage(a.getImage(), 0, 0, null);
+        g.drawImage(b.getImage(), a.getIconWidth() + space, 0, null);
+        g.dispose();
+        return new ImageIcon(img);
     }
     
     public static ImageIcon createEmptyIcon(int width, int height) {

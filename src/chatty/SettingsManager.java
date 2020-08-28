@@ -203,6 +203,7 @@ public class SettingsManager {
         settings.addLong("lafVariant", 0);
         settings.addString("lafStyle", "regular");
         settings.addString("lafScroll", "default");
+        settings.addBoolean("lafNativeWindow", false);
         settings.addString("language", "");
         settings.addString("timezone", "");
         
@@ -232,6 +233,7 @@ public class SettingsManager {
         settings.addLong("mentions", 3);
         settings.addLong("mentionsInfo", 3);
         settings.addLong("markHoveredUser", chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS);
+        settings.addLong("mentionMessages", 0);
 
         // Badges/Emotes
         settings.addBoolean("emoticonsEnabled",true);
@@ -355,6 +357,8 @@ public class SettingsManager {
         settings.addBoolean("saveChannelHistory", true);
         settings.addBoolean("historyClear", true);
         settings.addLong("favoritesSorting", 20);
+        
+        settings.addList("gameFavorites", new ArrayList(), Setting.STRING);
         
         //=======================
         // Channel Admin Features
@@ -600,6 +604,7 @@ public class SettingsManager {
         settings.addBoolean("logLockFiles", true);
         
         // TAB Completion
+        settings.addBoolean("completionEnabled", true);
         settings.addMap("customCompletion", new HashMap(), Setting.STRING);
         settings.addLong("completionMaxItemsShown", 5);
         settings.addBoolean("completionShowPopup", true);
@@ -615,6 +620,9 @@ public class SettingsManager {
         settings.addString("completionEmotePrefix", ":");
         settings.addLong("completionMixed", 0);
         settings.addBoolean("completionSpace", false);
+        
+        // Replying
+        settings.addBoolean("mentionReplyRestricted", false);
 
         // Stream Chat
         settings.addLong("streamChatMessageTimeout", -1);

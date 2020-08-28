@@ -231,7 +231,7 @@ public class MainGui extends JFrame implements Runnable {
         GuiUtil.installEscapeCloseOperation(favoritesDialog);
         joinDialog = new JoinDialog(this);
         GuiUtil.installEscapeCloseOperation(joinDialog);
-        liveStreamsDialog = new LiveStreamsDialog(contextMenuListener, client.channelFavorites);
+        liveStreamsDialog = new LiveStreamsDialog(contextMenuListener, client.channelFavorites, client.settings);
         setLiveStreamsWindowIcons();
         //GuiUtil.installEscapeCloseOperation(liveStreamsDialog);
         EmoteContextMenu.setEmoteManager(emoticons);
@@ -1826,6 +1826,22 @@ public class MainGui extends JFrame implements Runnable {
                 JCheckBoxMenuItem item = (JCheckBoxMenuItem)e.getSource();
                 client.settings.setBoolean("liveStreamsSortingFav", item.isSelected());
             }
+            if (cmd.equals("favoriteGame")) {
+                for (StreamInfo info : streamInfos) {
+                    if (!StringUtil.isNullOrEmpty(info.getGame())) {
+                        client.settings.setAdd("gameFavorites", info.getGame());
+                    }
+                }
+                client.settings.setSettingChanged("gameFavorites");
+            }
+            if (cmd.equals("unfavoriteGame")) {
+                for (StreamInfo info : streamInfos) {
+                    if (!StringUtil.isNullOrEmpty(info.getGame())) {
+                        client.settings.listRemove("gameFavorites", info.getGame());
+                    }
+                }
+                client.settings.setSettingChanged("gameFavorites");
+            }
         }
         
         /**
@@ -2404,7 +2420,7 @@ public class MainGui extends JFrame implements Runnable {
             if (p.hasArgs()) {
                 message = p.getArgs();
             }
-            UserMessage m = new UserMessage(client.getSpecialUser(), message, null, null, 0, null, null, null);
+            UserMessage m = new UserMessage(client.getSpecialUser(), message, null, null, 0, null, null, null, MsgTags.EMPTY);
             streamChat.printMessage(m);
         });
         client.commands.addEdt("livestreamer", p -> {
@@ -3033,7 +3049,8 @@ public class MainGui extends JFrame implements Runnable {
                         ignoreMatches = ignoreList.getLastTextMatches();
                     }
                     ignoredMessages.addMessage(channel, user, text, action,
-                            tagEmotes, bitsForEmotes, whisper, ignoreMatches);
+                            tagEmotes, bitsForEmotes, whisper, ignoreMatches,
+                            tags);
                     ignoredMessagesHelper.ignoredMessage(channel);
                 }
                 long ignoreMode = client.settings.getLong("ignoreMode");
@@ -3053,8 +3070,8 @@ public class MainGui extends JFrame implements Runnable {
                     UserMessage message = new UserMessage(user, text, tagEmotes, tags.getId(), bitsForEmotes,
                             highlightMatches,
                             hasReplacements ? filter.getLastTextMatches() : null,
-                            hasReplacements ? filter.getLastReplacement() : null);
-                    message.pointsHl = tags.isHighlightedMessage();
+                            hasReplacements ? filter.getLastReplacement() : null,
+                            tags);
                     
                     // Custom color
                     boolean hlByPoints = tags.isHighlightedMessage() && client.settings.getBoolean("highlightByPoints");
@@ -4218,7 +4235,7 @@ public class MainGui extends JFrame implements Runnable {
                 client.settings.setString("token", "");
             }
             else {
-                result = "Login data invalid. [help:login-invalid What does this mean?]";
+                result = "Login data invalid. This may only be temporary. If the issue persists, remove login and connect Twitch account again.";
             }
             if (!showInDialog && !changedTokenResponse) {
                 showTokenWarning();
@@ -4549,6 +4566,8 @@ public class MainGui extends JFrame implements Runnable {
                     emotesDialog.setCloseOnDoubleClick(bool);
                 } else if (setting.equals("foreignToken")) {
                     tokenDialog.setForeignToken(bool);
+                } else if (setting.equals("completionEnabled")) {
+                    channels.setCompletionEnabled(bool);
                 }
                 if (setting.startsWith("title")) {
                     updateState(true);
