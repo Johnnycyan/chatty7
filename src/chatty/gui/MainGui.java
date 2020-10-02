@@ -3051,6 +3051,7 @@ public class MainGui extends JFrame implements Runnable {
                     ignoredMessages.addMessage(channel, user, text, action,
                             tagEmotes, bitsForEmotes, whisper, ignoreMatches,
                             tags);
+                    client.chatLog.message("_ignored", user, "["+channel+"] "+text, action);
                     ignoredMessagesHelper.ignoredMessage(channel);
                 }
                 long ignoreMode = client.settings.getLong("ignoreMode");
@@ -3100,6 +3101,7 @@ public class MainGui extends JFrame implements Runnable {
                     chan.printMessage(message, timestamp);
                     if (highlighted) {
                         highlightedMessages.addMessage(channel, message);
+                        client.chatLog.message("_highlighted", user, "["+channel+"] "+text, action);
                     }
                     if (client.settings.listContains("streamChatChannels", channel)) {
                         streamChat.printMessage(message);
@@ -3404,6 +3406,7 @@ public class MainGui extends JFrame implements Runnable {
                 // After colors and everything is set
                 if (highlighted) {
                     highlightedMessages.addInfoMessage(channel.getChannel(), message);
+                    client.chatLog.info("_highlighted", "["+channel.getChannel()+"] "+message);
                 }
             }
             channel.printInfoMessage(message);
@@ -3412,6 +3415,7 @@ public class MainGui extends JFrame implements Runnable {
             }
         } else if (!message.isHidden()) {
             ignoredMessages.addInfoMessage(channel.getRoom().getDisplayName(), message.text);
+            client.chatLog.info("_ignored", "["+channel.getChannel()+"] "+message);
         }
         
         //----------

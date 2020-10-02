@@ -2830,7 +2830,8 @@ public class TwitchClient {
         
         // Prepare saving settings
         if (g != null && g.guiCreated) {
-            g.saveWindowStates();
+            // Run in EDT just to be safe
+            GuiUtil.edtAndWait(() -> g.saveWindowStates(), "Save Window States");
         }
         // Actually write settings to file
         if (force || !settings.getBoolean("dontSaveSettings")) {
@@ -2852,16 +2853,11 @@ public class TwitchClient {
 
         @Override
         public void aboutToSaveSettings(Settings settings) {
-            Collection<String> openChans;
-            if (SwingUtilities.isEventDispatchThread()) {
-                openChans = g.getOpenChannels();
-            } else {
-                openChans = c.getOpenChannels();
-            }
-            settings.setString("previousChannel", Helper.buildStreamsString(openChans));
+            GuiUtil.edtAndWait(() ->
+                    settings.setString("previousChannel", Helper.buildStreamsString(g.getOpenChannels())),
+                    "Save previous channels");
             EmoticonSizeCache.saveToFile();
         }
-        
     }
     
     private class Messages implements TwitchConnection.ConnectionListener {
