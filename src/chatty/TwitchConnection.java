@@ -1135,14 +1135,29 @@ public class TwitchConnection {
             if (months == -1) {
                 months = tags.getInteger("msg-param-months", -1);
             }
+            int giftMonths = tags.getInteger("msg-param-gift-months", -1);
+            
             if (StringUtil.isNullOrEmpty(login, text)) {
                 return;
             }
             User user = userJoined(channel, login);
             updateUserFromTags(user, tags);
             if (tags.isValueOf("msg-id", "resub", "sub", "subgift", "anonsubgift")) {
+                text = text.trim();
+                if (giftMonths > 1 && !text.matches(".* gifted "+giftMonths+" .*")) {
+                    text += " They gifted "+giftMonths+" months!";
+                }
+                // There are still some types of notifications that don't have
+                // this info, and it might be useful
                 if (months > 1 && !text.matches(".*\\b"+months+"\\b.*")) {
-                    text += " They've subscribed for "+months+" months!";
+                    String recipient = tags.get("msg-param-recipient-display-name");
+                    if (StringUtil.isNullOrEmpty(recipient)) {
+                        recipient = "They've";
+                    }
+                    else {
+                        recipient += " has";
+                    }
+                    text += " "+recipient+" subscribed for "+months+" months!";
                 }
                 listener.onSubscriberNotification(user, text, message, months, tags);
             } else if (tags.isValue("msg-id", "charity") && login.equals("twitch")) {
