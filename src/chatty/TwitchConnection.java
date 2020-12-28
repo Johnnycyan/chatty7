@@ -920,6 +920,9 @@ public class TwitchConnection {
             
             Map<String, String> badgeInfo = Helper.parseBadges(tags.get("badge-info"));
             String subMonths = badgeInfo.get("subscriber");
+            if (subMonths == null) {
+                subMonths = badgeInfo.get("founder");
+            }
             if (subMonths != null) {
                 user.setSubMonths(Helper.parseShort(subMonths, (short)0));
             }
@@ -1151,7 +1154,7 @@ public class TwitchConnection {
             if (tags.isValueOf("msg-id", "resub", "sub", "subgift", "anonsubgift")) {
                 text = text.trim();
                 if (giftMonths > 1 && !text.matches(".* gifted "+giftMonths+" .*")) {
-                    text += " They gifted "+giftMonths+" months!";
+                    text += " It's a "+giftMonths+"-month gift!";
                 }
                 // There are still some types of notifications that don't have
                 // this info, and it might be useful

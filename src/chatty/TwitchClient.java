@@ -1513,6 +1513,8 @@ public class TwitchClient {
             } catch (NumberFormatException ex) { }
             StreamInfo info = api.getStreamInfo("tduva", null);
             info.set("Test 2", "Game", viewers, System.currentTimeMillis() - 1000, StreamType.LIVE);
+        } else if (command.equals("newstatus")) {
+            g.setChannelNewStatus(parameter, "");
         } else if (command.equals("refreshstreams")) {
             api.manualRefreshStreams();
         } else if (command.equals("usericonsinfo")) {
@@ -2553,6 +2555,7 @@ public class TwitchClient {
         public void streamInfoUpdated(StreamInfo info) {
             g.updateState(true);
             g.updateChannelInfo(info);
+            g.updateStreamLive(info);
             g.addStreamInfo(info);
             String channel = "#"+info.getStream();
             if (isChannelOpen(channel)) {
@@ -2726,9 +2729,10 @@ public class TwitchClient {
         }
 
         @Override
-        public void botNamesReceived(Set<String> botNames) {
+        public void botNamesReceived(String stream, Set<String> botNames) {
             if (settings.getBoolean("botNamesFFZ")) {
-                botNameManager.addBotNames(null, botNames);
+                String channel = Helper.toValidChannel(stream);
+                botNameManager.addBotNames(channel, botNames);
             }
         }
 
@@ -2899,7 +2903,7 @@ public class TwitchClient {
             if (user.getRoom().hasTopic()) {
                 g.printLine(user.getRoom(), user.getRoom().getTopicText());
             }
-            g.loadRecentMessages(user.getChannel());
+            g.loadRecentMessages(user);
             
             // Icons and FFZ/BTTV Emotes
             //api.requestChatIcons(Helper.toStream(channel), false);

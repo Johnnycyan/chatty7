@@ -3,6 +3,7 @@ package chatty.util;
 
 import chatty.Chatty;
 import chatty.User;
+import chatty.Helper;
 import chatty.util.irc.MsgTags;
 
 import java.util.ArrayList;
@@ -25,6 +26,12 @@ import java.net.URLEncoder;
 import java.util.regex.*;
 import java.awt.Color;
 
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.SocketTimeoutException;
+import java.net.URL;
+import java.nio.charset.Charset;
+
 import chatty.gui.components.Channel;
 
 /**
@@ -46,6 +53,11 @@ public class ForkUtil {
 
     public static String FILTER_FORK_PREFIX = "ByFork";
 
+    public static String USER_AGENT = String.join(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ",
+        "AppleWebKit/537.36 (KHTML, like Gecko) ",
+        "Chrome/86.0.4240.198 Safari/537.36");
+
     public static Map<String, String> completionLangs = new HashMap<>();
     static {
         // "Ж" and "ж" are swaped because "search" text is in lower case.
@@ -66,10 +78,15 @@ public class ForkUtil {
     }
 
     public static String removeSharpFromTitle(Channel channel) {
-        if (channel.getType() == Channel.Type.CHANNEL && REMOVE_SHARP) {
-            return channel.getName().substring(1);
-        }
-        return channel.getName();
+        return (channel.getType() == Channel.Type.CHANNEL)
+            ? removeSharpFromTitle(channel.getName())
+            : channel.getName();
+    }
+
+    public static String removeSharpFromTitle(String title) {
+        return (REMOVE_SHARP && title.startsWith("#"))
+            ? title.substring(1)
+            : title;
     }
 
     public static boolean isItYoutubeUrl(String url) {
@@ -86,7 +103,7 @@ public class ForkUtil {
             String taks = "https://api.betterttv.net/2/link_resolver/" + URLEncoder.encode(url, "ISO-8859-1");
             taks = taks.replaceAll("\\+", "");
             JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(readUrl(taks));
+            JSONObject json = (JSONObject) parser.parse(getUrl(taks));
             String tooltip = (String)json.get("tooltip");
             tooltip = tooltip.replaceAll("\n", "<br />");
             tooltip = chatty.Helper.htmlspecialchars_decode(tooltip);
@@ -102,11 +119,10 @@ public class ForkUtil {
             String urlId = "https://api.twitch.tv/kraken/channels/" + channel.substring(1) + "?client_id=" + Chatty.CLIENT_ID;
             System.out.println(urlId);
             JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(readUrl(urlId));
+            JSONObject json = (JSONObject) parser.parse(getUrl(urlId));
             String id = (Long)json.get("_id") + "";
             System.out.println(id);
             return id;
-        } catch (org.json.simple.parser.ParseException | java.io.UnsupportedEncodingException ee) {
         } catch (Exception e) {
         }
         return "";
@@ -114,14 +130,17 @@ public class ForkUtil {
 
     public static List<String> getRecentMessages(String channel) {
         try {
-            String channelId = getIdChannel(channel);
+            // String channelId = getIdChannel(channel);
             // Old API.
             // String urlId = "https://tmi.twitch.tv/api/rooms/" + channelId + "/recent_messages?client_id=" + Chatty.CLIENT_ID;
             // New custom API from RAnders00.
-            String urlId = "https://recent-messages.robotty.de/api/v2/recent-messages/" + channel.substring(1) + "?clearchatToNotice=true";
-            System.out.println(urlId);
+            String urlId = "https://recent-messages.robotty.de/"
+                + "api/v2/recent-messages/"
+                + channel.substring(1)
+                + "?clearchatToNotice=true";
+            // System.out.println(urlId);
             JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(readUrl(urlId));
+            JSONObject json = (JSONObject) parser.parse(getUrl(urlId));
             JSONArray msg = (JSONArray) json.get("messages");
 
             List<String> messages = new ArrayList<String>();
@@ -134,68 +153,108 @@ public class ForkUtil {
 
             //System.out.println(id);
             return messages;
-        } catch (org.json.simple.parser.ParseException | java.io.UnsupportedEncodingException ee) {
         } catch (Exception e) {
         }
         return new ArrayList<String>();
     }
 
     public static void updateUserFromTags(User user, MsgTags tags) {
-        //From TwitchConnection
+        // From TwitchConnection.
         if (tags.isEmpty()) {
             return;
         }
+        /**
+         * Any and all tag values may be null, so account for that when
+         * checking against them.
+         */
+        // Whether anything in the user changed to warrant an update
         boolean changed = false;
-        
-        Map<String, String> badges = chatty.Helper.parseBadges(tags.get("badges"));
+
+        Map<String, String> badges = Helper.parseBadges(tags.get("badges"));
         if (user.setTwitchBadges(badges)) {
             changed = true;
-        }        
+        }
+
+        Map<String, String> badgeInfo = Helper.parseBadges(tags.get("badge-info"));
+        String subMonths = badgeInfo.get("subscriber");
+        if (subMonths == null) {
+            subMonths = badgeInfo.get("founder");
+        }
+        if (subMonths != null) {
+            user.setSubMonths(Helper.parseShort(subMonths, (short)0));
+        }
+
+        // if (settings.getBoolean("ircv3CapitalizedNames")) {
+            if (user.setDisplayNick(StringUtil.trim(tags.get("display-name")))) {
+                changed = true;
+            }
+        // }
+
         // Update color
         String color = tags.get("color");
         if (color != null && !color.isEmpty()) {
             user.setColor(color);
-        }        
+        }
+
         // Update user status
         boolean turbo = tags.isTrue("turbo") || badges.containsKey("turbo") || badges.containsKey("premium");
         if (user.setTurbo(turbo)) {
             changed = true;
         }
-        if (user.setSubscriber(tags.isTrue("subscriber"))) {
+        boolean subscriber = badges.containsKey("subscriber") || badges.containsKey("founder");
+        if (user.setSubscriber(subscriber)) {
             changed = true;
         }
-        
-        // Temporarily check both for containing a value as Twitch is
-        // changing it
-        String userType = tags.get("user-type");
-        if (user.setModerator("mod".equals(userType))) {
+        if (user.setVip(badges.containsKey("vip"))) {
             changed = true;
         }
-        if (user.setStaff("staff".equals(userType))) {
+        if (user.setModerator(badges.containsKey("moderator"))) {
             changed = true;
         }
-        if (user.setAdmin("admin".equals(userType))) {
+        if (user.setAdmin(badges.containsKey("admin"))) {
             changed = true;
         }
-        
+        if (user.setStaff(badges.containsKey("staff"))) {
+            changed = true;
+        }
+
         user.setId(tags.get("user-id"));
     }
 
-    private static String readUrl(String urlString) throws Exception {
-        BufferedReader reader = null;
-        try {
-            URL url = new URL(urlString);
-            reader = new BufferedReader(new InputStreamReader(url.openStream(), "UTF-8"));
-            StringBuffer buffer = new StringBuffer();
-            int read;
-            char[] chars = new char[1024];
-            while ((read = reader.read(chars)) != -1)
-                buffer.append(chars, 0, read); 
+    private static String getUrl(String targetUrl) {
+        Charset charset = Charset.forName("UTF-8");
+        URL url;
+        HttpURLConnection connection = null;
 
-            return buffer.toString();
+        try {
+            url = new URL(targetUrl);
+            connection = (HttpURLConnection)url.openConnection();
+            connection.setRequestProperty("User-Agent", USER_AGENT);
+
+            // Read response
+            InputStream input = connection.getInputStream();
+
+            StringBuilder response;
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(input, charset))) {
+                String line;
+                response = new StringBuilder();
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+            }
+
+            return response.toString();
+        } catch (SocketTimeoutException ex) {
+            System.out.println(ex.toString());
+            return null;
+        } catch (IOException ex) {
+            System.out.println(ex.toString());
+            return null;
         } finally {
-            if (reader != null)
-                reader.close();
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 
@@ -204,5 +263,5 @@ public class ForkUtil {
                 Math.max(0, start),
                 Math.min(end, str.length()));
     }
-    
+
 }

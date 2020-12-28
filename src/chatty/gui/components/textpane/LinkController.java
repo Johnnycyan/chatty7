@@ -249,7 +249,7 @@ public class LinkController extends MouseAdapter {
                 && !e.isAltGraphDown()) {
             // Doing this on mousePressed would prevent selection of text,
             // because this is used to change the focus to the input
-            mouseClickedListener.mouseClicked();
+            mouseClickedListener.mouseClicked(channel);
         }
     }
     
