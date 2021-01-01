@@ -1655,7 +1655,7 @@ public class MainGui extends JFrame implements Runnable {
                 setCustomName(user.getName());
             }
             else if (cmd.equals("notes")) {
-                UserNotes.instance().showDialog(user, MainGui.this);
+                UserNotes.instance().showDialog(user, MainGui.this, null);
             }
             else if (cmd.startsWith("command")) {
                 Parameters parameters = Parameters.create(user.getRegularDisplayNick());
@@ -2212,21 +2212,22 @@ public class MainGui extends JFrame implements Runnable {
         @Override
         public void userClicked(User user, String msgId, String autoModMsgId, MouseEvent e) {
             if (e != null && SwingUtilities.isMiddleMouseButton(e)) {
-                String n = user.getName();
-                String set = ForkUtil.MENTION_NICK;
-                if (set.equals("normal")) {
-                    n = user.getDisplayNick();
-                } else if (set.equals("custom")) {
-                    n = user.getCustomNick();
-                } else if (set.equals("customReal")) {
-                    n = user.getCustomNickOrReal();
-                }
+                final String set = ForkUtil.MENTION_NICK;
+                final String n = set.equals("normal")
+                    ? user.getDisplayNick()
+                    : set.equals("custom")
+                    ? user.getCustomNick()
+                    : set.equals("customReal")
+                    ? user.getCustomNickOrReal()
+                    : user.getName();
 
-                String at = "";
-                if (client.settings.getBoolean("addAtToMentions")) {
-                    at = "@";
-                }
-                channels.getActiveChannel().insertText(at + n + ", ", true);
+                final String at =
+                    client.settings.getBoolean("addAtToMentions") ? "@" : "";
+                SwingUtilities.invokeLater(() -> {
+                    channels.getActiveChannel().insertText(
+                        at + n + ", ",
+                        true);
+                });
                 return;
             }
             if (e == null || (!e.isControlDown() && !e.isAltDown())) {
@@ -3258,6 +3259,8 @@ public class MainGui extends JFrame implements Runnable {
                 if (client.settings.listContains("streamChatChannels", user.getChannel())) {
                     streamChat.userBanned(user, duration, reason, id);
                 }
+                highlightedMessages.addBan(user, duration, reason, id);
+                ignoredMessages.addBan(user, duration, reason, id);
             }
         });
     }
@@ -3270,6 +3273,8 @@ public class MainGui extends JFrame implements Runnable {
             if (client.settings.listContains("streamChatChannels", user.getChannel())) {
                 streamChat.userBanned(user, -2, null, targetMsgId);
             }
+            highlightedMessages.addBan(user, -2, null, targetMsgId);
+            ignoredMessages.addBan(user, -2, null, targetMsgId);
         });
     }
 

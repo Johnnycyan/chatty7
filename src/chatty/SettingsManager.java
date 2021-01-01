@@ -424,7 +424,7 @@ public class SettingsManager {
 
         // Popouts
         settings.addBoolean("popoutSaveAttributes", true);
-        settings.addBoolean("popoutCloseLastChannel", true);
+        settings.addBoolean("popoutCloseLastChannel", false);
         settings.addList("popoutAttributes", new ArrayList(), Setting.STRING);
         
         // Titlebar
