@@ -1035,6 +1035,7 @@ public class MainGui extends JFrame implements Runnable {
     
     private void updateIgnore() {
         ignoreList.update(StringUtil.getStringList(client.settings.getList("ignore")));
+        ignoreList.updateBlacklist(StringUtil.getStringList(client.settings.getList("ignoreBlacklist")));
     }
     
     private void updateFilter() {
@@ -2274,6 +2275,14 @@ public class MainGui extends JFrame implements Runnable {
             }
         }
 
+        @Override
+        public void linkClicked(Channel channel, String link) {
+            if (link.startsWith("join.")) {
+                String c = link.substring("join.".length());
+                client.joinChannel(c);
+            }
+        }
+        
         public void imageClicked(String url) {
             ImageDialog.showImageDialog(getActiveWindow(), url);
         }
@@ -4642,8 +4651,10 @@ public class MainGui extends JFrame implements Runnable {
                     BatchAction.queue(highlighter, () -> {
                         updateHighlight();
                     });
-                } else if (setting.equals("ignore")) {
-                    updateIgnore();
+                } else if (setting.equals("ignore") || setting.equals("ignoreBlacklist")) {
+                    BatchAction.queue(ignoreList, () -> {
+                        updateIgnore();
+                    });
                 } else if (setting.equals("filter")) {
                     updateFilter();
                 } else if (setting.equals("hotkeys")) {

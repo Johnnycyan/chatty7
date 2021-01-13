@@ -166,7 +166,7 @@ public class DockManager {
      * @param content
      * @return The popout, or null if the content is in main or not added at all
      */
-    private DockPopout getPopoutFromContent(DockContent content) {
+    public DockPopout getPopoutFromContent(DockContent content) {
         Component c = content.getComponent();
         do {
             c = c.getParent();
@@ -428,7 +428,9 @@ public class DockManager {
     
     protected void requestStopDrag(DockTransferable t) {
         if (!DockUtil.isMouseOverWindow()
-                && popoutTypeDrag != PopoutType.NONE) {
+                && popoutTypeDrag != PopoutType.NONE
+                && t != null
+                && t.content != null) {
             // Manually changed location, so reset
             t.content.setTargetPath(null);
             // Popout from dragging outside window
@@ -532,7 +534,7 @@ public class DockManager {
                 @Override
                 public void windowClosing(WindowEvent e) {
                     // User closed window directly
-                    DockManager.this.closePopout(popout2);
+                    listener.popoutClosing(popout2);
                 }
             });
         }

@@ -11,6 +11,7 @@ import chatty.gui.components.menus.ChannelContextMenu;
 import chatty.gui.components.menus.ContextMenu;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.components.menus.EmoteContextMenu;
+import chatty.gui.components.menus.StreamsContextMenu;
 import chatty.gui.components.menus.TextSelectionMenu;
 import chatty.gui.components.menus.UrlContextMenu;
 import chatty.gui.components.menus.UserContextMenu;
@@ -37,6 +38,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
@@ -202,6 +204,7 @@ public class LinkController extends MouseAdapter {
     
     private void handleSingleLeftClick(MouseEvent e, Element element) {
         String url;
+        String link;
         User user;
         EmoticonImage emoteImage;
         Usericon usericon;
@@ -209,6 +212,10 @@ public class LinkController extends MouseAdapter {
         if ((url = getUrl(element)) != null && !isUrlDeleted(element)) {
             if (linkListener != null) {
                 linkListener.linkClicked(url);
+            }
+        } else if ((link = getGeneralLink(element)) != null) {
+            for (UserListener listener : userListener) {
+                listener.linkClicked(channel, link);
             }
         } else if ((user = getUser(element)) != null
                 || (user = getMention(element)) != null) {
@@ -290,6 +297,7 @@ public class LinkController extends MouseAdapter {
 
         User user = null;
         boolean isClickableElement = (getUrl(element) != null && !isUrlDeleted(element))
+                || getGeneralLink(element) != null
                 || (user = getUser(element)) != null
                 || mention != null
                 || emoteImage != null
@@ -333,6 +341,10 @@ public class LinkController extends MouseAdapter {
             return false;
         }
         return deleted;
+    }
+    
+    private String getGeneralLink(Element e) {
+        return (String)(e.getAttributes().getAttribute(ChannelTextPane.Attribute.GENERAL_LINK));
     }
 
     private User getUser(Element e) {
@@ -429,6 +441,7 @@ public class LinkController extends MouseAdapter {
             user = getMention(element);
         }
         String url = getUrl(element);
+        String link = getGeneralLink(element);
         EmoticonImage emoteImage = getEmoticonImage(element);
         Usericon usericon = getUsericon(element);
         JPopupMenu m = null;
@@ -438,6 +451,12 @@ public class LinkController extends MouseAdapter {
         }
         else if (url != null) {
             m = new UrlContextMenu(url, isUrlDeleted(element), contextMenuListener);
+        }
+        else if (link != null) {
+            if (link.startsWith("join.")) {
+                String c = link.substring("join.".length());
+                m = new StreamsContextMenu(Arrays.asList(new String[]{c}), contextMenuListener);
+            }
         }
         else if (emoteImage != null) {
             m = new EmoteContextMenu(emoteImage, contextMenuListener);

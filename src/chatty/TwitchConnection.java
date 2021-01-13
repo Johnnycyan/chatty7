@@ -1209,8 +1209,15 @@ public class TwitchConnection {
          * 
          * @param channel
          * @param text 
+         * @param tags The associated tags, may be empty (never null)
          */
         private void infoMessage(String channel, String text, MsgTags tags) {
+            if (tags.isValue("msg-id", "host_on")) {
+                String hostedChannel = channelStates.getState(channel).getHosting();
+                if (!StringUtil.isNullOrEmpty(hostedChannel)) {
+                    tags = MsgTags.addTag(tags, "chatty-hosted", hostedChannel);
+                }
+            }
             if (text.startsWith("The moderators of")) {
                 parseModeratorsList(text, channel);
             } else {
@@ -1399,7 +1406,8 @@ public class TwitchConnection {
                 String[] parameters = trailing.split(" ");
                 if (parameters.length == 2) {
                     String target = parameters[0];
-                    if (target.equals("-")) {
+                    // Unhosting should be "-", but just to be safe
+                    if (!Helper.isRegularChannel(target)) {
                         listener.onHost(rooms.getRoom(channel), null);
                         channelStates.setHosting(channel, null);
                     } else {
