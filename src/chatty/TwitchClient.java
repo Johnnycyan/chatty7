@@ -272,7 +272,6 @@ public class TwitchClient {
         usercolorManager = new UsercolorManager(settings);
         usericonManager = new UsericonManager(settings);
         customCommands = new CustomCommands(settings, api, this);
-        customCommands.loadFromSettings();
         botNameManager = new BotNameManager(settings);
         settings.addSettingsListener(new SettingSaveListener());
 
@@ -423,6 +422,7 @@ public class TwitchClient {
         
         addCommands();
         g.addGuiCommands();
+        updateCustomCommands();
         
         // Request some stuff
         api.getEmotesBySets("0");
@@ -492,6 +492,10 @@ public class TwitchClient {
         } catch (SecurityException ex) {
             LOGGER.warning("Error setting drawing settings: "+ex.getLocalizedMessage());
         }
+    }
+    
+    public void updateCustomCommands() {
+        customCommands.update(commands);
     }
     
     /**
@@ -846,7 +850,9 @@ public class TwitchClient {
     }
     
     private void sendMessage(String channel, String text) {
-        sendMessage(channel, text, false);
+        if (c.onChannel(channel, true)) {
+            sendMessage(channel, text, false);
+        }
     }
     
     /**
@@ -1057,6 +1063,14 @@ public class TwitchClient {
         });
         commands.add("me", p -> {
             commandActionMessage(p.getChannel(), p.getArgs());
+        });
+        commands.add("say", p -> {
+            if (p.hasArgs()) {
+                sendMessage(p.getChannel(), p.getArgs());
+            }
+            else {
+                g.printLine(p.getRoom(), "Usage: /say <message>");
+            }
         });
         commands.add("msg", p -> {
             commandCustomMessage(p.getArgs());
@@ -1358,11 +1372,13 @@ public class TwitchClient {
                 g.printSystem("No valid commands");
             }
             for (String chainedCommand : commands) {
-                textInput(p.getRoom(), chainedCommand, p.getParameters());
+                // Copy parameters so changing args in commandInput() doesn't
+                // affect the following commands
+                textInput(p.getRoom(), chainedCommand, p.getParameters().copy());
             }
         });
     }
-        
+    
     /**
      * Executes the command with the given name, which can be a built-in or
      * Custom Command.
@@ -1729,14 +1745,17 @@ public class TwitchClient {
             g.printLine("Custom command: Not on a channel");
             return;
         }
-        String result = customCommands.command(command, parameters, room);
-        if (result == null) {
-            g.printLine("Custom command: Insufficient parameters/data");
-        } else if (result.isEmpty()) {
-            g.printLine("Custom command: No action specified");
-        } else {
-            textInput(room, result, parameters);
-        }
+        customCommands.command(command, parameters, room, result -> {
+            if (result == null) {
+                g.printLine("Custom command: Insufficient parameters/data");
+            }
+            else if (result.isEmpty()) {
+                g.printLine("Custom command: No action specified");
+            }
+            else {
+                textInput(room, result, parameters);
+            }
+        });
     }
     
     public void customCommandLaunch(String commandAndParameters) {
@@ -1767,28 +1786,36 @@ public class TwitchClient {
             g.printLine("Custom command not found: "+command);
             return;
         }
-        String result = customCommands.command(command, parameters, room);
-        if (result == null) {
-            g.printLine("Custom command '"+command+"': Insufficient parameters/data");
-        } else if (result.isEmpty()) {
-            // This shouldn't actually happen if edited through the settings,
-            // which should trim() out whitespace, so that the command won't
-            // have a result if it's empty and thus won't be added as a command.
-            // Although it can also happen if the command just contains a \
-            // (which is interpreted as an escape character).
-            g.printLine("Custom command '"+command+"': No action specified");
-        } else {
-            // Check what command is called in the result of this command
-            String[] resultSplit = result.split(" ", 2);
-            String resultCommand = resultSplit[0];
-            if (resultCommand.startsWith("/")
-                    && customCommands.containsCommand(resultCommand.substring(1), room)) {
-                g.printLine("Custom command '"+command+"': Calling another custom "
-                        + "command ('"+resultCommand.substring(1)+"') is not allowed");
-            } else {
-                textInput(room, result, parameters);
-            }
+        if (CustomCommands.getCustomCommandCount(parameters) > 2) {
+            g.printLine(String.format("Stopped executing '%s' (too many nested Custom Commands)", command));
+            return;
         }
+        customCommands.command(command, parameters, room, result -> {
+            if (result == null) {
+                g.printLine("Custom command '" + command + "': Insufficient parameters/data");
+            }
+            else if (result.isEmpty()) {
+                // This shouldn't actually happen if edited through the settings,
+                // which should trim() out whitespace, so that the command won't
+                // have a result if it's empty and thus won't be added as a command.
+                // Although it can also happen if the command just contains a \
+                // (which is interpreted as an escape character).
+                g.printLine("Custom command '" + command + "': No action specified");
+            }
+            else {
+                // Check what command is called in the result of this command
+                String[] resultSplit = result.split(" ", 2);
+                String resultCommand = resultSplit[0];
+                if (resultCommand.startsWith("/")
+                        && customCommands.containsCommand(resultCommand.substring(1), room)) {
+                    g.printLine("Custom command '" + command + "': Calling another custom "
+                            + "command ('" + resultCommand.substring(1) + "') is not allowed");
+                }
+                else {
+                    textInput(room, result, parameters);
+                }
+            }
+        });
     }
     
     /**

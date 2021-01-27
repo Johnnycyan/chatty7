@@ -349,6 +349,7 @@ public class SettingsManager {
         settings.addLong("clearUserMessages", 12);
         settings.addMap("userNotes", new HashMap(), Setting.STRING);
         settings.addMap("userNotesChat", new HashMap(), Setting.STRING);
+        settings.addLong("userDialogMessageLimit", 100);
 
         // History / Favorites
         settings.addMap("channelHistory",new TreeMap(), Setting.LONG);
@@ -675,7 +676,6 @@ public class SettingsManager {
         settings.addBoolean("livestreamer", false);
         settings.addString("livestreamerQualities", "Best, Worst, Select");
         settings.addString("livestreamerCommand", "livestreamer");
-        settings.addBoolean("livestreamerUseAuth", false);
         settings.addBoolean("livestreamerShowDialog", true);
         settings.addBoolean("livestreamerAutoCloseDialog", true);
 
