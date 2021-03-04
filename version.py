@@ -5,6 +5,9 @@ str = file.readlines()[1];
 sub = str[45:48];
 print(sub);
 
+partVersion = '0.14.0';
+finalVersion = f"{partVersion}.{sub}";
+
 path = "src/chatty/Chatty.java";
 chatty = open(path, 'r');
 line = chatty.read();
@@ -15,10 +18,12 @@ if not line:
 
 chatty = open(path, 'w');
 line = re.sub(
-	r"public static final String VERSION = \"0.14.0.[0-9]+",
-	"public static final String VERSION = \"0.14.0.%s" % sub,
+	rf"public static final String VERSION = \"{partVersion}.[0-9]+",
+	f"public static final String VERSION = \"{finalVersion}",
 	line
 );
 #print(line)
 chatty.write(line);
 chatty.close();
+
+open('final_version.txt', 'w').write(finalVersion);

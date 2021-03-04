@@ -23,6 +23,29 @@ jobs:
         git status
         git status > ch.txt
         python version.py
+    - name: Latest chatty tag.
+      shell: bash
+      run: |
+        curl \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/chatty/chatty/releases/latest > latest_chatty.json
+    - name: Parse JSON.
+      shell: python
+      run: |
+        import json
+        import os
+        def writeEnv(key, value):
+          open(os.environ['GITHUB_ENV'], "a").write(key + '=' + value + '\n');
+        with open('latest_chatty.json') as json_data:
+          data = json.load(json_data);
+          tag_name = str(data['tag_name']);
+          writeEnv('CHATTY_TAG', tag_name);
+          tag_text = tag_name.replace('-b', ' Beta ').replace('v', '');
+          writeEnv('CHATTY_TAG_TEXT', tag_text);
+          print(tag_name);
+          print(tag_text);
+        with open('final_version.txt') as ver_data:
+          writeEnv('NEW_TAG_TEXT', str(ver_data.read()));
     - name: Build with Gradle.
       shell: cmd
       run: |
@@ -31,8 +54,13 @@ jobs:
       shell: cmd
       run: |
         ./win_standalone.bat
-    - uses: actions/upload-artifact@master
-      name: Upload artifacts.
+    - name: Draft release.
+      uses: softprops/action-gh-release@v1
       with:
-        name: Chatty
-        path: build\releases\
+        draft: true
+        files: build\releases\*
+        tag_name: v${{ env.NEW_TAG_TEXT }}
+        name: "Chatty Fork ${{ env.NEW_TAG_TEXT }}"
+        body: "- Updated version to official [${{ env.CHATTY_TAG_TEXT }}](https://github.com/chatty/chatty/releases/tag/${{ env.CHATTY_TAG }})."
+      env:
+        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
