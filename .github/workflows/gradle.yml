@@ -28,7 +28,7 @@ jobs:
       run: |
         curl \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/chatty/chatty/releases/latest > latest_chatty.json
+          https://api.github.com/repos/chatty/chatty/releases > latest_chatty.json
     - name: Parse JSON.
       shell: python
       run: |
@@ -37,7 +37,7 @@ jobs:
         def writeEnv(key, value):
           open(os.environ['GITHUB_ENV'], "a").write(key + '=' + value + '\n');
         with open('latest_chatty.json') as json_data:
-          data = json.load(json_data);
+          data = json.load(json_data)[0];
           tag_name = str(data['tag_name']);
           writeEnv('CHATTY_TAG', tag_name);
           tag_text = tag_name.replace('-b', ' Beta ').replace('v', '');

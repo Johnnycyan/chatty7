@@ -1,6 +1,6 @@
 Fork Chatty
 ======
-![image](https://user-images.githubusercontent.com/4051126/71765502-d0f13780-2f06-11ea-9b8d-04a78f23267d.png)
+![image](https://user-images.githubusercontent.com/4051126/71765502-d0f13780-2f06-11ea-9b8d-04a78f23267d.png)  
 This is fork of [Chatty](http://chatty.github.io) with some improvements and without any breaking changes of original version.
 
 List of added features.

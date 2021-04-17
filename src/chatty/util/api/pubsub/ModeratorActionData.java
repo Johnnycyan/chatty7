@@ -4,7 +4,6 @@ package chatty.util.api.pubsub;
 import chatty.util.JSONUtil;
 import chatty.util.StringUtil;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -146,6 +145,14 @@ public class ModeratorActionData extends MessageData {
         String msgId = (String)data.get("msg_id");
         if (msgId == null) {
             msgId = "";
+        }
+        
+        // This one has different parameters (add allowed/blocked AutoMod term)
+        if (msgType.equals("channel_terms_action")) {
+            moderation_action = JSONUtil.getString(data, "type", "");
+            created_by = JSONUtil.getString(data, "requester_login", "");
+            args.clear();
+            args.add(JSONUtil.getString(data, "text", ""));
         }
         
         String stream = Helper.getStreamFromTopic(topic, userIds);
