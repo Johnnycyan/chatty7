@@ -8,6 +8,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
@@ -116,6 +117,40 @@ public class DockUtil {
             }
         }
         return ids;
+    }
+    
+    /**
+     * Get the DockContent with the given id from the Collection.
+     * 
+     * @param contents The Collection to get the DockContent from
+     * @param id The id of the DockContent to find
+     * @return The DockContent, or null if none could be found
+     */
+    public static DockContent getContentById(Collection<DockContent> contents, String id) {
+        for (DockContent content : contents) {
+            if (content.getId().equals(id)) {
+                return content;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Return a new list containing only the content that has an id starting
+     * with the given prefix.
+     * 
+     * @param input The input list (not modified)
+     * @param prefix The prefix
+     * @return The new list (could be empty, never null)
+     */
+    public static List<DockContent> getContentsByPrefix(List<DockContent> input, String prefix) {
+        List<DockContent> result = new ArrayList<>();
+        for (DockContent content : input) {
+            if (content.getId().startsWith(prefix)) {
+                result.add(content);
+            }
+        }
+        return result;
     }
     
 }

@@ -7,6 +7,7 @@ import chatty.Room;
 import chatty.gui.components.Channel;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.components.menus.TabContextMenu;
+import chatty.gui.components.settings.TabSettings;
 import chatty.lang.Language;
 import chatty.util.Debugging;
 import chatty.util.IconManager;
@@ -31,6 +32,8 @@ import javax.swing.UIManager;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import chatty.util.dnd.DockPopout;
+import chatty.util.dnd.DockUtil;
+import chatty.util.settings.Settings;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
@@ -56,7 +59,7 @@ import chatty.util.ForkUtil;
  * @author tduva
  */
 public class Channels {
-
+    
     private final MainGui gui;
             
     private ChangeListener changeListener;
@@ -85,6 +88,14 @@ public class Channels {
      * placeholder for when the main window does not contain a channel.
      */
     private Channel defaultChannel;
+    
+    /**
+     * The content id for the default channel. This should preferably not be
+     * changed, since it could be saved in layouts. It may be displayed in tab
+     * order settings, so it's chosen to be somewhat similiar to the tab title.
+     */
+    public static final String DEFAULT_CHANNEL_ID = "-nochannel-";
+    
     private final StyleManager styleManager;
     private final ContextMenuListener contextMenuListener;
     private final MouseClickedListener mouseClickedListener = new MyMouseClickedListener();
@@ -249,12 +260,42 @@ public class Channels {
         dock.setSetting(DockSetting.Type.TAB_PLACEMENT, getTabPlacementValue(gui.getSettings().getString("tabsPlacement")));
         dock.setSetting(DockSetting.Type.TAB_SCROLL, gui.getSettings().getBoolean("tabsMwheelScrolling"));
         dock.setSetting(DockSetting.Type.TAB_SCROLL_ANYWHERE, gui.getSettings().getBoolean("tabsMwheelScrollingAnywhere"));
-        dock.setSetting(DockSetting.Type.TAB_ORDER, getTabOrderValue(gui.getSettings().getString("tabOrder")));
+        dock.setSetting(DockSetting.Type.TAB_ORDER, DockSetting.TabOrder.INSERTION);
         dock.setSetting(DockSetting.Type.FILL_COLOR, UIManager.getColor("TextField.selectionBackground"));
         dock.setSetting(DockSetting.Type.LINE_COLOR, UIManager.getColor("TextField.selectionForeground"));
         dock.setSetting(DockSetting.Type.POPOUT_TYPE_DRAG, getPopoutTypeValue((int)gui.getSettings().getLong("tabsPopoutDrag")));
         dock.setSetting(DockSetting.Type.DIVIDER_SIZE, 7);
+        updateTabComparator();
         updateKeepEmptySetting();
+    }
+    
+    private void updateTabComparator() {
+        boolean alphabetical = gui.getSettings().getString("tabOrder").equals("alphabetical");
+        dock.setSetting(DockSetting.Type.TAB_COMPARATOR, new Comparator<DockContent>() {
+            @Override
+            public int compare(DockContent o1, DockContent o2) {
+                long o1Pos = getPos(o1);
+                long o2Pos = getPos(o2);
+                if (o1Pos < o2Pos) {
+                    return -1;
+                }
+                if (o1Pos > o2Pos) {
+                    return 1;
+                }
+                if (alphabetical) {
+                    return o1.getTitle().compareToIgnoreCase(o2.getTitle());
+                }
+                return 0;
+            }
+            
+            private long getPos(DockContent content) {
+                long pos = gui.getSettings().mapGetLong("tabsPos", content.getId(), 0);
+                if (pos == 0) {
+                    pos = gui.getSettings().mapGetLong("tabsPos", content.getId().substring(0, 1), 0);
+                }
+                return pos;
+            }
+        });
     }
     
     /**
@@ -315,6 +356,7 @@ public class Channels {
         gui.getSettings().mapPut("layouts", "", dock.getLayout().toList());
     }
     
+    private boolean loadingLayout;
     private DockLayout lastLoadedLayout;
     private final Set<String> openedSinceLayoutLoad = new HashSet<>();
     
@@ -340,6 +382,9 @@ public class Channels {
             return;
         }
         
+        loadingLayout = true;
+        Debugging.println("layout", "Loading layout.. (%s)", layout);
+        
         //--------------------------
         // Window/Layout
         //--------------------------
@@ -354,19 +399,29 @@ public class Channels {
         //--------------------------
         // Channels
         //--------------------------
+        // Disable the normal tab order (tabs should be ordered as added)
+        dock.setSetting(DockSetting.Type.TAB_COMPARATOR, null);
+        
+        /**
+         * Always add at first, since other active channels may not be available
+         * depending on the order stuff is opened.
+         * 
+         * Since this is added after loading the layout (which removes all
+         * content) it will stay added until it is re-added for proper tab order
+         * (when in layout) or removed at the end if not necessary anymore.
+         */
         if (defaultChannel != null) {
             addDefaultChannelToDock();
-            current.remove(defaultChannel.getDockContent());
         }
         else {
             addDefaultChannel();
         }
+        
         /**
-         * At this point the still joined channels still exist and message can
+         * At this point the still joined channels still exist and messages can
          * be added to it, however they won't be re-added to the layout
          * automatically (because that normally only happens when a new channel
-         * is created). The ones that should stay open are re-added further
-         * down.
+         * is created). The ones that should stay open are re-added here.
          * 
          * The closing channels are added to a separate map that prevents them
          * from being assumed to still be properly open (e.g. for removing
@@ -376,82 +431,164 @@ public class Channels {
          * While the channel is being parted, this will prevent the channel from
          * being opened again, but hopefully that's not an issue.
          */
-        if (!d.getPartChannels().isEmpty()) {
-            for (String chan : d.getPartChannels()) {
-                Channel channel = channels.remove(chan);
-                if (channel != null) {
-                    closingChannels.put(chan, channel);
-                }
-                gui.client.closeChannel(chan);
+        
+        /**
+         * Add everything from the loaded layout first (depending on options
+         * selected in the dialog).
+         * 
+         * All types of content (channels, dialogs) are handled in the same
+         * loop so that the order they are in can be retained. Currently open
+         * channels that are not in the layout of course don't have a defined
+         * order, so they are just appened in the next loop.
+         */
+        for (String id : layout.getContentIds()) {
+            DockContent currentContent = DockUtil.getContentById(current, id);
+            if (id.equals(DEFAULT_CHANNEL_ID)) {
+                // Remove first to fix tab order
+                dock.removeContent(defaultChannel.getDockContent());
+                addDefaultChannelToDock();
+            }
+            else if (getTypeFromChannelName(id) == Channel.Type.CHANNEL) { // Regular
+                handleContent(id, currentContent, d.getAddChannels().contains(id));
+            }
+            else if (getTypeFromChannelName(id) != Channel.Type.NONE) { // Whisper, ..
+                handleContent(id, currentContent, true);
+            }
+            else { // Other content
+                handleContent(id, currentContent, true);
             }
         }
+        
         /**
-         * Add all channels that should be open after loading the layout. This
-         * makes it easier to get the correct order when channels that are
-         * already open and channels that still need to be joined are mixed
-         * together.
+         * Add currently open channels not in the layout (depending on options),
+         * clear up everything else not in the layout.
          */
-        if (!d.getAddChannels().isEmpty()) {
-            for (String id : d.getAddChannels()) {
-                boolean addedAlreadyJoined = false;
-                for (DockContent content : current) {
-                    if (content.getId().equals(id)) {
-                        setTargetPath(content);
-                        dock.addContent(content);
-                        addedAlreadyJoined = true;
-                    }
+        for (DockContent currentContent : current) {
+            String id = currentContent.getId();
+            boolean inLayout = layout.getContentIds().contains(id);
+            // If in layout, the above loop would have already handled it
+            if (!inLayout) {
+                if (getTypeFromChannelName(id) == Channel.Type.CHANNEL) { // Regular
+                    handleContent(id, currentContent, d.getAddChannels().contains(id));
                 }
-                if (!addedAlreadyJoined) {
-                    // Add channel that will be joined
-                    getChannel(Room.createRegular(id));
+                else if (getTypeFromChannelName(id) != Channel.Type.NONE) { // Whisper, ..
+                    handleContent(id, currentContent, false);
+                }
+                else { // Other content
+                    // If not in layout (all of these), then undock
+                    // Only works for stuff that is registered with the docked
+                    // dialog manager, so not for -nochannel-
+                    handleContent(id, currentContent, false);
                 }
             }
         }
         
         /**
-         * Join channels that need to be joined.
+         * Join channels that need to be joined. Their tab will already have
+         * been opened.
          */
         if (!d.getJoinChannels().isEmpty()) {
             for (String channel : d.getJoinChannels()) {
+                // The joining state will be shown on the tab (reduced opacity)
                 channels.get(channel).getDockContent().setJoining(true);
             }
             gui.client.joinChannels(new HashSet<>(d.getJoinChannels()));
         }
         
-        Debugging.println("layout", "Loading layout.. Add: %s Join: %s Closing: %s", d.getAddChannels(), d.getJoinChannels(), closingChannels);
+        // Enable the normal tab order again
+        updateTabComparator();
+        loadingLayout = false;
+        checkDefaultChannel();
         
-        //--------------------------
-        // Non-channel panels
-        //--------------------------
-        /**
-         * Determine panels to close (that are open but not in the layout).
-         */
-        Set<String> closeExtra = new HashSet<>();
-        for (DockContent content : current) {
-            if (!layout.getContentIds().contains(content.getId())) {
-                closeExtra.add(content.getId());
+        Debugging.println("layout", "Finished loading layout. Add: %s Join: %s Closing: %s Channels: %s", d.getAddChannels(), d.getJoinChannels(), closingChannels, channels);
+    }
+    
+    /**
+     * Handle content with the given id, either add or remove.
+     * 
+     * @param id The content id
+     * @param currentContent If content for the id already exists, this is it
+     * @param add If true the content should be added, otherwise cleaned up
+     */
+    private void handleContent(String id, DockContent currentContent, boolean add) {
+        Debugging.println("layout", "Handle %s (%s) [%s]", id, add, currentContent);
+        if (getTypeFromChannelName(id) != Channel.Type.NONE) {
+            //--------------------------
+            // Any channel (regular, whisper)
+            //--------------------------
+            if (add) {
+                if (currentContent != null) {
+                    // Reuse existing content
+                    setTargetPath(currentContent);
+                    dock.addContent(currentContent);
+                }
+                else {
+                    // Create/add new channel (works if it doesn't exist)
+                    getChannel(Room.createRegular(id));
+                }
+            }
+            else {
+                // Close, if necessary
+                Channel channel = channels.remove(id);
+                if (channel != null) {
+                    closingChannels.put(id, channel);
+                }
+                gui.client.closeChannel(id);
             }
         }
-        /**
-         * Open/close panels. This simply attempts it with all content ids, but
-         * only those that are actually valid extra panels/dialogs will work.
-         */
-        for (String id : layout.getContentIds()) {
-            // Any entries whose id is not actually a registered docked dialog will simply be ignored
-            gui.dockedDialogs.openInDock(id);
+        else {
+            //--------------------------
+            // Other content (dialogs)
+            //--------------------------
+            if (add) {
+                gui.dockedDialogs.openInDock(id);
+            }
+            else {
+                gui.dockedDialogs.closeFromDock(id);
+            }
         }
-        for (String id : closeExtra) {
-            gui.dockedDialogs.closeFromDock(id);
-        }
+        
     }
     
     private void loadLastSessionLayout() {
         DockLayout layout = DockLayout.fromList((List) gui.getSettings().mapGet("layouts", ""));
         if (layout != null) {
+            loadingLayout = true;
+            
             loadLayout(layout);
+            
+            /**
+             * Always add default channel first since depending on the order
+             * stuff is opened there may not be an active channel when needed.
+             * 
+             * Loading layout removes all content, so add after that.
+             */
+            addDefaultChannel();
+            dock.setSetting(DockSetting.Type.TAB_COMPARATOR, null);
             for (String id : layout.getContentIds()) {
-                gui.dockedDialogs.openInDock(id);
+                if (id.equals(DEFAULT_CHANNEL_ID)) {
+                    // Default channel should be added at this point, so remove first for proper tab order
+                    dock.removeContent(defaultChannel.getDockContent());
+                    addDefaultChannelToDock();
+                }
+                else if (getTypeFromChannelName(id) == Channel.Type.CHANNEL) {
+                    if (gui.getSettings().getLong("onStart") == 3) {
+                        // Load previously open channels (they will be joined otherwise)
+                        handleContent(id, null, true);
+                        channels.get(id).getDockContent().setJoining(true);
+                    }
+                }
+                else if (getTypeFromChannelName(id) != Channel.Type.NONE) {
+                    // Always open whisper etc.
+                    handleContent(id, null, true);
+                }
+                else {
+                    // Always open docked dialogs
+                    handleContent(id, null, true);
+                }
             }
+            loadingLayout = false;
+            updateTabComparator();
         }
     }
     
@@ -620,7 +757,7 @@ public class Channels {
      */
     private void addDefaultChannel() {
         defaultChannel = createChannel(Room.EMPTY, Channel.Type.NONE);
-        defaultChannel.getDockContent().setId("-default-");
+        defaultChannel.getDockContent().setId(DEFAULT_CHANNEL_ID);
         addDefaultChannelToDock();
     }
     
@@ -704,7 +841,7 @@ public class Channels {
         DockPath layoutPath = getLayoutPath(room.getChannel());
         Channel panel;
         if (defaultChannel != null
-                && (layoutPath == null || Objects.equals(defaultChannel.getDockContent().getPath(), layoutPath))) {
+                && (layoutPath == null)) {
             // Reuse default channel
             panel = defaultChannel;
             defaultChannel = null;
@@ -780,6 +917,18 @@ public class Channels {
      * empty and any other channels are presently added.
      */
     private void checkDefaultChannel() {
+        if (loadingLayout) {
+            /**
+             * While changing layouts there may be some inconsistent state (e.g.
+             * channels containing channels that are already being removed), so
+             * ignore this for now.
+             */
+            return;
+        }
+        Debugging.println("defaultchannel", "Default channel: %s Chans: %s Main Contents: %s",
+                defaultChannel != null ? "Present" : "-",
+                channels.size(),
+                dock.getContents(null).size());
         if (defaultChannel == null) {
             /**
              * Currently no default channel, check if it should be added
@@ -812,6 +961,7 @@ public class Channels {
                     updateKeepEmptySetting();
                     defaultChannel.cleanUp();
                     defaultChannel = null;
+                    Debugging.println("defaultchannel", "Default channel removed");
                 }
             }
         }
@@ -1166,11 +1316,11 @@ public class Channels {
         return result;
     }
     
-    public Collection<Channel> getTabsRelativeTo(Channel chan, int direction) {
-        List<Channel> result = new ArrayList<>();
-        for (DockContent c : dock.getContentsRelativeTo(chan.getDockContent(), direction)) {
-            if (c.getComponent() instanceof Channel) {
-                result.add((Channel)c.getComponent());
+    public Collection<DockContent> getTabsRelativeTo(DockContent relativeToContent, int direction, String prefix) {
+        List<DockContent> result = new ArrayList<>();
+        for (DockContent content : dock.getContentsRelativeTo(relativeToContent, direction)) {
+            if (content.getId().startsWith(prefix)) {
+                result.add(content);
             }
         }
         return result;
@@ -1287,39 +1437,58 @@ public class Channels {
      * Creates a map of channels for different closing options.
      * 
      * @param channels
-     * @param channel
+     * @param activeContent
+     * @param sameType
      * @return 
      */
-    public static Map<String, Collection<Channel>> getCloseTabsChans(Channels channels, Channel channel) {
-        Map<String, Collection<Channel>> result = new HashMap<>();
-        result.put("closeAllTabsButCurrent", channels.getTabsRelativeTo(channel, 0));
-        result.put("closeAllTabsToLeft", channels.getTabsRelativeTo(channel, -1));
-        result.put("closeAllTabsToRight", channels.getTabsRelativeTo(channel, 1));
+    public static Map<String, Collection<DockContent>> getCloseTabs(Channels channels, DockContent activeContent, boolean sameType) {
+        String prefix = sameType ? activeContent.getId().substring(0, 1) : "";
+        Map<String, Collection<DockContent>> result = new HashMap<>();
+        result.put("closeAllTabsButCurrent", channels.getTabsRelativeTo(activeContent, 0, prefix));
+        result.put("closeAllTabsToLeft", channels.getTabsRelativeTo(activeContent, -1, prefix));
+        result.put("closeAllTabsToRight", channels.getTabsRelativeTo(activeContent, 1, prefix));
         
-        Collection<Channel> all = channels.getTabsRelativeTo(channel, 0);
-        all.add(channel);
+        Collection<DockContent> all = channels.getTabsRelativeTo(activeContent, 0, prefix);
+        all.add(activeContent);
         result.put("closeAllTabs", all);
-        Collection<Channel> allOffline = new ArrayList<>();
-        for (Channel c : all) {
-            if (!c.getDockContent().isLive()) {
+        Collection<DockContent> allOffline = new ArrayList<>();
+        for (DockContent c : all) {
+            if (isChanOffline(c)) {
                 allOffline.add(c);
             }
         }
         result.put("closeAllTabsOffline", allOffline);
         
-        Collection<Channel> all2 = channels.getChannels();
-        all2.remove(channel);
+        Collection<DockContent> all2 = DockUtil.getContentsByPrefix(channels.getDock().getContents(), prefix);
+        all2.remove(activeContent);
         result.put("closeAllTabs2ButCurrent", all2);
         
-        Collection<Channel> all2Offline = new ArrayList<>();
-        result.put("closeAllTabs2", channels.getChannels());
-        for (Channel c : channels.getChannels()) {
-            if (!c.getDockContent().isLive()) {
+        Collection<DockContent> all2Offline = new ArrayList<>();
+        result.put("closeAllTabs2", DockUtil.getContentsByPrefix(channels.getDock().getContents(), prefix));
+        for (DockContent c : DockUtil.getContentsByPrefix(channels.getDock().getContents(), prefix)) {
+            if (isChanOffline(c)) {
                 all2Offline.add(c);
             }
         }
         result.put("closeAllTabs2Offline", all2Offline);
         return result;
+    }
+    
+    /**
+     * Checks if the given DockContent is offline, that is, if it is an actual
+     * channel that can be live, but is not live.
+     * 
+     * @param content
+     * @return 
+     */
+    private static boolean isChanOffline(DockContent content) {
+        if (content instanceof DockChannelContainer) {
+            Channel channel = ((DockChannelContainer) content).getContent();
+            if (channel.getType() == Channel.Type.CHANNEL) {
+                return !channel.getDockContent().isLive();
+            }
+        }
+        return false;
     }
     
     /**
@@ -1359,6 +1528,34 @@ public class Channels {
         }
     }
     
+    public void sortContent(String id) {
+        if (id == null) {
+            dock.sortContent(null);
+        }
+        else {
+            DockContent content = DockUtil.getContentById(dock.getContents(), id);
+            if (content != null) {
+                dock.sortContent(content);
+            }
+        }
+    }
+    
+    public static long getTabPos(Settings settings, String id) {
+        return settings.mapGetLong("tabsPos", id, 0);
+    }
+    
+    public static Map<Long, List<String>> getTabPosIds(Settings settings) {
+        Map<String, Long> tabsPos = settings.getMap("tabsPos");
+        Map<Long, List<String>> result = new HashMap<>();
+        for (Map.Entry<String, Long> entry : tabsPos.entrySet()) {
+            if (!result.containsKey(entry.getValue())) {
+                result.put(entry.getValue(), new ArrayList<>());
+            }
+            result.get(entry.getValue()).add(TabSettings.tabPosLabel(entry.getKey()));
+        }
+        return result;
+    }
+    
     /**
      * The container used to add a Channel to the DockManager.
      */
@@ -1378,7 +1575,11 @@ public class Channels {
         
         @Override
         public JPopupMenu getContextMenu() {
-            return new TabContextMenu(listener, (Channel) getComponent(), Channels.getCloseTabsChans(channels, (Channel) getComponent()));
+            Channel channel = (Channel) getComponent();
+            return new TabContextMenu(listener,
+                    channel.getDockContent(),
+                    Channels.getCloseTabs(channels, channel.getDockContent(), channels.gui.getSettings().getBoolean("closeTabsSameType")),
+                    channels.gui.getSettings());
         }
         
         @Override
@@ -1399,7 +1600,7 @@ public class Channels {
         @Override
         public void setTitle(String title) {
             if (title.isEmpty()) {
-                title = "No channel";
+                title = Language.getString("tabs.noChannel");
             }
             super.setTitle(title);
         }

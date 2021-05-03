@@ -732,12 +732,22 @@ public class DockManager {
             else {
                 PopoutType type = p.id.startsWith("d") ? PopoutType.DIALOG : PopoutType.FRAME;
                 DockPopout popout = openPopout(type, p.location, p.size, p.state);
+                popout.setId(p.id);
+                // Creating the layout should also apply current settings
                 popout.getBase().createLayout(p.child, popout.getBase());
             }
         }
         
+        currentlyActive = null;
+        active.clear();
+        
         // New layout, so previous paths should probably be reset
         pathOnRemove.clear();
+    }
+    
+    public void sortContent(DockContent content) {
+        main.sortContent(content);
+        popouts.forEach(w -> w.getBase().sortContent(content));
     }
     
 }

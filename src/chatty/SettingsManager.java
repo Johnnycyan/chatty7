@@ -341,6 +341,7 @@ public class SettingsManager {
         settings.addString("textContextMenu", "-\n" +
                 "Translate=/openUrlPrompt https://translate.google.com/#view=home&op=translate&sl=auto&tl=en&text=$$urlencode($(msg))");
         settings.addString("adminContextMenu", "!title=!title $(title)\n!game=!game $(game)");
+        settings.addBoolean("menuCommandLabels", false);
         
         settings.addBoolean("closeUserDialogOnAction", true);
         settings.addBoolean("openUserDialogByMouse", true);
@@ -441,6 +442,12 @@ public class SettingsManager {
 
         // Tabs
         settings.addString("tabOrder", "normal");
+        Map<String, Long> tabsPos = new HashMap<>();
+        tabsPos.put("-nochannel-", -2L);
+        tabsPos.put("#", -1L);
+        tabsPos.put("-", 1L);
+        settings.addMap("tabsPos", tabsPos, Setting.LONG);
+        settings.addBoolean("tabsAutoSort", true);
         settings.addString("tabsOpen", "active2");
         settings.addBoolean("tabsMwheelScrolling", false);
         settings.addBoolean("tabsMwheelScrollingAnywhere", true);
@@ -454,6 +461,7 @@ public class SettingsManager {
         settings.addLong("tabsPopoutDrag", 2);
         settings.addLong("tabsMaxWidth", 200);
         settings.addBoolean("tabsCloseEmpty", true);
+        settings.addBoolean("closeTabsSameType", true);
         settings.addBoolean("tabsChanTitles", false);
         
         // Chat Window
