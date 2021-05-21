@@ -290,7 +290,7 @@ public class Channels {
             
             private long getPos(DockContent content) {
                 long pos = gui.getSettings().mapGetLong("tabsPos", content.getId(), 0);
-                if (pos == 0) {
+                if (pos == 0 && !content.getId().isEmpty()) {
                     pos = gui.getSettings().mapGetLong("tabsPos", content.getId().substring(0, 1), 0);
                 }
                 return pos;
@@ -401,6 +401,7 @@ public class Channels {
         //--------------------------
         // Disable the normal tab order (tabs should be ordered as added)
         dock.setSetting(DockSetting.Type.TAB_COMPARATOR, null);
+        dock.setSetting(DockSetting.Type.KEEP_EMPTY, true);
         
         /**
          * Always add at first, since other active channels may not be available
@@ -497,6 +498,7 @@ public class Channels {
         
         // Enable the normal tab order again
         updateTabComparator();
+        updateKeepEmptySetting();
         loadingLayout = false;
         checkDefaultChannel();
         
@@ -565,6 +567,7 @@ public class Channels {
              */
             addDefaultChannel();
             dock.setSetting(DockSetting.Type.TAB_COMPARATOR, null);
+            dock.setSetting(DockSetting.Type.KEEP_EMPTY, true);
             for (String id : layout.getContentIds()) {
                 if (id.equals(DEFAULT_CHANNEL_ID)) {
                     // Default channel should be added at this point, so remove first for proper tab order
@@ -589,6 +592,7 @@ public class Channels {
             }
             loadingLayout = false;
             updateTabComparator();
+            updateKeepEmptySetting();
         }
     }
     
@@ -807,6 +811,11 @@ public class Channels {
                         || (popout != null && popout.getWindow().isActive())) {
                     content.setTargetPath(active.getPath());
                 }
+            }
+        }
+        else if (target.equalsIgnoreCase("activeChan")) {
+            if (lastActiveChannel != null) {
+                content.setTargetPath(lastActiveChannel.getDockContent().getPath());
             }
         }
         // Other "target" values, in default location

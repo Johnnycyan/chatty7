@@ -159,6 +159,7 @@ public class MainGui extends JFrame implements Runnable {
     private final Highlighter highlighter = new Highlighter("highlight");
     private final Highlighter ignoreList = new Highlighter("ignore");
     private final Highlighter filter = new Highlighter("filter");
+    private final RepeatMsgHelper repeatMsg;
     private final MsgColorManager msgColorManager;
     private StyleManager styleManager;
     private TrayIconManager trayIcon;
@@ -178,6 +179,7 @@ public class MainGui extends JFrame implements Runnable {
     public MainGui(TwitchClient client) {
         this.client = client;
         msgColorManager = new MsgColorManager(client.settings);
+        repeatMsg = new RepeatMsgHelper(client.settings);
         SwingUtilities.invokeLater(this);
     }
     
@@ -229,7 +231,6 @@ public class MainGui extends JFrame implements Runnable {
         userInfoDialog = new UserInfoManager(this, client.settings, contextMenuListener);
         aboutDialog = new About();
         setHelpWindowIcons();
-        adminDialog = new AdminDialog(this, client.api);
         favoritesDialog = new FavoritesDialog(this, client.channelFavorites, contextMenuListener);
         GuiUtil.installEscapeCloseOperation(favoritesDialog);
         joinDialog = new JoinDialog(this);
@@ -274,6 +275,7 @@ public class MainGui extends JFrame implements Runnable {
                 this, client.api, contextMenuListener, dockedDialogs);
         channelInfoDialog = new ChannelInfoDialog(this, dockedDialogs);
         channelInfoDialog.addContextMenuListener(contextMenuListener);
+        adminDialog = new AdminDialog(this, client.api, dockedDialogs);
         liveStreamsDialog = new LiveStreamsDialog(contextMenuListener, client.channelFavorites, client.settings, dockedDialogs);
         setLiveStreamsWindowIcons();
         
@@ -959,6 +961,7 @@ public class MainGui extends JFrame implements Runnable {
         updateNotificationSettings();
         updateChannelsSettings();
         updateHighlightNextMessages();
+        repeatMsg.loadSettings();
         
         msgColorManager.loadFromSettings();
         notificationManager.loadFromSettings();
@@ -987,6 +990,7 @@ public class MainGui extends JFrame implements Runnable {
         emoticons.setCheerBackground(HtmlColors.decode(client.settings.getString("backgroundColor")));
         
         client.api.setToken(client.settings.getString("token"));
+        client.api.setLocalUserId(client.settings.getString("userid"));
         if (client.settings.getList("scopes").isEmpty()) {
             client.api.checkToken();
         }
@@ -3181,10 +3185,11 @@ public class MainGui extends JFrame implements Runnable {
     }
     //For timestamp
 
-    public void printMessage(User user, String text, boolean action, MsgTags tags, final String timestamp) {
+    public void printMessage(User user, String text, boolean action, MsgTags tags0, final String timestamp) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
+                MsgTags tags = tags0;
                 Channel chan;
                 String channel = user.getChannel();
                 boolean whisper = false;
@@ -3220,6 +3225,9 @@ public class MainGui extends JFrame implements Runnable {
                 }
                 // If channel was changed from the given one, change accordingly
                 channel = chan.getChannel();
+                
+                // Adds a tag if repeated msg is detected according to settings
+                tags = repeatMsg.check(user, localUser, text, tags);
                 
                 boolean isOwnMessage = isOwnUsername(user.getName()) || (whisper && action);
                 boolean ignoredUser = (userIgnored(user, whisper) && !isOwnMessage);
@@ -3814,14 +3822,9 @@ public class MainGui extends JFrame implements Runnable {
         }
     }
     
-    public void autoModRequestResult(final String result, final String msgId) {
-        SwingUtilities.invokeLater(new Runnable() {
-            
-            @Override
-            public void run() {
-                autoModDialog.requestResult(result, msgId);
-            }
-            
+    public void autoModRequestResult(TwitchApi.AutoModAction action, String msgId, TwitchApi.AutoModActionResult result) {
+        SwingUtilities.invokeLater(() -> {
+            autoModDialog.requestResult(action, msgId, result);
         });
     }
     
@@ -4889,6 +4892,8 @@ public class MainGui extends JFrame implements Runnable {
                     userInfoDialog.setUserDefinedButtonsDef(client.settings.getString("timeoutButtons"));
                 } else if (setting.equals("token")) {
                     client.api.setToken((String)value);
+                } else if (setting.equals("userid")) {
+                    client.api.setLocalUserId((String)value);
                 } else if (setting.equals("emoji")) {
                     emoticons.addEmoji((String)value);
                 } else if (setting.equals("cheersType")) {
