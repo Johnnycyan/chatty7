@@ -386,7 +386,7 @@ public class User implements Comparable<User> {
     
     public synchronized void addModAction(ModeratorActionData data) {
         setFirstSeen();
-        addLine(new ModAction(System.currentTimeMillis(), data.getCommandAndParameters()));
+        addLine(new ModAction(System.currentTimeMillis(), data.moderation_action+" "+ModLogInfo.makeArgsText(data)));
     }
     
     private List<ModeratorActionData> cachedBanInfo;
@@ -1222,6 +1222,9 @@ public class User implements Comparable<User> {
     
     public static class ModAction extends Message {
 
+        /**
+         * For display, may be formatted differently depending on the command.
+         */
         public final String commandAndParameters;
         
         public ModAction(long time, String commandAndParameters) {
