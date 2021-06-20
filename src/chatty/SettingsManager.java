@@ -247,6 +247,7 @@ public class SettingsManager {
         settings.addBoolean("ffzModIcon", true);
         settings.addBoolean("bttvEmotes", true);
         settings.addBoolean("showAnimatedEmotes", true);
+        settings.addBoolean("animatedEmotes", true);
         settings.addList("ignoredEmotes", new ArrayList(), Setting.STRING);
         settings.addList("favoriteEmotes", new ArrayList(), Setting.LIST);
         
@@ -622,7 +623,7 @@ public class SettingsManager {
         settings.addBoolean("repeatMsg", false);
         settings.addLong("repeatMsgSim", 80);
         settings.addLong("repeatMsgRep", 2);
-        settings.addLong("repeatMsgLen", 20);
+        settings.addLong("repeatMsgLen", 0);
         settings.addLong("repeatMsgTime", 3600);
         settings.addLong("repeatMsgMethod", 1);
         settings.addString("repeatMsgIgnored", "");

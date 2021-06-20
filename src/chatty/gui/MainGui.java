@@ -1005,6 +1005,7 @@ public class MainGui extends JFrame implements Runnable {
         streamChat.setMessageTimeout((int)client.settings.getLong("streamChatMessageTimeout"));
         
         emotesDialog.setEmoteScale((int)client.settings.getLong("emoteScaleDialog"));
+        emotesDialog.setEmoteImageType(Emoticon.makeImageType(client.settings.getBoolean("animatedEmotes")));
         emotesDialog.setHiddenEmotesets(client.settings.getList("emoteHiddenSets"));
         emotesDialog.setCloseOnDoubleClick(client.settings.getBoolean("closeEmoteDialogOnDoubleClick"));
         
@@ -2688,7 +2689,7 @@ public class MainGui extends JFrame implements Runnable {
                 String[] split = args.split(" ", 2);
                 if (split.length == 2) {
                     command = split[0];
-                    if (split[1].startsWith("-")) {
+                    if (split[1].startsWith("-") && command.equals("load")) {
                         String[] optionsSplit = split[1].split(" ");
                         if (optionsSplit.length == 2) {
                             if (!optionsSplit[0].equals("--")) {
@@ -4897,6 +4898,8 @@ public class MainGui extends JFrame implements Runnable {
                     tokenDialog.setForeignToken(bool);
                 } else if (setting.equals("completionEnabled")) {
                     channels.setCompletionEnabled(bool);
+                } else if (setting.equals("animatedEmotes")) {
+                    emotesDialog.setEmoteImageType(Emoticon.makeImageType(bool));
                 }
                 if (setting.startsWith("title") || setting.equals("tabsChanTitles")) {
                     updateState(true);

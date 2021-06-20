@@ -182,6 +182,7 @@ public class Chatty {
         });
         
         LogUtil.startMemoryUsageLogging();
+        LogUtil.startEdtLockDetection();
     }
     
     /**

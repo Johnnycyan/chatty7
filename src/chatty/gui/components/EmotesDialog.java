@@ -16,6 +16,7 @@ import chatty.util.api.CheerEmoticon;
 import chatty.util.api.Emoticon;
 import chatty.util.api.Emoticon.EmoticonImage;
 import chatty.util.api.Emoticon.EmoticonUser;
+import chatty.util.api.Emoticon.ImageType;
 import chatty.util.api.Emoticons;
 import chatty.util.colors.ColorCorrection;
 import chatty.util.colors.ColorCorrectionNew;
@@ -135,6 +136,7 @@ public class EmotesDialog extends JDialog {
     private String tempStream;
     private Emoticon detailsEmote;
     private float scale;
+    private ImageType imageType = ImageType.ANIMATED_DARK;
     private boolean closeOnDoubleClick = true;
     private boolean userEmotesAccess;
     private final Set<String> hiddenEmotesets = new HashSet<>();
@@ -464,6 +466,13 @@ public class EmotesDialog extends JDialog {
         }
     }
     
+    public void setEmoteImageType(ImageType imageType) {
+        if (this.imageType != imageType) {
+            this.imageType = imageType;
+            update();
+        }
+    }
+    
     /**
      * Set emotesets for hidden sections. Does not update already loaded pages.
      * 
@@ -572,10 +581,10 @@ public class EmotesDialog extends JDialog {
         public final boolean noInsert;
 
         public EmoteLabel(Emoticon emote, MouseListener mouseListener, float scale,
-                EmoticonUser emoteUser) {
+                ImageType imageType, EmoticonUser emoteUser) {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             addMouseListener(mouseListener);
-            EmoticonImage emoteImage = emote.getIcon(scale, 0, emoteUser);
+            EmoticonImage emoteImage = emote.getIcon(scale, 0, imageType, emoteUser);
             this.code = emote.code;
             this.emote = emoteImage;
             setIcon(emoteImage.getImageIcon());
@@ -872,7 +881,7 @@ public class EmotesDialog extends JDialog {
                     panel.add(makeSeparator());
                 }
                 prevEmoteset = emote.emoteset;
-                panel.add(new EmoteLabel(emote, mouseListener, scale, emoteUser));
+                panel.add(new EmoteLabel(emote, mouseListener, scale, imageType, emoteUser));
             }
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.insets = EMOTE_INSETS;
@@ -1507,7 +1516,7 @@ public class EmotesDialog extends JDialog {
                 String label) {
             lgbc.anchor = GridBagConstraints.CENTER;
             lgbc.gridy = 0;
-            panel.add(new EmoteLabel(emote, mouseListener, scale, emoteUser), lgbc);
+            panel.add(new EmoteLabel(emote, mouseListener, scale, imageType, emoteUser), lgbc);
             
             lgbc.gridy = 1;
             JLabel title = new JLabel(label);
