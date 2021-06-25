@@ -91,6 +91,11 @@ public class TwitchApi {
             this.key = key;
             this.request = request;
         }
+        
+        @Override
+        public String toString() {
+            return key;
+        }
 
         @Override
         public boolean equals(Object obj) {
@@ -131,6 +136,46 @@ public class TwitchApi {
     //=================
     // Chat / Emoticons
     //=================
+    
+    /**
+     * Request channel emotes if necessary.
+     * 
+     * @param stream The stream name (required)
+     * @param id The stream id (optional)
+     * @param refresh If true, request is done even if already requested before
+     */
+    public void getEmotesByChannelId(String stream, String id, boolean refresh) {
+        if (id != null) {
+            getEmotesByChannelId2(stream, id, refresh);
+        } else {
+            userIDs.getUserIDsAsap(r -> {
+                if (!r.hasError()) {
+                    getEmotesByChannelId2(stream, r.getId(stream), refresh);
+                }
+            }, stream);
+        }
+    }
+    
+    /**
+     * Request channel emotes if necessary. Only does one request attempt for a
+     * while, since at least currently it's only used for the Emote Dialog and
+     * manually triggered anyway. The reload button should be implemented at
+     * some point to be able to trigger a manual refresh.
+     *
+     * @param stream The stream name (required)
+     * @param id The stream id (required)
+     * @param refresh If true, request is done even if already requested before
+     */
+    private void getEmotesByChannelId2(String stream, String id, boolean refresh) {
+        int options = CachedBulkManager.ASAP | CachedBulkManager.UNIQUE;
+        if (refresh) {
+            options = options | CachedBulkManager.REFRESH;
+        }
+        String requestId = "channel_emotes:" + id;
+        m.query(null, options, new Req(requestId, () -> {
+            requests.requestEmotesByChannelId(stream, id, requestId);
+        }));
+    }
     
     public void getEmotesBySets(String... emotesets) {
         getEmotesBySets(new HashSet<>(Arrays.asList(emotesets)));
