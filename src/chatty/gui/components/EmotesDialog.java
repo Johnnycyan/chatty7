@@ -9,6 +9,7 @@ import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.components.menus.EmoteContextMenu;
 import chatty.lang.Language;
 import chatty.util.Debugging;
+import chatty.util.MiscUtil;
 import chatty.util.StringUtil;
 import chatty.util.TwitchEmotesApi;
 import chatty.util.TwitchEmotesApi.EmotesetInfo;
@@ -749,12 +750,14 @@ public class EmotesDialog extends JDialog {
                 stream = "-";
             }
             Set<Emoticon> emotes = emoteManager.getEmoticonsBySet(emoteset);
-            List<Emoticon> sorted = new ArrayList<>(emotes);
-            Collections.sort(sorted, new SortEmotesByTypeAndName());
-            addTitle(stream + " [" + emoteset + "] (" + emotes.size() + " emotes)",
-                    Arrays.asList(new String[]{emoteset}));
-            if (!allowHide || !isHidden(emoteset)) {
-                addEmotesPanel(sorted);
+            if (!emotes.isEmpty()) {
+                List<Emoticon> sorted = new ArrayList<>(emotes);
+                Collections.sort(sorted, new SortEmotesByTypeAndName());
+                addTitle(stream + " [" + emoteset + "] (" + emotes.size() + " emotes)",
+                        Arrays.asList(new String[]{emoteset}));
+                if (!allowHide || !isHidden(emoteset)) {
+                    addEmotesPanel(sorted);
+                }
             }
         }
         
@@ -777,16 +780,19 @@ public class EmotesDialog extends JDialog {
             for (String set : sets) {
                 sorted.addAll(emoteManager.getEmoticonsBySet(set));
             }
-            Collections.sort(sorted, new SortEmotesByEmotesetAndName());
-            addTitle(String.format("%s %s (%d emotes)",
-                    titlePrefix,
-                    sets,
-                    sorted.size()), allowHide ? sets : null);
-            boolean show = !allowHide || !isHidden(sets);
-            if (show) {
-                addEmotesPanel(sorted);
+            if (!sorted.isEmpty()) {
+                Collections.sort(sorted, new SortEmotesByEmotesetAndName());
+                addTitle(String.format("%s %s (%d emotes)",
+                        titlePrefix,
+                        sets,
+                        sorted.size()), allowHide ? sets : null);
+                boolean show = !allowHide || !isHidden(sets);
+                if (show) {
+                    addEmotesPanel(sorted);
+                }
+                return show;
             }
-            return show && !sorted.isEmpty();
+            return false;
         }
         
         void addTitle(String title) {
@@ -914,7 +920,7 @@ public class EmotesDialog extends JDialog {
             if (StringUtil.isNullOrEmpty(emote.getEmotesetInfo())) {
                 return;
             }
-            if (Arrays.asList(new String[]{"Tier 2", "Tier 3", "Bits"}).contains(emote.getEmotesetInfo())) {
+            if (Arrays.asList(new String[]{"Tier 2", "Tier 3", "Bits", "Follower"}).contains(emote.getEmotesetInfo())) {
                 panel.add(new JLabel(emote.getEmotesetInfo()));
             }
         }
@@ -1035,6 +1041,32 @@ public class EmotesDialog extends JDialog {
             //-------------------------
             // Sort emotes by emoteset
             //-------------------------
+            /**
+             * Add all emotes with the same owner id together, to determine the
+             * common prefix. This is necessary if some emotesets from the same
+             * owner have an unclear prefix.
+             * 
+             * Currently this is designed to make use of the current code. This
+             * whole section should be rewritten once it's clearer what
+             * information will be available when the emote APIs are updated or
+             * when it seems like they won't be updated anymore anytime soon.
+             */
+            Map<String, Set<Emoticon>> perOwnerId = new HashMap<>();
+            for (String emoteset : localUserEmotesets) {
+                EmotesetInfo newInfo = emoteManager.getInfoBySet(emoteset);
+                if (newInfo != null && newInfo.stream_id != null) {
+                    Set<Emoticon> emotes = emoteManager.getEmoticonsBySet(emoteset);
+                    MiscUtil.getSetFromMap(perOwnerId, newInfo.stream_id).addAll(emotes);
+                }
+            }
+            Map<String, String> prefixesByOwnerId = new HashMap<>();
+            for (Map.Entry<String, Set<Emoticon>> entry : perOwnerId.entrySet()) {
+                String emotePrefix = getPrefix(entry.getValue());
+                if (emotePrefix != null) {
+                    prefixesByOwnerId.put(entry.getKey(), emotePrefix);
+                }
+            }
+            
             Set<String> turboEmotes = new HashSet<>();
             Map<String, Set<EmotesetInfo>> perStream = new HashMap<>();
             Map<String, Set<EmotesetInfo>> perInfo = new HashMap<>();
@@ -1073,6 +1105,10 @@ public class EmotesDialog extends JDialog {
                         // Unknown emoteset
                         Set<Emoticon> emotes = emoteManager.getEmoticonsBySet(emoteset);
                         String emotePrefix = getPrefix(emotes);
+                        EmotesetInfo newInfo = emoteManager.getInfoBySet(emoteset);
+                        if (newInfo != null && newInfo.stream_id != null && prefixesByOwnerId.containsKey(newInfo.stream_id)) {
+                            emotePrefix = prefixesByOwnerId.get(newInfo.stream_id);
+                        }
                         if (emotePrefix == null) {
                             if (emotes.size() == 1) {
                                 unknownEmotesetsSingle.add(emoteset);

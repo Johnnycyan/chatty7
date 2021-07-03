@@ -2622,7 +2622,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         // Channel based (may also have a emoteset restriction)
         HashSet<Emoticon> channelEmotes = main.emoticons.getEmoticonsByStream(user.getStream());
-        findEmoticons(user, channelEmotes, text, ranges, rangesStyle);
+        findEmoticons(user, channelEmotes, text, ranges, rangesStyle, accessToSets);
         
         // Special Combined Emotes
         CombinedEmotesInfo cei = ChattyMisc.getCombinedEmotesInfo();
