@@ -106,13 +106,13 @@ public class UrlOpener {
         }
 
         if (!Chatty.PLAYER_PATH.equals("")) {
-            if (url.endsWith(".mp4") || url.endsWith(".webm")) {
-                ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
-                return true;
-            }
-            
-            if (ForkUtil.isItYoutubeUrl(url)) {
-                ProcessManager.execute(Chatty.PLAYER_PATH + " " + url, "");
+            if (url.endsWith(".mp4")
+                || url.endsWith(".webm")
+                || ForkUtil.isItYoutubeUrl(url)) {
+                ProcessManager.execute(
+                    Chatty.PLAYER_PATH + " " + url,
+                    "",
+                    null);
                 return true;
             }
         }
