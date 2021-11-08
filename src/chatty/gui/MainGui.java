@@ -1546,32 +1546,47 @@ public class MainGui extends JFrame implements Runnable {
 
         @Override
         public void linkClicked(String type, String ref) {
-            if (type.equals("help")) {
-                openHelp(ref);
-            } else if (type.equals("help-settings")) {
-                openHelp("help-settings.html", ref);
-            } else if (type.equals("help-commands")) {
-                openHelp("help-custom_commands.html", ref);
-            } else if (type.equals("help-admin")) {
-                openHelp("help-admin.html", ref);
-            } else if (type.equals("help-livestreamer")) {
-                openHelp("help-livestreamer.html", ref);
-            } else if (type.equals("help-whisper")) {
-                openHelp("help-whisper.html", ref);
-            } else if (type.equals("help-laf")) {
-                openHelp("help-laf.html", ref);
-            } else if (type.equals("help-guide2")) {
-                openHelp("help-guide2.html", ref);
-            } else if (type.equals("url")) {
-                UrlOpener.openUrlPrompt(MainGui.this, ref);
-            } else if (type.equals("update")) {
-                if (ref.equals("show")) {
-                    openUpdateDialog();
-                }
-            } else if (type.equals("announcement")) {
-                if (ref.equals("show")) {
-                    //newsDialog.showDialog();
-                }
+            switch (type) {
+                case "help":
+                    openHelp(ref);
+                    break;
+                case "help-settings":
+                    openHelp("help-settings.html", ref);
+                    break;
+                case "help-commands":
+                    openHelp("help-custom_commands.html", ref);
+                    break;
+                case "help-admin":
+                    openHelp("help-admin.html", ref);
+                    break;
+                case "help-livestreamer":
+                    openHelp("help-livestreamer.html", ref);
+                    break;
+                case "help-whisper":
+                    openHelp("help-whisper.html", ref);
+                    break;
+                case "help-laf":
+                    openHelp("help-laf.html", ref);
+                    break;
+                case "help-guide2":
+                    openHelp("help-guide2.html", ref);
+                    break;
+                case "help-releases":
+                    openHelp("help-releases.html", ref);
+                    break;
+                case "url":
+                    UrlOpener.openUrlPrompt(MainGui.this, ref);
+                    break;
+                case "update":
+                    if (ref.equals("show")) {
+                        openUpdateDialog();
+                    }
+                    break;
+                case "announcement":
+                    if (ref.equals("show")) {
+                        //newsDialog.showDialog();
+                    }
+                    break;
             }
         }
     }
@@ -3420,6 +3435,20 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
     
+    /**
+     * Will attempt to merge Points notices with an attached message between IRC
+     * and PubSub. Data is shared between both sources accordingly when a merge
+     * occurs, which is when both sources have called this method for the same
+     * message. When no merge occurs after a second, a backup timer will output
+     * the message anyway.
+     * 
+     * Notices without an attached messages will be directly output.
+     * 
+     * @param user
+     * @param text
+     * @param message
+     * @param tags 
+     */
     public void printPointsNotice(final User user, final String text, final String message, final MsgTags tags) {
         SwingUtilities.invokeLater(() -> {
             UserNotice m = new UserNotice("Points", user, text, message, tags);
@@ -4607,7 +4636,7 @@ public class MainGui extends JFrame implements Runnable {
                 showTokenWarning();
             }
         }
-        else if (!tokenInfo.hasScope(TokenInfo.Scope.CHAT)) {
+        else if (!tokenInfo.hasChatAccess()) {
             result = "No chat access (required) with token.";
         }
         else {

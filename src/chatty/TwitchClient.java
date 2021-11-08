@@ -65,10 +65,11 @@ import chatty.util.api.StreamInfo.ViewerStats;
 import chatty.util.api.StreamTagManager.StreamTag;
 import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.UserInfo;
-import chatty.util.api.pubsub.UserinfoMessageData;
+import chatty.util.api.pubsub.RewardRedeemedMessageData;
 import chatty.util.api.pubsub.Message;
 import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.api.pubsub.PubSubListener;
+import chatty.util.api.pubsub.UserModerationMessageData;
 import chatty.util.chatlog.ChatLog;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
@@ -612,6 +613,7 @@ public class TwitchClient {
         if (!c.onOwnerChannel(room.getOwnerChannel())) {
             frankerFaceZ.left(room.getOwnerChannel());
             pubsub.unlistenModLog(room.getStream());
+            pubsub.unlistenUserModeration(room.getStream());
             pubsub.unlistenPoints(room.getStream());
         }
     }
@@ -2290,10 +2292,17 @@ public class TwitchClient {
                         }
                     }
                 }
-                else if (message.data instanceof UserinfoMessageData) {
-                    UserinfoMessageData data = (UserinfoMessageData) message.data;
+                else if (message.data instanceof RewardRedeemedMessageData) {
+                    RewardRedeemedMessageData data = (RewardRedeemedMessageData) message.data;
                     User user = c.getUser(Helper.toChannel(data.stream), data.username);
-                    g.printPointsNotice(user, data.msg, data.attached_msg, MsgTags.create("chatty-source", "pubsub"));
+                    // Uses added source and reward id for merging
+                    g.printPointsNotice(user, data.msg, data.attached_msg,
+                            MsgTags.create("chatty-source", "pubsub",
+                                    "custom-reward-id", data.reward_id));
+                }
+                else if (message.data instanceof UserModerationMessageData) {
+                    UserModerationMessageData data = (UserModerationMessageData) message.data;
+                    g.printLine(c.getRoomByChannel(Helper.toChannel(data.stream)), data.info);
                 }
             }
         }
@@ -2897,16 +2906,27 @@ public class TwitchClient {
                     user.getName(),
                     c.getUsername(),
                     user.getStream());
-            if (user.hasChannelModeratorRights()
-                    && user.getName().equals(c.getUsername())
+            if (user.getName().equals(c.getUsername())
                     && user.getStream() != null) {
-                if (settings.listContains("scopes", TokenInfo.Scope.CHAN_MOD.scope)) {
-                    Debugging.println("pubsub", "Listen");
-                    pubsub.setLocalUsername(c.getUsername());
-                    pubsub.listenModLog(user.getStream(), settings.getString("token"));
+                pubsub.setLocalUsername(c.getUsername());
+                if (user.hasChannelModeratorRights()) {
+                    if (settings.listContains("scopes", TokenInfo.Scope.CHAN_MOD.scope)) {
+                        Debugging.println("pubsub", "Listen");
+                        pubsub.listenModLog(user.getStream(), settings.getString("token"));
+                    }
+                    else {
+                        EventLog.addSystemEvent("access.modlog");
+                    }
+                    pubsub.unlistenUserModeration(user.getStream());
                 }
                 else {
-                    EventLog.addSystemEvent("access.modlog");
+                    if (settings.listContains("scopes", TokenInfo.Scope.CHAT_EDIT.scope)) {
+                        pubsub.listenUserModeration(user.getStream(), settings.getString("token"));
+                    }
+                    else {
+                        EventLog.addSystemEvent("access.chat");
+                    }
+                    pubsub.unlistenModLog(user.getStream());
                 }
             }
         }
@@ -2914,7 +2934,6 @@ public class TwitchClient {
         private void checkPointsListen(User user) {
             if (settings.listContains("scopes", TokenInfo.Scope.POINTS.scope)
                     && user.getName().equals(c.getUsername())
-                    && user.getStream().equals(c.getUsername())
                     && user.getStream() != null) {
                 pubsub.listenPoints(user.getStream(), settings.getString("token"));
             }
