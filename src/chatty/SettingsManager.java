@@ -350,6 +350,7 @@ public class SettingsManager {
         settings.addBoolean("reuseUserDialog", false);
         settings.addString("userDialogTimestamp", "[HH:mm:ss]");
         settings.addLong("clearUserMessages", 12);
+        settings.addLong("userMessagesHighlight", 15);
         settings.addMap("userNotes", new HashMap(), Setting.STRING);
         settings.addMap("userNotesChat", new HashMap(), Setting.STRING);
         settings.addLong("userDialogMessageLimit", 100);
@@ -374,6 +375,8 @@ public class SettingsManager {
 
         // Game Presets
         settings.addList("gamesFavorites",new ArrayList(), Setting.STRING);
+        // New format for saving id and name
+        settings.addList("gamesFavorites2", new ArrayList(), Setting.LIST);
         
         // Tags Presets
         settings.addMap("tagsFavorites", new HashMap(), Setting.STRING);
@@ -595,6 +598,7 @@ public class SettingsManager {
         settings.addList("highlightBlacklist", new ArrayList(), Setting.STRING);
         settings.addBoolean("highlightMatches", true);
         settings.addBoolean("highlightMatchesAll", true);
+        settings.addBoolean("highlightMatchesAllEntries", false);
         settings.addBoolean("highlightByPoints", true);
 
         // Ignore

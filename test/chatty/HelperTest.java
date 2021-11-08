@@ -269,6 +269,26 @@ public class HelperTest {
     }
     
     @Test
+    public void testGetChannelFromUrl() {
+        assertEquals("channel", Helper.getChannelFromUrl("twitch.tv/channel"));
+        assertEquals("channel", Helper.getChannelFromUrl("twitch.tv/channel/"));
+        assertEquals("channel", Helper.getChannelFromUrl("twitch.tv/channel/about/"));
+        assertEquals("channel_name", Helper.getChannelFromUrl("twitch.tv/channel_name/"));
+        assertEquals("channel_123_abc_", Helper.getChannelFromUrl("twitch.tv/channel_123_abc_"));
+        assertEquals("twitc.tv/channel/about/", Helper.getChannelFromUrl("twitc.tv/channel/about/"));
+        assertEquals("channel", Helper.getChannelFromUrl("channel"));
+        assertEquals("channel/", Helper.getChannelFromUrl("channel/"));
+        assertEquals("twitch.tv/$%&", Helper.getChannelFromUrl("twitch.tv/$%&"));
+        assertEquals("channel", Helper.getChannelFromUrl("https://twitch.tv/channel"));
+        assertEquals("channel", Helper.getChannelFromUrl("http://twitch.tv/channel"));
+        assertEquals("channel", Helper.getChannelFromUrl("https://www.twitch.tv/channel"));
+        assertEquals("channel", Helper.getChannelFromUrl("http://www.twitch.tv/channel"));
+        assertEquals("channel", Helper.getChannelFromUrl("www.twitch.tv/channel"));
+        assertEquals("https:///twitch.tv/channel", Helper.getChannelFromUrl("https:///twitch.tv/channel"));
+        assertEquals("https://wwww.twitch.tv/channel", Helper.getChannelFromUrl("https://wwww.twitch.tv/channel"));
+    }
+    
+    @Test
     public void testChannelsListParsingRoundTrip() {
         Set<String> expected = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         expected.add("foo");

@@ -12,6 +12,8 @@ import chatty.util.Pair;
 import chatty.util.TimeoutPatternMatcher;
 import chatty.util.RepeatMsgHelper;
 import chatty.util.StringUtil;
+import chatty.util.api.StreamInfo;
+import chatty.util.api.TwitchApi;
 import chatty.util.api.usericons.BadgeType;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
@@ -57,10 +59,12 @@ public class Highlighter {
     private final List<HighlightItem> blacklistItems = new ArrayList<>();
     private HighlightItem usernameItem;
     private HighlightItem lastMatchItem;
+    private List<HighlightItem> lastMatchItems;
     private Color lastMatchColor;
     private Color lastMatchBackgroundColor;
     private boolean lastMatchNoNotification;
     private boolean lastMatchNoSound;
+    private boolean includeAllTextMatches;
     private List<Match> lastTextMatches;
     private String lastReplacement;
     
@@ -130,8 +134,16 @@ public class Highlighter {
         this.highlightNextMessages = highlight;
     }
     
+    public void setIncludeAllTextMatches(boolean all) {
+        this.includeAllTextMatches = all;
+    }
+    
     public HighlightItem getLastMatchItem() {
         return lastMatchItem;
+    }
+    
+    public List<HighlightItem> getLastMatchItems() {
+        return lastMatchItems;
     }
     
     /**
@@ -244,12 +256,37 @@ public class Highlighter {
         }
         
         // Then try to match against the items
+        boolean alreadyMatched = false;
         for (HighlightItem item : items) {
             if (item.matches(type, text, blacklist, channel, ab, user, localUser, tags)) {
-                fillLastMatchVariables(item, text);
-                addMatch(user, item);
-                return true;
+                if (!alreadyMatched) {
+                    // Only for the first match
+                    fillLastMatchVariables(item, text);
+                    addMatch(user, item);
+                    alreadyMatched = true;
+                }
+                else if (includeAllTextMatches) {
+                    List<Match> matches = item.getTextMatches(text);
+                    if (lastTextMatches == null && matches != null) {
+                        // Can happen if first match has no pattern
+                        lastTextMatches = new ArrayList<>();
+                    }
+                    if (Match.addAllIfNotAlreadyMatched(lastTextMatches, matches)) {
+                        lastMatchItems.add(item);
+                    }
+                }
+                if (!includeAllTextMatches) {
+                    // Finish here if not all text matches should be included
+                    return true;
+                }
             }
+        }
+        if (alreadyMatched) {
+            // Only applies if all text matches should be included
+            if (lastTextMatches != null) {
+                Collections.sort(lastTextMatches);
+            }
+            return true;
         }
         
         // Then see if there is a recent match ("Highlight follow-up")
@@ -262,6 +299,8 @@ public class Highlighter {
     
     private void fillLastMatchVariables(HighlightItem item, String text) {
         lastMatchItem = item;
+        lastMatchItems = new ArrayList<>();
+        lastMatchItems.add(item);
         lastMatchColor = item.getColor();
         lastMatchBackgroundColor = item.getBackgroundColor();
         lastMatchNoNotification = item.noNotification();
@@ -279,6 +318,7 @@ public class Highlighter {
      */
     public void resetLastMatchVariables() {
         lastMatchItem = null;
+        lastMatchItems = null;
         lastMatchColor = null;
         lastMatchBackgroundColor = null;
         lastMatchNoNotification = false;
@@ -442,6 +482,7 @@ public class Highlighter {
         };
         
         private static Map<String, CustomCommand> globalPresets;
+        private static TwitchApi api;
         
         //==========================
         // Properties
@@ -544,6 +585,14 @@ public class Highlighter {
         
         public static synchronized Map<String, CustomCommand> getGlobalPresets() {
             return HighlightItem.globalPresets;
+        }
+        
+        public static synchronized void setTwitchApi(TwitchApi api) {
+            HighlightItem.api = api;
+        }
+        
+        public static synchronized TwitchApi getTwitchApi(TwitchApi api) {
+            return HighlightItem.api;
         }
         
         /**
@@ -812,6 +861,9 @@ public class Highlighter {
                                 }
                             });
                         }
+                        else if (part.startsWith("live") || part.startsWith("!live")) {
+                            parseLive(part);
+                        }
                         else if (part.equals("hl")) {
                             addTagsItem("Highlighted by channel points", null, t -> {
                                 return t.isHighlightedMessage();
@@ -937,6 +989,62 @@ public class Highlighter {
                     pattern = compilePattern("(?iu)" + Pattern.quote(item));
                 }
             }
+        }
+        
+        /**
+         * Parse the config:live prefix.
+         * 
+         * @param part 
+         */
+        private void parseLive(String part) {
+            // Handle config:!live (negated)
+            boolean successResult = !part.startsWith("!");
+            if (part.startsWith("!")) {
+                part = part.substring(1);
+            }
+            
+            // Optional parameters
+            Pattern titlePattern = null;
+            Pattern categoryPattern = null;
+            if (part.length() > "live".length()) {
+                int paramStart = part.indexOf("|");
+                if (paramStart != -1) {
+                    String param = part.substring(paramStart + 1);
+                    String[] split = param.split("/", 2);
+                    if (split.length == 2) {
+                        titlePattern = compilePattern(split[0]);
+                        categoryPattern = compilePattern(split[1]);
+                    }
+                    if (split.length == 1) {
+                        titlePattern = compilePattern(split[0]);
+                    }
+                }
+            }
+            
+            Pattern titlePattern2 = titlePattern;
+            Pattern categoryPattern2 = categoryPattern;
+            matchItems.add(new Item((!successResult ? "Not: " : "") + "Stream is live (Title:" + titlePattern + "/Game:" + categoryPattern + ")", null, false) {
+
+                @Override
+                public boolean matches(String text, Blacklist blacklist, String channel, Addressbook ab, User user, User localUser, MsgTags tags) {
+                    if (api != null && !StringUtil.isNullOrEmpty(channel)) {
+                        StreamInfo info = api.getCachedStreamInfo(Helper.toStream(channel));
+                        if (info != null && info.isValid() && info.getOnline()) {
+                            // Optional parameters
+                            if (titlePattern2 != null && !titlePattern2.matcher(info.getStatus()).find()) {
+                                return !successResult;
+                            }
+                            if (categoryPattern2 != null && !categoryPattern2.matcher(info.getGame()).find()) {
+                                return !successResult;
+                            }
+                            // If it got to this part, it matches
+                            return successResult;
+                        }
+                        return !successResult;
+                    }
+                    return false;
+                }
+            });
         }
         
         /**
@@ -1519,6 +1627,10 @@ public class Highlighter {
             return matches(Type.ANY, "", null, null, null, user, null, MsgTags.EMPTY);
         }
         
+        public boolean matches(User user, MsgTags tags) {
+            return matches(Type.ANY, "", null, null, null, user, null, tags);
+        }
+        
         /**
          * Check whether a message matches this item.
          * 
@@ -1859,7 +1971,7 @@ public class Highlighter {
 
     }
     
-    public static class Match {
+    public static class Match implements Comparable<Match> {
 
         public final int start;
         public final int end;
@@ -1901,6 +2013,46 @@ public class Highlighter {
                 }
             }
             return result;
+        }
+        
+        /**
+         * Add all the newEntries to currentEntries, except for entries that
+         * won't add any matched areas.
+         * 
+         * @param currentEntries
+         * @param newEntries
+         * @return true if anything has been added, false otherwise
+         */
+        public static boolean addAllIfNotAlreadyMatched(List<Match> currentEntries, List<Match> newEntries) {
+            if (currentEntries == null || newEntries == null) {
+                return false;
+            }
+            boolean anyAdded = false;
+            for (Match newEntry : newEntries) {
+                boolean alreadyMatched = false;
+                for (Match currentEntry : currentEntries) {
+                    if (currentEntry.spans(newEntry.start, newEntry.end)) {
+                        alreadyMatched = true;
+                        break;
+                    }
+                }
+                if (!alreadyMatched) {
+                    anyAdded = true;
+                    currentEntries.add(newEntry);
+                }
+            }
+            return anyAdded;
+        }
+
+        /**
+         * Entries with smaller start index first.
+         * 
+         * @param o
+         * @return 
+         */
+        @Override
+        public int compareTo(Match o) {
+            return start - o.start;
         }
 
     }

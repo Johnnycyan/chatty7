@@ -52,6 +52,7 @@ import chatty.util.TwitchEmotesApi;
 import chatty.util.UserRoom;
 import chatty.util.Webserver;
 import chatty.util.api.AutoModCommandHelper;
+import chatty.util.api.ChannelStatus;
 import chatty.util.api.CheerEmoticon;
 import chatty.util.api.EmotesetManager;
 import chatty.util.api.EmoticonSizeCache;
@@ -63,6 +64,7 @@ import chatty.util.api.StreamInfo.StreamType;
 import chatty.util.api.StreamInfo.ViewerStats;
 import chatty.util.api.StreamTagManager.StreamTag;
 import chatty.util.api.TwitchApi.RequestResultCode;
+import chatty.util.api.UserInfo;
 import chatty.util.api.pubsub.UserinfoMessageData;
 import chatty.util.api.pubsub.Message;
 import chatty.util.api.pubsub.ModeratorActionData;
@@ -1933,15 +1935,14 @@ public class TwitchClient {
      */
     public void commandJoinChannel(String channelString) {
         if (channelString == null) {
-            g.printLine("A channel to join needs to be specified.");
-        } else {
-            String[] channelList = channelString.split(" ");
-            for (String channel: channelList)
-            {
-                channel = StringUtil.toLowerCase(channel.trim());
-                c.joinChannel(channel);
-            }
-            
+            channelString = "";
+        }
+        String[] channelList = Helper.parseChannels(channelString);
+        if (channelList.length == 0) {
+            g.printLine("No valid channel specified.");
+        }
+        else {
+            c.joinChannels(new HashSet<>(Arrays.asList(channelList)));
         }
     }
     
@@ -2053,37 +2054,11 @@ public class TwitchClient {
      * @param parameter 
      */
     public void commandFollow(String channel, String parameter) {
-        String user = settings.getString("username");
-        String target = Helper.toStream(channel);
-        if (parameter != null && !parameter.isEmpty()) {
-            target = Helper.toStream(parameter.trim());
-        }
-        if (!Helper.isValidStream(target)) {
-            g.printSystem("No valid channel to follow.");
-            return;
-        }
-        if (!Helper.isValidStream(user)) {
-            g.printSystem("No valid username.");
-            return;
-        }
-        api.followChannel(user, target);
+        g.printSystem("Following/unfollowing has been removed from the Twitch API");
     }
     
     public void commandUnfollow(String channel, String parameter) {
-        String user = settings.getString("username");
-        String target = Helper.toStream(channel);
-        if (parameter != null && !parameter.isEmpty()) {
-            target = Helper.toStream(parameter.trim());
-        }
-        if (!Helper.isValidStream(target)) {
-            g.printSystem("No valid channel to unfollow.");
-            return;
-        }
-        if (!Helper.isValidStream(user)) {
-            g.printSystem("No valid username.");
-            return;
-        }
-        api.unfollowChannel(user, target);
+        g.printSystem("Following/unfollowing has been removed from the Twitch API");
     }
     
     public void commandAddStreamHighlight(Room room, String parameter) {
@@ -2371,7 +2346,12 @@ public class TwitchClient {
         
         @Override
         public void receivedChannelInfo(String stream, ChannelInfo info, RequestResultCode result) {
-            g.setChannelInfo(stream, info, result);
+            
+        }
+        
+        @Override
+        public void receivedChannelStatus(ChannelStatus status, RequestResultCode resultCode) {
+            g.channelStatusReceived(status, resultCode);
         }
     
         @Override
@@ -2485,7 +2465,7 @@ public class TwitchClient {
             }
             g.setCheerEmotes(emoticons);
         }
-
+        
         
     }
 
@@ -2703,17 +2683,28 @@ public class TwitchClient {
      * @param length The length of the commercial in seconds
      */
     public void runCommercial(String stream, int length) {
+        String channel = Helper.toChannel(stream);
         if (stream == null || stream.isEmpty()) {
             commercialResult(stream, "Can't run commercial, not on a channel.", TwitchApi.RequestResultCode.FAILED);
         }
-        else {
-            String channel = "#"+stream;
+        else if (stream.equals(settings.getString("username"))) {
+            // Broadcaster can use API
             if (isChannelOpen(channel)) {
-                g.printLine(roomManager.getRoom(channel), "Trying to run "+length+"s commercial..");
-            } else {
-                g.printLine("Trying to run "+length+"s commercial.. ("+stream+")");
+                g.printLine(roomManager.getRoom(channel), Language.getString("chat.twitchcommands.commercial", length));
+            }
+            else {
+                g.printLine(Language.getString("chat.twitchcommands.commercial", length)+" (" + stream + ")");
             }
             api.runCommercial(stream, length);
+        }
+        else {
+            // Editor must use command
+            if (isChannelOpen(channel)) {
+                c.command(channel, "commercial", String.valueOf(length), null);
+            }
+            else {
+                commercialResult(stream, "Can't run commercial, not in the channel.", TwitchApi.RequestResultCode.FAILED);
+            }
         }
     }
     
@@ -3020,6 +3011,16 @@ public class TwitchClient {
 
         @Override
         public void onInfo(Room room, String infoMessage, MsgTags tags) {
+            if (tags != null) {
+                if (tags.isValue("msg-id", "commercial_success"))  {
+                    g.commercialResult(room.getStream(), StringUtil.shortenTo(infoMessage, 60), RequestResultCode.SUCCESS);
+                }
+                else if (tags.isValue("msg-id", "bad_commercial_error")) {
+                    g.commercialResult(room.getStream(), StringUtil.shortenTo(infoMessage, 60), RequestResultCode.UNKNOWN);
+                }
+                // Some error responses, like no access, don't appear to have
+                // commercial-specific ids, so they are not forwarded
+            }
             g.printInfo(room, infoMessage, tags);
         }
 
@@ -3078,9 +3079,9 @@ public class TwitchClient {
                 reason = "";
             }
             g.userBanned(user, duration, reason, targetMsgId);
-            ChannelInfo channelInfo = api.getOnlyCachedChannelInfo(user.getName());
+            UserInfo userInfo = api.getCachedOnlyUserInfo(user.getName());
             chatLog.userBanned(user.getRoom().getFilename(), user.getRegularDisplayNick(),
-                    duration, reason, channelInfo);
+                    duration, reason, userInfo);
         }
         
         @Override

@@ -11,6 +11,8 @@ import chatty.util.api.StreamTagManager.StreamTagPutListener;
 import chatty.util.api.UserIDs.UserIdResult;
 import java.util.*;
 import java.util.logging.Logger;
+import chatty.util.api.ResultManager.CategoryResult;
+import java.util.function.Consumer;
 
 /**
  * Handles TwitchApi requests and responses.
@@ -48,6 +50,8 @@ public class TwitchApi {
     protected final ChannelInfoManager channelInfoManager;
     protected final StreamTagManager communitiesManager;
     protected final CachedBulkManager<Req, Boolean> m;
+    protected final ResultManager resultManager;
+    protected final UserInfoManager userInfoManager;
     
     private volatile Long tokenLastChecked = Long.valueOf(0);
     
@@ -67,6 +71,7 @@ public class TwitchApi {
         requests = new Requests(this, resultListener);
         channelInfoManager = new ChannelInfoManager(this, resultListener);
         userIDs = new UserIDs(this);
+        userInfoManager = new UserInfoManager(this);
         communitiesManager = new StreamTagManager();
         emoticonManager2 = new EmoticonManager2(resultListener, requests);
         m = new CachedBulkManager<>(new CachedBulkManager.Requester<Req, Boolean>() {
@@ -80,6 +85,7 @@ public class TwitchApi {
                 }
             }
         }, "[Api] ", CachedBulkManager.NONE);
+        resultManager = new ResultManager();
     }
     
     private static class Req {
@@ -220,19 +226,19 @@ public class TwitchApi {
     // Channel Information
     //====================
     
-    public void getChannelInfo(String stream) {
-        getChannelInfo(stream, null);
+    public void getChannelStatus(String stream) {
+        getChannelStatus(stream, null);
     }
     
-    public void getChannelInfo(String stream, String id) {
+    public void getChannelStatus(String stream, String id) {
         if (id != null) {
-            requests.getChannelInfo(id, stream);
+            requests.getChannelStatus(id, stream);
         } else {
             userIDs.getUserIDsAsap(r -> {
                 if (r.hasError()) {
-                    resultListener.receivedChannelInfo(stream, null, TwitchApi.RequestResultCode.FAILED);
+                    resultListener.receivedChannelStatus(ChannelStatus.createInvalid(null, stream), TwitchApi.RequestResultCode.FAILED);
                 } else {
-                    requests.getChannelInfo(r.getId(stream), stream);
+                    requests.getChannelStatus(r.getId(stream), stream);
                 }
             }, stream);
         }
@@ -250,30 +256,12 @@ public class TwitchApi {
         subscriberManager.request(stream);
     }
     
-    /**
-     * Get ChannelInfo, if cached. This will *not* request missing ChannelInfo.
-     * 
-     * @param stream
-     * @return 
-     */
-    public ChannelInfo getOnlyCachedChannelInfo(String stream) {
-        return channelInfoManager.getOnlyCachedChannelInfo(stream);
+    public UserInfo getCachedUserInfo(String channel, Consumer<UserInfo> result) {
+        return userInfoManager.getCached(channel, result);
     }
     
-    public ChannelInfo getCachedChannelInfo(String stream) {
-        return getCachedChannelInfo(stream, null);
-    }
-    
-    /**
-     * Get ChannelInfo, which may be cached. This will request immediately if
-     * not cached.
-     * 
-     * @param stream
-     * @param id
-     * @return 
-     */
-    public ChannelInfo getCachedChannelInfo(String stream, String id) {
-        return channelInfoManager.getCachedChannelInfo(stream, id);
+    public UserInfo getCachedOnlyUserInfo(String login) {
+        return userInfoManager.getCachedOnly(login);
     }
     
     //===================
@@ -405,51 +393,53 @@ public class TwitchApi {
         }, usernames.split(" "));
     }
     
-    //================
-    // User Management
-    //================
-    
-    public void followChannel(String user, String target) {
-        userIDs.getUserIDsAsap(r -> {
-            if (r.hasError()) {
-                resultListener.followResult("Couldn't follow '" + target + "' ("+r.getError()+")");
-            } else {
-                requests.followChannel(r.getId(user), r.getId(target), target, defaultToken);
-            }
-        }, user, target);
-    }
-    
-    public void unfollowChannel(String user, String target) {
-        userIDs.getUserIDsAsap(r -> {
-            if (r.hasError()) {
-                resultListener.followResult("Couldn't unfollow '" + target + "' ("+r.getError()+")");
-            } else {
-                requests.unfollowChannel(r.getId(user), r.getId(target), target, defaultToken);
-            }
-        }, user, target);
-    }
-    
     
     //===================
     // Admin / Moderation
     //===================
     
-    public void putChannelInfo(ChannelInfo info) {
+    public void putChannelInfo(ChannelStatus info) {
+        userIDs.getUserIDsAsap(r -> {
+            if (r.hasError()) {
+                resultListener.putChannelInfoResult(TwitchApi.RequestResultCode.FAILED);
+            }
+            else {
+                requests.putChannelInfo(r.getId(info.channelLogin), info, defaultToken);
+            }
+        }, info.channelLogin);
+    }
+    
+    public void putChannelInfoNew(ChannelStatus info) {
         userIDs.getUserIDsAsap(r -> {
             if (r.hasError()) {
                 resultListener.putChannelInfoResult(TwitchApi.RequestResultCode.FAILED);
             } else {
-                requests.putChannelInfo(r.getId(info.name), info, defaultToken);
+                String streamId = r.getId(info.channelLogin);
+                if (!info.hasCategoryId()) {
+                    // Search for category
+                    performGameSearch(info.category.name, (categories) -> {
+                        boolean categoryFound = false;
+                        for (StreamCategory category : categories) {
+                            if (category.nameMatches(info.category)) {
+                                requests.putChannelInfoNew(streamId, info.changeCategory(category), defaultToken);
+                                categoryFound = true;
+                            }
+                        }
+                        if (!categoryFound) {
+                            LOGGER.warning("Stream Category "+info.category.name+" not found");
+                            resultListener.putChannelInfoResult(TwitchApi.RequestResultCode.FAILED);
+                        }
+                    });
+                }
+                else {
+                    requests.putChannelInfoNew(streamId, info, defaultToken);
+                }
             }
-        }, info.name);
+        }, info.channelLogin);
     }
     
-    public void performGameSearch(String search, GameSearchListener listener) {
+    public void performGameSearch(String search, CategoryResult listener) {
         requests.getGameSearch(search, listener);
-    }
-    
-    public interface GameSearchListener {
-        public void result(Collection<String> result);
     }
     
     //-------------
@@ -541,7 +531,7 @@ public class TwitchApi {
             if (r.hasError()) {
                 resultListener.runCommercialResult(stream, "Failed to resolve id", RequestResultCode.UNKNOWN);
             } else {
-                requests.runCommercial(r.getId(stream), stream, defaultToken, length);
+                requests.runCommercial(r.getId(stream), stream, length);
             }
         }, stream);
     }
@@ -592,6 +582,10 @@ public class TwitchApi {
                 requests.createStreamMarker(r.getId(stream), description, defaultToken, listener);
             }
         }, stream);
+    }
+    
+    public void subscribe(ResultManager.Type type, Object listener) {
+        resultManager.subscribe(type, listener);
     }
     
     public interface StreamMarkerResult {

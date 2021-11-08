@@ -14,7 +14,6 @@ import chatty.util.api.StreamTagManager.StreamTagPutListener;
 import chatty.util.api.StreamTagManager.StreamTagsResult;
 import chatty.util.api.TwitchApi.AutoModAction;
 import chatty.util.api.TwitchApi.AutoModActionResult;
-import chatty.util.api.TwitchApi.GameSearchListener;
 import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.TwitchApi.StreamMarkerResult;
 import chatty.util.api.TwitchApiRequest.TwitchApiRequestResult;
@@ -33,6 +32,8 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
+import chatty.util.api.ResultManager.CategoryResult;
+import java.util.Arrays;
 
 /**
  *
@@ -84,19 +85,29 @@ public class Requests {
         }
     }
     
-    public void getChannelInfo(String streamId, String stream) {
-        if (stream == null || stream.isEmpty()) {
-            return;
-        }
-        String url = "https://api.twitch.tv/kraken/channels/"+streamId;
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            execute(request, r -> {
-                api.channelInfoManager.handleChannelInfoResult(false, r.text, r.responseCode, stream);
-            });
-        }
+    public void getChannelStatus(String streamId, String stream) {
+        String url = "https://api.twitch.tv/helix/channels?broadcaster_id="+streamId;
+        newApi.add(url, "GET", api.defaultToken, (result, statusCode) -> {
+            if (statusCode == 200) {
+                List<ChannelStatus> parsed = ChannelStatus.parseJson(result);
+                if (parsed != null && parsed.size() > 0) {
+                    ChannelStatus status = parsed.get(0);
+                    listener.receivedChannelStatus(status, RequestResultCode.SUCCESS);
+                    if (status.hasCategoryId()) {
+                        api.resultManager.inform(ResultManager.Type.CATEGORY_RESULT, (CategoryResult l) -> {
+                            l.result(Arrays.asList(new StreamCategory[]{status.category}));
+                        });
+                    }
+                }
+                else {
+                    listener.receivedChannelStatus(ChannelStatus.createInvalid(streamId, stream), RequestResultCode.NOT_FOUND);
+                }
+            }
+            else {
+                listener.receivedChannelStatus(ChannelStatus.createInvalid(streamId, stream), RequestResultCode.UNKNOWN);
+            }
+        });
     }
-
     
     //===================
     // Stream Information
@@ -204,78 +215,30 @@ public class Requests {
         });
     }
     
+    public void requestUserInfo(Set<String> usernames) {
+        String url = "https://api.twitch.tv/helix/users"+makeNewApiParameters("login", usernames);
+        newApi.add(url, "GET", api.defaultToken, (result, responseCode) -> {
+            Collection<UserInfo> parsedResult = UserInfoManager.parseJSON(result);
+            Map<String, String> ids = null;
+            if (parsedResult != null) {
+                ids = new HashMap<>();
+                for (UserInfo info : parsedResult) {
+                    ids.put(info.login, info.id);
+                }
+            }
+            // Error or missing values are handled in these methods
+            api.userInfoManager.resultReceived(usernames, parsedResult);
+            api.userIDs.handleRequestResult(usernames, ids);
+        });
+    }
+    
     public void requestUserIDs(Set<String> usernames) {
-        String url = "https://api.twitch.tv/kraken/users?login="+StringUtil.join(usernames, ",");
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            execute(request, r -> {
-                api.userIDs.handleRequestResult(usernames, r.text);
-            });
-        }
+        requestUserInfo(usernames);
     }
 
     //================
     // User Management
     //================
-    
-    public void followChannel(String userId, String targetId, String targetName, String token) {
-        String url = String.format(
-                "https://api.twitch.tv/kraken/users/%s/follows/channels/%s",
-                userId,
-                targetId);
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            request.setToken(token);
-            request.setRequestType("PUT");
-            execute(request, r -> {
-                if (r.responseCode == 200) {
-                    long followTime = Parsing.followGetTime(r.text);
-                    if (followTime != -1 && System.currentTimeMillis() - followTime > 5000) {
-                        listener.followResult(String.format("Already following '%s' (since %s)",
-                                targetName,
-                                DateTime.ago(followTime, 0, 2, 0, DateTime.Formatting.VERBOSE)));
-                    } else {
-                        listener.followResult("Now following '" + targetName + "'");
-                    }
-                } else if (r.responseCode == 404) {
-                    listener.followResult("Couldn't follow '" + targetName + "' (channel not found)");
-                } else if (r.responseCode == 401) {
-                    listener.followResult("Couldn't follow '" + targetName + "' (access denied)");
-                } else {
-                    listener.followResult("Couldn't follow '" + targetName + "' (unknown error)");
-                }
-                if (r.responseCode != 200) {
-                    listener.followResult("Note: Twitch planned to remove follow/unfollow functionality from their API on July 27, 2021.");
-                }
-            });
-        }
-    }
-    
-    public void unfollowChannel(String userId, String targetId, String targetName, String token) {
-        String url = String.format(
-                "https://api.twitch.tv/kraken/users/%s/follows/channels/%s",
-                userId,
-                targetId);
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            request.setToken(token);
-            request.setRequestType("DELETE");
-            execute(request, r -> {
-                if (r.responseCode == 204) {
-                    listener.followResult("No longer following '" + targetName + "'");
-                } else if (r.responseCode == 404) {
-                    listener.followResult("Couldn't unfollow '" + targetName + "' (channel not found)");
-                } else if (r.responseCode == 401) {
-                    listener.followResult("Couldn't unfollow '" + targetName + "' (access denied)");
-                } else {
-                    listener.followResult("Couldn't unfollow '" + targetName + "' (unknown error)");
-                }
-                if (r.responseCode != 204) {
-                    listener.followResult("Note: Twitch planned to remove follow/unfollow functionality from their API on July 27, 2021.");
-                }
-            });
-        }
-    }
 
     public void getSingleFollower(String stream, String streamID, String user, String userID) {
         if (StringUtil.isNullOrEmpty(stream, user, streamID, userID)) {
@@ -303,19 +266,37 @@ public class Requests {
      * @param info
      * @param token 
      */
-    public void putChannelInfo(String userId, ChannelInfo info, String token) {
-        if (info == null || info.name == null) {
+    public void putChannelInfo(String userId, ChannelStatus info, String token) {
+        if (info == null || info.channelLogin == null) {
             return;
         }
-        String url = "https://api.twitch.tv/kraken/channels/"+userId;
+        String url = "https://api.twitch.tv/kraken/channels/" + userId;
         if (attemptRequest(url)) {
             TwitchApiRequest request = new TwitchApiRequest(url, "v5");
             request.setToken(token);
             request.setData(api.channelInfoManager.makeChannelInfoJson(info), "PUT");
             execute(request, r -> {
-                api.channelInfoManager.handleChannelInfoResult(true, r.text, r.responseCode, info.name);
+                api.channelInfoManager.handleChannelInfoResult(true, r.text, r.responseCode, info.channelLogin);
             });
         }
+    }
+    
+    public void putChannelInfoNew(String userId, ChannelStatus info, String token) {
+        if (info == null || info.channelLogin == null) {
+            return;
+        }
+        String url = "https://api.twitch.tv/helix/channels?broadcaster_id=" + userId;
+        newApi.add(url, "PATCH", info.makePutJson(), token, (result, statusCode) -> {
+            if (statusCode == 204) {
+                listener.putChannelInfoResult(TwitchApi.RequestResultCode.SUCCESS);
+            }
+            else if (statusCode == 401 || statusCode == 403) {
+                listener.putChannelInfoResult(TwitchApi.RequestResultCode.ACCESS_DENIED);
+            }
+            else {
+                listener.putChannelInfoResult(TwitchApi.RequestResultCode.FAILED);
+            }
+        });
     }
     
     private int allTagsRequestCount;
@@ -418,7 +399,7 @@ public class Requests {
         });
     }
     
-    public void getGameSearch(String game, GameSearchListener listener) {
+    public void getGameSearch(String game, CategoryResult listener) {
         if (game == null || game.isEmpty()) {
             return;
         }
@@ -428,13 +409,15 @@ public class Requests {
         } catch (UnsupportedEncodingException ex) {
             Logger.getLogger(TwitchApi.class.getName()).log(Level.SEVERE, null, ex);
         }
-        final String url = "https://api.twitch.tv/kraken/search/games?query="+encodedGame;
-        TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-        execute(request, r -> {
-            if (r.text != null) {
-                Set<String> games = Parsing.parseGameSearch(r.text);
-                if (games != null) {
-                    listener.result(games);
+        final String url = "https://api.twitch.tv/helix/search/categories?query="+encodedGame;
+        newApi.add(url, "GET", api.defaultToken, (result, responseCode) -> {
+            if (result != null) {
+                Set<StreamCategory> categories = Parsing.parseCategorySearch(result);
+                if (categories != null) {
+                    listener.result(categories);
+                    api.resultManager.inform(ResultManager.Type.CATEGORY_RESULT, (CategoryResult l) -> {
+                        l.result(categories);
+                    });
                 }
             }
         });
@@ -469,6 +452,22 @@ public class Requests {
                 listener.runCommercialResult(stream, resultText, resultCode);
             });
         }
+    }
+    
+    public void runCommercial(String userId, String stream, int length) {
+        String url = "https://api.twitch.tv/helix/channels/commercial";
+        JSONObject data = new JSONObject();
+        data.put("broadcaster_id", userId);
+        data.put("length", length);
+        newApi.add(url, "POST", data.toJSONString(), api.defaultToken, (result, responseCode) -> {
+            String resultText = "Failed to start commercial (error " + responseCode + ")";
+            RequestResultCode resultCode = RequestResultCode.UNKNOWN;
+            if (responseCode == 204 || responseCode == 200) {
+                resultText = "Running commercial..";
+                resultCode = RequestResultCode.RUNNING_COMMERCIAL;
+            }
+            listener.runCommercialResult(stream, resultText, resultCode);
+        });
     }
     
     public void autoMod(AutoModAction action, String msgId, String token, String localUserId) {
@@ -518,23 +517,17 @@ public class Requests {
     //=================
     
     protected void requestGlobalBadges() {
-        String url = "https://badges.twitch.tv/v1/badges/global/display?language=en";
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            execute(request, r -> {
-                listener.receivedUsericons(api.badgeManager.handleGlobalBadgesResult(r.text));
-            });
-        }
+        String url = "https://api.twitch.tv/helix/chat/badges/global";
+        newApi.add(url, "GET", api.defaultToken, (result, responseCode) -> {
+            listener.receivedUsericons(api.badgeManager.handleGlobalBadgesResult(result));
+        });
     }
     
     protected void requestRoomBadges(String roomId, String stream) {
-        String url = "https://badges.twitch.tv/v1/badges/channels/"+roomId+"/display?language=en";
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            execute(request, r -> {
-                listener.receivedUsericons(api.badgeManager.handleRoomBadgesResult(r.text, stream));
-            });
-        }
+        String url = "https://api.twitch.tv/helix/chat/badges?broadcaster_id="+roomId;
+        newApi.add(url, "GET", api.defaultToken, (result, responseCode) -> {
+            listener.receivedUsericons(api.badgeManager.handleRoomBadgesResult(result, stream));
+        });
     }
     
     public void requestEmotesByChannelId(String stream, String id, String requestId) {
@@ -621,13 +614,10 @@ public class Requests {
     }
     
     public void requestCheerEmoticons(String channelId, String stream) {
-        String url = "https://api.twitch.tv/kraken/bits/actions?channel_id="+channelId+"&include_sponsored=1";
-        if (attemptRequest(url)) {
-            TwitchApiRequest request = new TwitchApiRequest(url, "v5");
-            execute(request, r -> {
-                api.cheersManager2.dataReceived(r.text, stream, channelId);
-            });
-        }
+        String url = "https://api.twitch.tv/helix/bits/cheermotes?broadcaster_id="+channelId;
+        newApi.add(url, "GET", api.defaultToken, (result, responseCode) -> {
+            api.cheersManager2.dataReceived(result, stream, channelId);
+        });
     }
     
     //===================
@@ -719,6 +709,10 @@ public class Requests {
             return input.replace(token, "<token>");
         }
         return input;
+    }
+    
+    public static String makeNewApiParameters(String key, Collection<String> values) {
+        return "?"+key+"="+StringUtil.join(values, "&"+key+"=");
     }
     
 }
