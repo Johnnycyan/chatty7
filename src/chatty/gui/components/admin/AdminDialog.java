@@ -2,6 +2,7 @@
 package chatty.gui.components.admin;
 
 import chatty.Chatty;
+import chatty.Helper;
 import chatty.gui.DockedDialogHelper;
 import chatty.gui.DockedDialogManager;
 import chatty.gui.GuiUtil;
@@ -36,6 +37,9 @@ public class AdminDialog extends JDialog {
     private final static String COMMERCIALS_TEXT = "[help-admin:commercials Help]";
     private final static String COMMERCIALS_TEXT_NO_ACCESS
             = "No Commercial Access available. [help-admin:access More information..]";
+    private final static String BLOCKED_TERMS_TEXT = "[help-admin: Help]";
+    private final static String BLOCKED_TERMS_TEXT_NO_ACCESS
+            = "Required access not available. [help-admin:access More information..]";
     
     // Colors for hideable labels
     private static final Color LABEL_INVISIBLE = new Color(0, 0, 0, 0);
@@ -53,6 +57,7 @@ public class AdminDialog extends JDialog {
     
     private final StatusPanel statusPanel;
     private final CommercialPanel commercialPanel;
+    private final BlockedTermsPanel blockedTermsPanel;
 
     // Shared
     private final JTabbedPane tabs;
@@ -68,6 +73,7 @@ public class AdminDialog extends JDialog {
     // Current access (not currentChannel specific)
     private boolean commercialAccess;
     private boolean editorAccess;
+    private boolean blockedTermsAccess;
     
     private final DockContent content;
     protected final DockedDialogHelper helper;
@@ -85,6 +91,7 @@ public class AdminDialog extends JDialog {
         
         statusPanel = new StatusPanel(this, main, api);
         commercialPanel = new CommercialPanel(main);
+        blockedTermsPanel = new BlockedTermsPanel(this, api);
         
         GridBagConstraints gbc;
         
@@ -97,10 +104,14 @@ public class AdminDialog extends JDialog {
             @Override
             public void stateChanged(ChangeEvent e) {
                 updateInfoText();
+                if (currentChannel != null) {
+                    changeChannel(currentChannel);
+                }
             }
         });
         tabs.addTab(Language.getString("admin.tab.status"), statusPanel);
         tabs.addTab(Language.getString("admin.tab.commercial"), commercialPanel);
+        tabs.addTab("Blocked Terms", blockedTermsPanel);
         gbc = makeGbc(0,0,2,1);
         gbc.insets = new Insets(0,0,0,0);
         gbc.fill = GridBagConstraints.BOTH;
@@ -173,6 +184,11 @@ public class AdminDialog extends JDialog {
             }
             
         });
+        helper.setChannelChangeListener(channel -> {
+            if (isVisible()) {
+                setChannel(Helper.toStream(channel));
+            }
+        });
         helper.installContextMenu(tabs);
         helper.installContextMenu(mainPanel);
         helper.installContextMenu(infoText);
@@ -212,6 +228,7 @@ public class AdminDialog extends JDialog {
         if (isVisible()) {
             statusPanel.update();
             commercialPanel.update();
+            blockedTermsPanel.update();
         }
         commercialPanel.checkScheduled();
     }
@@ -223,14 +240,25 @@ public class AdminDialog extends JDialog {
         if (tabs.getSelectedIndex() == 0) {
             if (editorAccess) {
                 infoText.setText(EDITOR_TEXT);
-            } else {
+            }
+            else {
                 infoText.setText(EDITOR_TEXT_NO_ACCESS);
             }
-        } else {
+        }
+        else if (tabs.getSelectedIndex() == 1) {
             if (commercialAccess) {
                 infoText.setText(COMMERCIALS_TEXT);
-            } else {
+            }
+            else {
                 infoText.setText(COMMERCIALS_TEXT_NO_ACCESS);
+            }
+        }
+        else {
+            if (blockedTermsAccess) {
+                infoText.setText(BLOCKED_TERMS_TEXT);
+            }
+            else {
+                infoText.setText(BLOCKED_TERMS_TEXT_NO_ACCESS);
             }
         }
     }
@@ -243,9 +271,10 @@ public class AdminDialog extends JDialog {
      * @param edit_broadcast
      * @param commercials 
      */
-    public void updateAccess(boolean editor, boolean edit_broadcast, boolean commercials) {
+    public void updateAccess(boolean editor, boolean edit_broadcast, boolean commercials, boolean blockedTerms) {
         this.editorAccess = editor && edit_broadcast;
         this.commercialAccess = commercials;
+        this.blockedTermsAccess = blockedTerms;
         updateInfoText();
     }
 
@@ -312,8 +341,13 @@ public class AdminDialog extends JDialog {
      */
     private void changeChannel(String channel) {
         this.currentChannel = channel;
-        statusPanel.changeChannel(channel);
         commercialPanel.changeChannel(channel);
+        if (tabs.getSelectedComponent() == statusPanel) {
+            statusPanel.changeChannel(channel);
+        }
+        if (tabs.getSelectedComponent() == blockedTermsPanel) {
+            blockedTermsPanel.changeStream(channel);
+        }
         update();
     }
 

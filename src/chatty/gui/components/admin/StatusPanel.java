@@ -35,6 +35,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,6 +92,8 @@ public class StatusPanel extends JPanel {
     private final List<StreamTag> currentStreamTags = new ArrayList<>();
     private StreamCategory currentStreamCategory = StreamCategory.EMPTY;
     private long infoLastLoaded;
+    
+    private final Map<String, CacheItem> cache = new HashMap<>();
     
     private boolean loading;
     private boolean loadingStatus;
@@ -275,6 +278,7 @@ public class StatusPanel extends JPanel {
                     setTags(null);
                     statusEdited();
                 } else if (e.getSource() == historyButton) {
+                    statusHistoryDialog.setLocationRelativeTo(StatusPanel.this);
                     StatusHistoryEntry result = statusHistoryDialog.showDialog(currentStreamCategory);
                     if (result != null) {
                         // A null value means that value shouldn't be used to
@@ -383,13 +387,25 @@ public class StatusPanel extends JPanel {
     }
     
     public void changeChannel(String channel) {
+        if (channel.equals(currentChannel)) {
+            return;
+        }
+        // Save previous data
+        saveToCache();
         currentChannel = channel;
-        status.setText("");
-        game.setText("");
-        setTags(null);
-        
-        // This will reset last loaded anyway
-        getChannelInfo();
+        // Load data from new channel (if available)
+        if (loadFromCache()) {
+            setLoading(false);
+        }
+        else {
+            status.setText("");
+            game.setText("");
+            setTags(null);
+
+            // This will reset last loaded anyway
+            getChannelInfo();
+        }
+        setPutResult("");
     }
     
     private void setTags(Collection<StreamTag> tags) {
@@ -644,6 +660,49 @@ public class StatusPanel extends JPanel {
      */
     private void addCurrentToFavorites() {
         main.getStatusHistory().addFavorite(status.getText().trim(), currentStreamCategory, currentStreamTags);
+    }
+    
+    private static class CacheItem {
+        
+        public final String channel;
+        public final String title;
+        public final StreamCategory category;
+        public final List<StreamTag> tags;
+        public final boolean statusEdited;
+        public final long lastLoaded;
+        
+        public CacheItem(String channel, String title, StreamCategory category, List<StreamTag> tags, boolean statusEdited, long lastLoaded) {
+            this.channel = channel;
+            this.title = title;
+            this.category = category;
+            this.tags = new ArrayList<>(tags);
+            this.statusEdited = statusEdited;
+            this.lastLoaded = lastLoaded;
+        }
+        
+    }
+    
+    private void saveToCache() {
+        if (!loading && !StringUtil.isNullOrEmpty(currentChannel)) {
+            cache.put(currentChannel, new CacheItem(currentChannel, status.getText(),
+                    currentStreamCategory, currentStreamTags, statusEdited, infoLastLoaded));
+        }
+    }
+    
+    private boolean loadFromCache() {
+        if (!StringUtil.isNullOrEmpty(currentChannel)) {
+            CacheItem item = cache.get(currentChannel);
+            if (item != null) {
+                status.setText(item.title);
+                currentStreamCategory = item.category;
+                game.setText(item.category.name);
+                setTags(item.tags);
+                statusEdited = item.statusEdited;
+                infoLastLoaded = item.lastLoaded;
+                return true;
+            }
+        }
+        return false;
     }
 
 }

@@ -18,6 +18,7 @@ import chatty.util.settings.Settings;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -38,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -53,6 +55,38 @@ import javax.swing.tree.DefaultMutableTreeNode;
 public class SettingsDialog extends JDialog implements ActionListener {
     
     private final static Logger LOGGER = Logger.getLogger(SettingsDialog.class.getName());
+    
+    private static SettingsDialog INSTANCE;
+    
+    /**
+     * Get the SettingsDialog instance and apply an action to it. Creates the
+     * dialog when first used.
+     * 
+     * @param g
+     * @param action 
+     */
+    public static void get(MainGui g, Consumer<SettingsDialog> action) {
+        if (INSTANCE == null) {
+            if (action == null) {
+                INSTANCE = new SettingsDialog(g, g.getSettings());
+            }
+            else {
+                // invokeLater to give whatever called this a chance to finish
+                // (e.g. closing menu)
+                SwingUtilities.invokeLater(() -> {
+                    g.getGlassPane().setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+                    g.getGlassPane().setVisible(true);
+                    INSTANCE = new SettingsDialog(g, g.getSettings());
+                    g.getGlassPane().setCursor(Cursor.getDefaultCursor());
+                    g.getGlassPane().setVisible(false);
+                    action.accept(INSTANCE);
+                });
+            }
+        }
+        else {
+            action.accept(INSTANCE);
+        }
+    }
     
     private final JButton ok = new JButton(Language.getString("dialog.button.save"));
     private final JButton cancel = new JButton(Language.getString("dialog.button.cancel"));
@@ -94,6 +128,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
     private final MainGui owner;
     
     private final NotificationSettings notificationSettings;
+    private final LiveStreamsSettings liveStreamsSettings;
     private final UsercolorSettings usercolorSettings;
     private final MsgColorSettings msgColorSettings;
     private final ImageSettings imageSettings;
@@ -118,6 +153,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         FILTER("Filter", Language.getString("settings.page.filter")),
         HISTORY("History", Language.getString("settings.page.history")),
         NOTIFICATIONS("Notifications", Language.getString("settings.page.notifications")),
+        LIVE_STREAMS("Live Streams", Language.getString("settings.page.liveStreams")),
         SOUNDS("Sounds", Language.getString("settings.page.sound")),
         USERCOLORS("Usercolors", Language.getString("settings.page.usercolors")),
         LOGGING("Log to file", Language.getString("settings.page.logging")),
@@ -181,6 +217,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         MENU.put(Page.WINDOW, Arrays.asList(new Page[]{
             Page.TABS,
             Page.NOTIFICATIONS,
+            Page.LIVE_STREAMS,
             Page.SOUNDS,
         }));
         MENU.put(Page.OTHER, Arrays.asList(new Page[]{
@@ -272,6 +309,8 @@ public class SettingsDialog extends JDialog implements ActionListener {
         cards.add(new SoundSettings(this), Page.SOUNDS.name);
         notificationSettings = new NotificationSettings(this, settings);
         cards.add(notificationSettings, Page.NOTIFICATIONS.name);
+        liveStreamsSettings = new LiveStreamsSettings(this);
+        cards.add(liveStreamsSettings, Page.LIVE_STREAMS.name);
         usercolorSettings = new UsercolorSettings(this);
         cards.add(usercolorSettings, Page.USERCOLORS.name);
         cards.add(new LogSettings(this), Page.LOGGING.name);
@@ -358,7 +397,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         // Initialize
         //------------
         loadSettings();
-        notificationSettings.setUserReadPermission(settings.getList("scopes").contains(TokenInfo.Scope.FOLLOWS.scope));
+        liveStreamsSettings.setUserReadPermission(settings.getList("scopes").contains(TokenInfo.Scope.FOLLOWS.scope));
         if (action != null) {
             editDirectly(action, parameter);
         }
@@ -426,11 +465,22 @@ public class SettingsDialog extends JDialog implements ActionListener {
                 } else if (action.equals("selectMsgColor")) {
                     showPanel(Page.MSGCOLORS);
                     msgColorSettings.selectItem((String) parameter);
+                } else if (action.equals("show")) {
+                    showPage((String) parameter);
                 }
             }
         });
     }
-
+    
+    public void showPage(String page) {
+        try {
+            showPanel(Page.valueOf(page));
+        }
+        catch (IllegalArgumentException ex) {
+            LOGGER.warning("Invalid settings page: "+page);
+        }
+    }
+    
     private void showPanel(Page page) {
         cardManager.show(cards, page.name);
         currentlyShown = page;

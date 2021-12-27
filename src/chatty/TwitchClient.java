@@ -221,6 +221,7 @@ public class TwitchClient {
         if (Chatty.getOriginalWdir() != null) {
             LOGGER.info("Working directory changed due to -appwdir (from: "+Chatty.getOriginalWdir()+")");
         }
+        Helper.checkSLF4JBinding();
         
         // Settings
         settingsManager = new SettingsManager();
@@ -245,7 +246,6 @@ public class TwitchClient {
         if (settings.getBoolean("abAutoImport")) {
             addressbook.enableAutoImport();
         }
-        Helper.addressbook = addressbook;
         
         initDxSettings();
         
@@ -446,6 +446,24 @@ public class TwitchClient {
             }, 1, CHECK_VERSION_INTERVAL * 1000);
         }
         
+        Helper.parseChannelHelper = new Helper.ParseChannelHelper() {
+            @Override
+            public Collection<String> getFavorites() {
+                return channelFavorites.getFavorites();
+            }
+
+            @Override
+            public Collection<String> getNamesByCategory(String category) {
+                return addressbook.getNamesByCategory(category);
+            }
+
+            @Override
+            public boolean isStreamLive(String stream) {
+                StreamInfo info = api.getCachedStreamInfo(stream);
+                return info != null && info.isValidEnough() && info.getOnline();
+            }
+        };
+        
         // Connect or open connect dialog
         if (settings.getBoolean("connectOnStartup")) {
             prepareConnection();
@@ -606,6 +624,7 @@ public class TwitchClient {
             closeChannelStuff(room);
             g.removeChannel(channel);
             chatLog.closeChannel(room.getFilename());
+            updateStreamInfoChannelOpen(channel);
         }
     }
     
@@ -831,6 +850,7 @@ public class TwitchClient {
         if (text.isEmpty()) {
             return;
         }
+        Debugging.println("textinput", "'%s' in %s (%s)", text, room, commandParameters);
         text = g.replaceEmojiCodes(text);
         String channel = room.getChannel();
         if (text.startsWith("//")) {
@@ -972,6 +992,13 @@ public class TwitchClient {
     
     public boolean isChannelJoined(String channel) {
         return c.onChannel(channel, false);
+    }
+    
+    public void updateStreamInfoChannelOpen(String channel) {
+        StreamInfo streamInfo = api.getCachedStreamInfo(Helper.toStream(channel));
+        if (streamInfo != null) {
+            streamInfo.setIsOpen(c.isChannelOpen(channel));
+        }
     }
     
     public boolean isUserlistLoaded(String channel) {
@@ -1216,7 +1243,10 @@ public class TwitchClient {
         // Settings/Customization
         //-----------------------
         commands.add("set", p -> {
-            g.printSystem(settings.setTextual(p.getArgs()));
+            g.printSystem(settings.setTextual(p.getArgs(), true));
+        });
+        commands.add("set2", p -> {
+            g.printSystem(settings.setTextual(p.getArgs(), false));
         });
         commands.add("get", p -> {
             g.printSystem(settings.getTextual(p.getArgs()));
@@ -1228,10 +1258,22 @@ public class TwitchClient {
             g.printSystem(settings.resetTextual(p.getArgs()));
         });
         commands.add("add", p -> {
-            g.printSystem(settings.addTextual(p.getArgs()));
+            g.printSystem(settings.addTextual(p.getArgs(), true));
+        });
+        commands.add("add2", p -> {
+            g.printSystem(settings.addTextual(p.getArgs(), false));
+        });
+        commands.add("addUnique", p -> {
+            g.printSystem(settings.addUniqueTextual(p.getArgs(), true));
+        });
+        commands.add("addUnique2", p -> {
+            g.printSystem(settings.addUniqueTextual(p.getArgs(), false));
         });
         commands.add("remove", p -> {
-            g.printSystem(settings.removeTextual(p.getArgs()));
+            g.printSystem(settings.removeTextual(p.getArgs(), true));
+        });
+        commands.add("remove2", p -> {
+            g.printSystem(settings.removeTextual(p.getArgs(), false));
         });
         commands.add("setcolor", p -> {
             if (p.hasArgs()) {
@@ -1399,6 +1441,36 @@ public class TwitchClient {
                 // Copy parameters so changing args in commandInput() doesn't
                 // affect the following commands
                 textInput(p.getRoom(), chainedCommand, p.getParameters().copy());
+            }
+        });
+        commands.add("foreach", p -> {
+            if (p.hasArgs()) {
+                String[] split = Helper.getForeachParams(p.getArgs());
+                if (split[0] == null) {
+                    g.printSystem("No list specified for foreach");
+                }
+                else if (split[1] == null) {
+                    g.printSystem("No command specified for foreach");
+                }
+                else {
+                    String list = split[0];
+                    String command = split[1];
+                    String[] splitList = list.split(" ");
+                    CustomCommand customCommand = CustomCommand.parse(command);
+                    if (customCommand.hasError()) {
+                        g.printSystem("Command specified for foreach is invalid");
+                    }
+                    else {
+                        for (String item : splitList) {
+                            Parameters param = Parameters.create(item);
+                            Debugging.println("foreach", "Foreach command: %s Param: %s", customCommand, param);
+                            anonCustomCommand(p.getRoom(), customCommand, param);
+                        }
+                    }
+                }
+            }
+            else {
+                g.printSystem("Usage: /foreach [list] > [command]");
             }
         });
     }
@@ -1934,7 +2006,7 @@ public class TwitchClient {
     /**
      * Command to join channel entered.
      * 
-     * @param channel 
+     * @param channelString 
      */
     public void commandJoinChannel(String channelString) {
         if (channelString == null) {
@@ -1945,7 +2017,7 @@ public class TwitchClient {
             g.printLine("No valid channel specified.");
         }
         else {
-            c.joinChannels(new HashSet<>(Arrays.asList(channelList)));
+            c.joinChannels(new LinkedHashSet<>(Arrays.asList(channelList)));
         }
     }
     
@@ -2962,6 +3034,7 @@ public class TwitchClient {
                 frankerFaceZ.joined(stream);
                 checkModLogListen(user);
                 checkPointsListen(user);
+                updateStreamInfoChannelOpen(user.getChannel());
             }
         }
 

@@ -432,6 +432,7 @@ public class SettingsManager {
         settings.addLong("layoutsOptions", 3);
         settings.addBoolean("restoreLayout", true);
         settings.addBoolean("restoreLayoutWhisper", false);
+        settings.addBoolean("initSettingsDialog", false);
 
         // Popouts
         settings.addBoolean("popoutSaveAttributes", true);
@@ -483,6 +484,10 @@ public class SettingsManager {
 
         settings.addString("liveStreamsSorting", "recent");
         settings.addBoolean("liveStreamsSortingFav", true);
+        settings.addString("liveStreamsAction", "info");
+        settings.addString("liveStreamsCommand", "");
+        settings.addBoolean("liveStreamsChatIcon", true);
+        settings.addBoolean("liveStreamsNotificationAction", false);
         settings.addLong("historyRange", 0);
         settings.addBoolean("historyVerticalZoom", false);
         
@@ -843,7 +848,7 @@ public class SettingsManager {
                     break;
             }
             if (key.startsWith("set:") && key.length() > 4) {
-                LOGGER.info("Setting commandline setting: "+settings.setTextual(key.substring(4)+" "+value));
+                LOGGER.info("Setting commandline setting: "+settings.setTextual(key.substring(4)+" "+value, true));
             }
         }
     }

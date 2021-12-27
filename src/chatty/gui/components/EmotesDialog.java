@@ -4,6 +4,7 @@ package chatty.gui.components;
 import chatty.Chatty;
 import chatty.util.ForkUtil;
 import chatty.gui.GuiUtil;
+import chatty.gui.GuiUtil.SimpleMouseListener;
 import chatty.gui.MainGui;
 import chatty.gui.components.menus.ContextMenuListener;
 import chatty.gui.components.menus.EmoteContextMenu;
@@ -126,7 +127,7 @@ public class EmotesDialog extends JDialog {
     //------------
     private final Emoticons emoteManager;
     private final EmoticonUser emoteUser;
-    private final MouseAdapter mouseListener;
+    private final SimpleMouseListener mouseListener;
     private final ContextMenuListener contextMenuListener;
     
     //------------------
@@ -232,12 +233,12 @@ public class EmotesDialog extends JDialog {
         //---------------------------------
         // Listener for clicking on emotes
         //---------------------------------
-        mouseListener = new MouseAdapter() {
+        mouseListener = new SimpleMouseListener() {
             
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (SwingUtilities.isLeftMouseButton(e)) {
-                    if (e.getClickCount() == 2 && closeOnDoubleClick) {
+                    if (e.getClickCount() == 2 && closeOnDoubleClick && !e.isShiftDown()) {
                         setVisible(false);
                     } else {
                         EmoteLabel label = (EmoteLabel) e.getSource();
@@ -247,14 +248,9 @@ public class EmotesDialog extends JDialog {
                     }
                 }
             }
-            
+
             @Override
-            public void mousePressed(MouseEvent e) {
-                openContextMenu(e);
-            }
-            
-            @Override
-            public void mouseReleased(MouseEvent e) {
+            public void contextMenu(MouseEvent e) {
                 openContextMenu(e);
             }
             
@@ -344,11 +340,9 @@ public class EmotesDialog extends JDialog {
      * @param e 
      */
     private void openContextMenu(MouseEvent e) {
-        if (e.isPopupTrigger()) {
-            EmoticonImage emote = ((EmoteLabel)e.getSource()).emote;
-            JPopupMenu m = new EmoteContextMenu(emote, contextMenuListener);
-            m.show(e.getComponent(), e.getX(), e.getY());
-        }
+        EmoticonImage emote = ((EmoteLabel) e.getSource()).emote;
+        JPopupMenu m = new EmoteContextMenu(emote, contextMenuListener);
+        m.show(e.getComponent(), e.getX(), e.getY());
     }
     
     /**
@@ -599,10 +593,10 @@ public class EmotesDialog extends JDialog {
         public final EmoticonImage emote;
         public final boolean noInsert;
 
-        public EmoteLabel(Emoticon emote, MouseListener mouseListener, float scale,
+        public EmoteLabel(Emoticon emote, SimpleMouseListener mouseListener, float scale,
                 ImageType imageType, EmoticonUser emoteUser) {
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            addMouseListener(mouseListener);
+            GuiUtil.addSimpleMouseListener(this, mouseListener);
             EmoticonImage emoteImage = emote.getIcon(scale, 0, imageType, emoteUser);
             this.code = emote.code;
             this.emote = emoteImage;
@@ -838,7 +832,7 @@ public class EmotesDialog extends JDialog {
             gbc.gridy++;
             if (sets != null) {
                 // If sets are given, allow clicking on title to hide/unhide
-                titleLabel.addMouseListener(new MouseAdapter() {
+                GuiUtil.addSimpleMouseListener(titleLabel, new SimpleMouseListener() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         if (SwingUtilities.isLeftMouseButton(e)) {
@@ -851,6 +845,7 @@ public class EmotesDialog extends JDialog {
                             updateEmotes();
                         }
                     }
+
                 });
                 titleLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             }

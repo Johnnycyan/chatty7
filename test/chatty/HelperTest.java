@@ -2,7 +2,9 @@
 package chatty;
 
 import chatty.util.StringUtil;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
@@ -230,6 +232,29 @@ public class HelperTest {
     }
     
     @Test
+    public void getForeachParamsTest() {
+        foreachTest(null, null, null);
+        foreachTest("", null, null);
+        foreachTest("a b c", "a b c", null);
+        foreachTest(">", null, null);
+        foreachTest("a b c>abc", "a b c", "abc");
+        foreachTest("a b c > abc", "a b c", "abc");
+        foreachTest("a b c  >  abc", "a b c", "abc");
+        foreachTest(">abc", null, "abc");
+        foreachTest("     >abc", null, "abc");
+        foreachTest(">> >abc", ">", "abc");
+        foreachTest(">> >abc<<", ">", "abc<<");
+        foreachTest(">> >abc>>", ">", "abc>");
+        foreachTest(">> >abc>", ">", "abc>");
+        foreachTest("weaf >> fawef", "weaf > fawef", null);
+        foreachTest("abc >     ", "abc", null);
+    }
+    
+    private static void foreachTest(String input, String... result) {
+        assertArrayEquals(Helper.getForeachParams(input), result);
+    }
+    
+    @Test
     public void parseChannelsFromStringTest() {
         parseChannelsTest("", true);
         parseChannelsTest("$abc", true);
@@ -251,7 +276,22 @@ public class HelperTest {
         ab.add("user2", "cat2");
         
         parseChannelsTest("[cat]", true);
-        Helper.addressbook = ab;
+        Helper.parseChannelHelper = new Helper.ParseChannelHelper() {
+            @Override
+            public Collection<String> getFavorites() {
+                return Arrays.asList(new String[]{"#favChan1", "#favChan2", "#favChan3"});
+            }
+
+            @Override
+            public Collection<String> getNamesByCategory(String category) {
+                return ab.getNamesByCategory(category);
+            }
+
+            @Override
+            public boolean isStreamLive(String stream) {
+                return !stream.equals("chan2") && !stream.equals("favChan3");
+            }
+        };
         parseChannelsTest("[cat]", false, "#chan", "user");
         parseChannelsTest("[cat]", true, "#chan", "#user");
         parseChannelsTest("[cat ]", true, "#chan", "#user");
@@ -260,8 +300,19 @@ public class HelperTest {
         parseChannelsTest("[cat2]", true, "#chan2", "#user2");
         parseChannelsTest("#chan, [cat2]", true, "#chan", "#chan2", "#user2");
         parseChannelsTest("#chan, [cat2], #chan3", true, "#chan", "#chan2", "#user2", "#chan3");
-        Helper.addressbook = null;
+        
+        parseChannelsTest("[*]", true, "#favchan1", "#favchan2", "#favchan3");
+        parseChannelsTest("[* live]", true, "#favchan1", "#favchan2");
+        
+        parseChannelsTest("[cat live]", true, "#chan", "#user");
+        parseChannelsTest("[cat2 # live]", true);
+        parseChannelsTest("[cat2 live]", true, "#user2");
+        parseChannelsTest("[cat live], [cat2 live]", true, "#chan", "#user", "#user2");
+        
+        Helper.parseChannelHelper = null;
         parseChannelsTest("#chan, [cat2], #chan3", true, "#chan", "#chan3");
+        parseChannelsTest("[*]", true);
+        parseChannelsTest("[cat live]", true);
     }
     
     private static void parseChannelsTest(String input, boolean prepend, String... result) {
