@@ -122,6 +122,8 @@ import org.json.simple.JSONValue;
  */
 public class MainGui extends JFrame implements Runnable { 
     
+    private static final Logger LOGGER = Logger.getLogger(MainGui.class.getName());
+    
     public final Emoticons emoticons = new Emoticons();
     
     // Reference back to the client to give back data etc.
@@ -174,6 +176,7 @@ public class MainGui extends JFrame implements Runnable {
     protected DockedDialogManager dockedDialogs;
     private final IgnoredMessages ignoredMessagesHelper = new IgnoredMessages(this);
     public final HotkeyManager hotkeyManager = new HotkeyManager(this);
+    public final LocalEmotesSetting localEmotes;
 
     // Listeners that need to be returned by methods
     private ActionListener actionListener;
@@ -185,6 +188,7 @@ public class MainGui extends JFrame implements Runnable {
     public MainGui(TwitchClient client) {
         this.client = client;
         msgColorManager = new MsgColorManager(client.settings);
+        localEmotes = new LocalEmotesSetting(client.settings, this);
         repeatMsg = new RepeatMsgHelper(client.settings);
         SwingUtilities.invokeLater(this);
     }
@@ -328,7 +332,11 @@ public class MainGui extends JFrame implements Runnable {
             client.bttvEmotes.requestEmotes(BTTVEmotes.GLOBAL, false);
         }
         OtherBadges.requestBadges(r -> client.usericonManager.setThirdPartyIcons(r), false);
-        ChattyMisc.request();
+        ChattyMisc.request(() -> {
+            SwingUtilities.invokeLater(() -> {
+                updateSmilies();
+            });
+        });
         
         // Window states
         windowStateManager = new WindowStateManager(this, client.settings);
@@ -1006,6 +1014,8 @@ public class MainGui extends JFrame implements Runnable {
             client.api.checkToken();
         }
         
+        localEmotes.init();
+        emoticons.setLocalEmotes(localEmotes.getData());
         emoticons.setIgnoredEmotes(client.settings.getList("ignoredEmotes"));
         emoticons.loadFavoritesFromSettings(client.settings);
         client.api.getEmotesBySets(emoticons.getFavoritesNonGlobalEmotesets());
@@ -2332,6 +2342,12 @@ public class MainGui extends JFrame implements Runnable {
                 emoticons.removeFavorite(emote);
                 client.settings.listRemove("favoriteEmotes", emote.code);
                 emotesDialog.favoritesUpdated();
+            }
+            else if (e.getActionCommand().equals("addCustomLocalEmote")) {
+                localEmotes.add(emote);
+            }
+            else if (e.getActionCommand().equals("removeCustomLocalEmote")) {
+                localEmotes.remove(emote);
             }
             else if (e.getActionCommand().equals("addToFilter")) {
                 String item = "";
@@ -4447,7 +4463,7 @@ public class MainGui extends JFrame implements Runnable {
             }
         }
         else if (type.equals("globaltwitch")) {
-            client.emotesetManager.requestUserEmotes();
+            client.api.refreshSets(new HashSet<>(Arrays.asList(new String[]{"0"})));
         }
         else if (type.equals("globalother")) {
             if (client.settings.getBoolean("ffz")) {
@@ -4460,25 +4476,95 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     public void updateEmoticons(final EmoticonUpdate update) {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                emoticons.updateEmoticons(update);
+        SwingUtilities.invokeLater(() -> {
+            emoticons.updateEmoticons(update);
+            emotesDialog.update();
+            autoSetSmilies(update);
+        });
+    }
+    
+    private void updateSmilies() {
+        GuiUtil.edt(() -> {
+            Map<String, Set<Emoticon>> smilies = ChattyMisc.getSmilies();
+            if (smilies != null) {
+                switch ((int) client.settings.getLong("smilies")) {
+                    case 1:
+                    case 10:
+                        emoticons.setSmilies(smilies.get("robot"));
+                        break;
+                    case 2:
+                    case 20:
+                        emoticons.setSmilies(smilies.get("glitch"));
+                        break;
+                    case 3:
+                    case 30:
+                        emoticons.setSmilies(smilies.get("monkey"));
+                        break;
+                    default:
+                        emoticons.setSmilies(null);
+                }
                 emotesDialog.update();
             }
         });
     }
     
-    public void addEmoticons(final Set<Emoticon> emotes) {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                emoticons.addEmoticons(emotes);
-                emotesDialog.update();
+    /**
+     * The old user emotes API will contain at least most of the smilies the
+     * user has selected in their Twitch settings, so that can be used to set
+     * the setting before the API is removed.
+     * 
+     * Additionally, it can also look for emotesets in new API request results,
+     * although only the set 42 (monkey emotes) appear to actually be in the IRC
+     * emotesets message tag.
+     * 
+     * The smilies in the new API appear to be a bit messy, because instead of
+     * regex (and maybe specifying in an option that it's regex) it has an emote
+     * for several variations (but the same image). Plus the glitch emotes seem
+     * to not be available at all (at least without coding in the emoteset
+     * manually somehow, if it still exists). This is why the smilies are loaded
+     * separately from another API, whereas the "smilies" setting determines
+     * which set is loaded.
+     *
+     * @param update 
+     */
+    private void autoSetSmilies(EmoticonUpdate update) {
+        if (client.settings.getLong("smilies") < 10) {
+            // Manually set to not be automatically changed
+            return;
+        }
+        if (update.setsAdded != null) {
+            // User Emotes request should have setsAdded filled
+            String type = null;
+            for (Emoticon emote : update.emotesToAdd) {
+                type = ChattyMisc.getTypeByEmoteId(emote.stringId);
+                if (type != null) {
+                    LOGGER.info("Set smilies type to "+type+" (by id "+emote.stringId+")");
+                    break;
+                }
             }
-        });
+            if (type == null) {
+                for (String set : update.setsAdded) {
+                    type = ChattyMisc.getTypeByEmoteSet(set);
+                    if (type != null) {
+                        LOGGER.info("Set smilies type to " + type + " (by set " + set + ")");
+                        break;
+                    }
+                }
+            }
+            if (type != null) {
+                switch (type) {
+                    case "robot":
+                        client.settings.setLong("smilies", 10);
+                        break;
+                    case "glitch":
+                        client.settings.setLong("smilies", 20);
+                        break;
+                    case "monkey":
+                        client.settings.setLong("smilies", 30);
+                        break;
+                }
+            }
+        }
     }
     
     public void setCheerEmotes(final Set<CheerEmoticon> emotes) {
@@ -5065,6 +5151,9 @@ public class MainGui extends JFrame implements Runnable {
                     hotkeyManager.loadFromSettings(client.settings);
                 } else if (setting.equals("streamChatChannels")) {
                     client.updateStreamChatLogos();
+                } else if (setting.equals("localEmotes")) {
+                    emoticons.setLocalEmotes(localEmotes.getData());
+                    emotesDialog.update();
                 }
             }
             if (type == Setting.LONG) {
@@ -5074,6 +5163,8 @@ public class MainGui extends JFrame implements Runnable {
                     streamChat.setMessageTimeout(((Long)value).intValue());
                 } else if (setting.equals("emoteScaleDialog")) {
                     emotesDialog.setEmoteScale(((Long)value).intValue());
+                } else if (setting.equals("smilies")) {
+                    updateSmilies();
                 }
             }
             if (setting.equals("liveStreamsSorting")

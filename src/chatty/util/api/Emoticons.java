@@ -122,6 +122,16 @@ public class Emoticons {
     private final Set<Emoticon> otherGlobalEmotes = new HashSet<>();
     
     /**
+     * Manually added Twitch Emotes that aren't available through the API, for
+     * sending messages. These are added to usable emotes as normal for actual
+     * use, this Set is only used for displaying them in the Emote Dialog and
+     * such.
+     */
+    private final Set<Emoticon> localEmotes = new HashSet<>();
+    
+    private final Set<Emoticon> smilies = new HashSet<>();
+    
+    /**
      * All loaded Twitch Emotes, by their Twitch Emote Id.
      */
     private final HashMap<String,Emoticon> twitchEmotesById = new HashMap<>();
@@ -164,6 +174,8 @@ public class Emoticons {
      */
     private Set<String> allLocalEmotesets = new HashSet<>();
     
+    private Set<String> allHelixEmoteIds = new HashSet<>();
+    
     //==================
     // Meta Information
     //==================
@@ -204,7 +216,7 @@ public class Emoticons {
         if (!update.emotesToAdd.isEmpty()) {
             addEmoticons(update.emotesToAdd);
         }
-        if (update.source == EmoticonUpdate.Source.CHANNEL) {
+        if (update.source == EmoticonUpdate.Source.HELIX_CHANNEL) {
             // All emotes should contain emoteset info and the same stream
             Set<EmotesetInfo> sets = new HashSet<>();
             String stream = null;
@@ -221,6 +233,10 @@ public class Emoticons {
             for (EmotesetInfo info : update.setInfos) {
                 infoBySet.put(info.emoteset_id, info);
             }
+        }
+        if (update.source == EmoticonUpdate.Source.HELIX_CHANNEL
+                || update.source == EmoticonUpdate.Source.HELIX_SETS) {
+            update.emotesToAdd.forEach(emote -> allHelixEmoteIds.add(emote.stringId));
         }
     }
     
@@ -271,6 +287,13 @@ public class Emoticons {
                 }
             }
         }
+        if (update.typeToRemove == Emoticon.Type.CUSTOM2) {
+            removedCount += localEmotes.size();
+            for (Emoticon emote : localEmotes) {
+                usableGlobalEmotes.remove(emote);
+            }
+            localEmotes.clear();
+        }
         if (removedCount >= 0) {
             LOGGER.info(String.format("Removed %d emotes (%s/%s/%s/%s)",
                     removedCount,
@@ -318,6 +341,8 @@ public class Emoticons {
                     // Global emotes
                     if (emote.type == Emoticon.Type.TWITCH) {
                         addEmote(globalTwitchEmotes, emote);
+                    } else if (emote.type == Emoticon.Type.CUSTOM2) {
+                        addEmote(localEmotes, emote);
                     } else {
                         addEmote(otherGlobalEmotes, emote);
                     }
@@ -379,6 +404,53 @@ public class Emoticons {
      */
     public void addTempEmoticon(Emoticon emote) {
         twitchEmotesById.put(emote.stringId, emote);
+    }
+    
+    public void setSmilies(Set<Emoticon> emotes) {
+        smilies.clear();
+        if (emotes != null) {
+            smilies.addAll(emotes);
+            LOGGER.info("Set " + smilies.size() + " smilies");
+        }
+    }
+    
+    public Set<Emoticon> getSmilies() {
+        if (smilies != null) {
+            return smilies;
+        }
+        return EMPTY_SET;
+    }
+    
+    public void setLocalEmotes(Collection<Emoticon> emotes) {
+        EmoticonUpdate.Builder b = new EmoticonUpdate.Builder(new HashSet<>(emotes));
+        b.setTypeToRemove(Emoticon.Type.CUSTOM2);
+        updateEmoticons(b.build());
+    }
+    
+    public Set<Emoticon> getCustomLocalEmotes() {
+        return localEmotes;
+    }
+    
+    public boolean canAddCustomLocal(Emoticon emote) {
+        return (emote.type == Emoticon.Type.TWITCH || emote.type == Emoticon.Type.CUSTOM2)
+                && (emote.subType == null || emote.subType == Emoticon.SubType.REGULAR)
+                && emote.stringId != null;
+    }
+    
+    public boolean isCustomLocal(Emoticon emote) {
+        if (emote.type == Emoticon.Type.CUSTOM2) {
+            return true;
+        }
+        for (Emoticon presentEmote : localEmotes) {
+            if (presentEmote.stringId.equals(emote.stringId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public boolean isHelixEmoteId(Emoticon emote) {
+        return allHelixEmoteIds.contains(emote.stringId);
     }
     
     private static int clearOldEmoticonImages(Collection<Emoticon> emotes) {
@@ -793,7 +865,7 @@ public class Emoticons {
     
     public static final String toRegex(String emoteCode) {
         for (Map.Entry<String, String> entry : EMOTICONS_MAP.entrySet()) {
-            if (entry.getValue().equals(emoteCode)) {
+            if (entry.getValue().equals(emoteCode) || emoteCode.matches(entry.getKey())) {
                 return entry.getKey();
             }
         }
