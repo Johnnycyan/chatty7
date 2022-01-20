@@ -238,7 +238,7 @@ public class MainGui extends JFrame implements Runnable {
         GuiUtil.installEscapeCloseOperation(connectionDialog);
         tokenDialog = new TokenDialog(this);
         tokenGetDialog = new TokenGetDialog(this);
-        userInfoDialog = new UserInfoManager(this, client.settings, contextMenuListener);
+        userInfoDialog = new UserInfoManager(this, client.settings, contextMenuListener, client.api);
         aboutDialog = new About();
         setHelpWindowIcons();
         favoritesDialog = new FavoritesDialog(this, client.channelFavorites, contextMenuListener);
@@ -4839,6 +4839,7 @@ public class MainGui extends JFrame implements Runnable {
             @Override
             public void run() {
                 followerDialog.setFollowerInfo(info);
+                userInfoDialog.setFollowerInfo(info);
             }
         });
     }
@@ -4867,18 +4868,6 @@ public class MainGui extends JFrame implements Runnable {
         else {
             client.api.putChannelInfoNew(info);
         }
-    }
-    
-    public void getChannelStatus(String channel) {
-        client.api.getChannelStatus(channel);
-    }
-    
-    public UserInfo getCachedUserInfo(String channel, Consumer<UserInfo> result) {
-        return client.api.getCachedUserInfo(channel, result);
-    }
-    
-    public Follower getSingleFollower(String stream, String streamId, String user, String userId, boolean refresh) {
-        return client.api.getSingeFollower(stream, streamId, user, userId, refresh);
     }
 
     public String getActiveStream() {
