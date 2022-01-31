@@ -691,6 +691,8 @@ public class HighlighterTest {
         assertTrue(highlighter.check(user, "Hello testi"));
         updateBlacklist("testi");
         assertFalse(highlighter.check(user, "Hello testi"));
+        update("config:!blacklist test");
+        assertTrue(highlighter.check(user, "Hello testi"));
         
         updateBlacklist();
         update("w:ROM");
@@ -789,8 +791,26 @@ public class HighlighterTest {
         
         update("user:testuser", "abc");
         updateBlacklist("config:block !start:!quote");
+        assertFalse(highlighter.check(user, "123"));
         assertFalse(highlighter.check(user, "abc"));
         assertFalse(highlighter.check(user, "blah abc"));
+        assertTrue(highlighter.check(user, "!quote blah abc"));
+        
+        update("user:testuser", "config:!blacklist abc");
+        updateBlacklist("config:block !start:!quote");
+        assertFalse(highlighter.check(user, "123"));
+        assertFalse(highlighter.check(user2, "123"));
+        assertTrue(highlighter.check(user2, "abc"));
+        assertTrue(highlighter.check(user, "abc"));
+        assertTrue(highlighter.check(user, "blah abc"));
+        assertTrue(highlighter.check(user, "!quote blah abc"));
+        
+        update("config:!blacklist user:testuser", "abc");
+        updateBlacklist("config:block !start:!quote");
+        assertTrue(highlighter.check(user, "123"));
+        assertFalse(highlighter.check(user2, "abc"));
+        assertTrue(highlighter.check(user, "abc"));
+        assertTrue(highlighter.check(user, "blah abc"));
         assertTrue(highlighter.check(user, "!quote blah abc"));
     }
     
@@ -821,6 +841,10 @@ public class HighlighterTest {
         assertTrue(highlighter.check(user, "Cake"));
         
         update("blacklist:cheesecake cake");
+        assertTrue(highlighter.check(user, "cake"));
+        assertFalse(highlighter.check(user, "cheesecake"));
+        
+        update("blacklist:cheesecake config:!blacklist cake");
         assertTrue(highlighter.check(user, "cake"));
         assertFalse(highlighter.check(user, "cheesecake"));
         
