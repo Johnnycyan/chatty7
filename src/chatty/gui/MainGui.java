@@ -27,6 +27,7 @@ import chatty.Helper;
 import chatty.User;
 import chatty.Irc;
 import chatty.Room;
+import chatty.SettingsManager;
 import chatty.gui.components.admin.StatusHistory;
 import chatty.gui.colors.UsercolorItem;
 import chatty.util.api.usericons.Usericon;
@@ -68,6 +69,7 @@ import chatty.gui.components.textpane.SubscriberMessage;
 import chatty.gui.components.textpane.UserNotice;
 import chatty.gui.components.userinfo.UserInfoManager;
 import chatty.gui.components.userinfo.UserNotes;
+import chatty.gui.emoji.EmojiUtil;
 import chatty.gui.notifications.Notification;
 import chatty.gui.notifications.NotificationActionListener;
 import chatty.gui.notifications.NotificationManager;
@@ -1081,6 +1083,16 @@ public class MainGui extends JFrame implements Runnable {
         BatchAction.queue(highlighter, () -> {
             highlighter.update(StringUtil.getStringList(client.settings.getList("highlight")));
             highlighter.updateBlacklist(StringUtil.getStringList(client.settings.getList("highlightBlacklist")));
+            
+            if (client.settings.getBoolean("matchingSubstitutesEnabled")) {
+                @SuppressWarnings("unchecked") // Setting
+                List<String> substitutionsValue = client.settings.getList("matchingSubstitutes");
+                highlighter.updateSubstitutions(Replacer2.create(substitutionsValue));
+            }
+            else {
+                // Remove if it was enabled before
+                highlighter.updateSubstitutions(null);
+            }
         });
     }
     
@@ -1092,7 +1104,17 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     private void updateMatchingPresets() {
-        Highlighter.HighlightItem.setGlobalPresets(Highlighter.HighlightItem.makePresets(client.settings.getList("matchingPresets")));
+        @SuppressWarnings("unchecked") // Setting
+        List<String> settingValue = client.settings.getList("matchingPresets");
+        Map<String, CustomCommand> presets = Highlighter.HighlightItem.makePresets(settingValue);
+        if (SettingsManager.switchedFromVersionBefore("0.18")) {
+            for (String name : presets.keySet()) {
+                if (name.equals("_global_highlight") || name.equals("_global_ignore")) {
+                    EventLog.addSystemEvent("matching.presetsBlacklist");
+                }
+            }
+        }
+        Highlighter.HighlightItem.setGlobalPresets(presets);
         Highlighter.HighlightItem.setTwitchApi(client.api);
         updateHighlight();
         updateIgnore();
@@ -2396,6 +2418,14 @@ public class MainGui extends JFrame implements Runnable {
             else if (e.getActionCommand().startsWith("addUsericonOfBadgeType")) {
                 getSettingsDialog(s -> s.showSettings(e.getActionCommand(), usericon));
             }
+            else if (e.getActionCommand().startsWith("hideUsericonOfBadgeType")) {
+                if (client.usericonManager.hideBadge(usericon)) {
+                    JOptionPane.showMessageDialog(rootPane, "Badges of type '"+usericon.readableLenientType()+"' will not show up in new messages.\n\nSee: <Main - Settings - Badges - View Hidden Badges>");
+                }
+                else {
+                    JOptionPane.showMessageDialog(rootPane, "Badges of type '"+usericon.readableLenientType()+"' are already hidden.\n\nSee: <Main - Settings - Badges - View Hidden Badges>");
+                }
+            }
             else if (e.getActionCommand().equals("badgeImage")) {
                 UrlOpener.openUrlPrompt(getActiveWindow(), usericon.url.toString(), true);
             }
@@ -2583,12 +2613,20 @@ public class MainGui extends JFrame implements Runnable {
         return client.usericonManager.getCustomData();
     }
     
+    public List<Usericon> getHiddenBadgesData() {
+        return client.usericonManager.getHiddenBadgesData();
+    }
+    
     public Set<String> getTwitchBadgeTypes() {
         return client.usericonManager.getTwitchBadgeTypes();
     }
     
     public void setUsericonData(List<Usericon> data) {
         client.usericonManager.setCustomData(data);
+    }
+    
+    public void setHiddenBadgesData(List<Usericon> data) {
+        client.usericonManager.setHiddenBadgesData(data);
     }
     
     public List<Notification> getNotificationData() {
@@ -3281,10 +3319,20 @@ public class MainGui extends JFrame implements Runnable {
     }
     //For timestamp
 
-    public void printMessage(User user, String text, boolean action, MsgTags tags0, final String timestamp) {
+    public void printMessage(User user, String text2, boolean action, MsgTags tags0, final String timestamp) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
+                /**
+                 * Replace the ZWF replacement (which consists of two chars)
+                 * with the ZFW before anything that relies on character
+                 * position (like Highlights or Emote parsing) is performed.
+                 * Twitch emote indices work with codepoint counts, so it's
+                 * fine.
+                 */
+                boolean decodeZWF = client.settings.getLong("emojiZWJ") > 0;
+                String text = decodeZWF ? EmojiUtil.decodeZWJ(text2) : text2;
+                
                 MsgTags tags = tags0;
                 Channel chan;
                 String channel = user.getChannel();
@@ -3334,18 +3382,30 @@ public class MainGui extends JFrame implements Runnable {
                 
                 boolean isOwnMessage = isOwnUsername(user.getName()) || (whisper && action);
                 boolean ignoredUser = (userIgnored(user, whisper) && !isOwnMessage);
-                boolean ignored = checkMsg(ignoreList, "ignore", text, user, localUser, tags, isOwnMessage) || ignoredUser;
+                boolean ignored = checkMsg(ignoreList, "ignore", text, user, localUser, tags, isOwnMessage, false) || ignoredUser;
+                
+                boolean highlighted = false;
+                List<Match> highlightMatches = null;
+                if ((client.settings.getBoolean("highlightIgnored")
+                        || client.settings.getBoolean("highlightOverrideIgnored")
+                        || highlighter.hasOverrideIgnored()
+                        || !ignored)
+                        && !client.settings.listContains("noHighlightUsers", user.getName())) {
+                    boolean rejectIgnoredWithoutPrefix = client.settings.getBoolean("highlightOverrideIgnored")
+                                              || client.settings.getBoolean("highlightIgnored")
+                                              ? false : ignored;
+                    highlighted = checkMsg(highlighter, "highlight", text, user, localUser, tags, isOwnMessage, rejectIgnoredWithoutPrefix);
+                    if (highlighted) {
+                        if (client.settings.getBoolean("highlightOverrideIgnored")
+                                || highlighter.getLastMatchItem().overrideIgnored()) {
+                            ignored = false;
+                        }
+                    }
+                }
                 
                 if (!ignored || client.settings.getBoolean("logIgnored")) {
                     client.chatLog.bits(chan.getFilename(), user, bitsAmount);
                     client.chatLog.message(chan.getFilename(), user, text, action, null);
-                }
-                
-                boolean highlighted = false;
-                List<Match> highlightMatches = null;
-                if ((client.settings.getBoolean("highlightIgnored") || !ignored)
-                        && !client.settings.listContains("noHighlightUsers", user.getName())) {
-                    highlighted = checkMsg(highlighter, "highlight", text, user, localUser, tags, isOwnMessage);
                 }
                 
                 TagEmotes tagEmotes = Emoticons.parseEmotesTag(tags.getRawEmotes());
@@ -3401,7 +3461,7 @@ public class MainGui extends JFrame implements Runnable {
                         printInfo(chan, InfoMessage.createInfo("Own message ignored."));
                     }
                 } else {
-                    boolean hasReplacements = checkMsg(filter, "filter", text, user, localUser, tags, isOwnMessage);
+                    boolean hasReplacements = checkMsg(filter, "filter", text, user, localUser, tags, isOwnMessage, false);
 
                     // Print message, but determine how exactly
                     UserMessage message = new UserMessage(user, text, tagEmotes, tags.getId(), bitsForEmotes,
@@ -3409,6 +3469,7 @@ public class MainGui extends JFrame implements Runnable {
                             hasReplacements ? filter.getLastTextMatches() : null,
                             hasReplacements ? filter.getLastReplacement() : null,
                             tags);
+                    message.localUser = localUser;
                     
                     // Custom color
                     boolean hlByPoints = tags.isHighlightedMessage() && client.settings.getBoolean("highlightByPoints");
@@ -3547,26 +3608,29 @@ public class MainGui extends JFrame implements Runnable {
     
     private boolean checkHighlight(HighlightItem.Type type, String text,
             String channel, Addressbook ab, User user, User localUser, MsgTags tags, Highlighter hl,
-            String setting, boolean isOwnMessage) {
+            String setting, boolean isOwnMessage, boolean ignored) {
         if (client.settings.getBoolean(setting + "Enabled")) {
             if (client.settings.getBoolean(setting + "OwnText") ||
                     !isOwnMessage) {
-                return hl.check(type, text, channel, ab, user, localUser, tags);
+                return hl.check(type, text, channel, ab, user, localUser, tags, ignored);
             }
         }
         return false;
     }
     
     private boolean checkMsg(Highlighter hl, String setting, String text,
-            User user, User localUser, MsgTags tags, boolean isOwnMessage) {
+            User user, User localUser, MsgTags tags, boolean isOwnMessage,
+            boolean ignored) {
         return checkHighlight(HighlightItem.Type.REGULAR, text, null, null,
-                user, localUser, tags, hl, setting, isOwnMessage);
+                user, localUser, tags, hl, setting, isOwnMessage, ignored);
     }
     
     private boolean checkInfoMsg(Highlighter hl, String setting, String text,
-            User user, MsgTags tags, String channel, Addressbook ab) {
+            User user, MsgTags tags, String channel, Addressbook ab,
+            boolean ignored) {
         return checkHighlight(HighlightItem.Type.INFO, text, channel, ab,
-                user, client.getLocalUser(channel), tags, hl, setting, false);
+                user, client.getLocalUser(channel), tags, hl, setting, false,
+                ignored);
     }
     
     protected void ignoredMessagesCount(String channel, String message) {
@@ -3722,14 +3786,27 @@ public class MainGui extends JFrame implements Runnable {
             user = ((UserNotice)message).user;
         }
         MsgTags tags = message.tags;
-        boolean ignored = checkInfoMsg(ignoreList, "ignore", message.text, user, tags, channel.getChannel(), client.addressbook);
+        boolean ignored = checkInfoMsg(ignoreList, "ignore", message.text, user, tags, channel.getChannel(), client.addressbook, false);
+        boolean highlighted = false;
+        boolean ignoreCheck = !ignored
+                || highlighter.hasOverrideIgnored()
+                || client.settings.getBoolean("highlightOverrideIgnored");
+        if (ignoreCheck && !message.isHidden()) {
+            boolean rejectIgnoredWithoutPrefix = client.settings.getBoolean("highlightOverrideIgnored") ? false : ignored;
+            highlighted = checkInfoMsg(highlighter, "highlight", message.text, user, tags, channel.getChannel(), client.addressbook, rejectIgnoredWithoutPrefix);
+            if (highlighted) {
+                if (client.settings.getBoolean("highlightOverrideIgnored")
+                        || highlighter.getLastMatchItem().overrideIgnored()) {
+                    ignored = false;
+                }
+            }
+        }
         if (!ignored) {
             //----------------
             // Output Message
             //----------------
             if (!message.isHidden()) {
                 User localUser = client.getLocalUser(channel.getChannel());
-                boolean highlighted = checkInfoMsg(highlighter, "highlight", message.text, user, tags, channel.getChannel(), client.addressbook);
                 if (highlighted) {
                     message.highlighted = true;
                     message.highlightMatches = highlighter.getLastTextMatches();
@@ -5085,6 +5162,8 @@ public class MainGui extends JFrame implements Runnable {
                     channels.setCompletionEnabled(bool);
                 } else if (setting.equals("animatedEmotes")) {
                     emotesDialog.setEmoteImageType(Emoticon.makeImageType(bool));
+                } else if (setting.equals("matchingSubstitutesEnabled")) {
+                    updateHighlight();
                 }
                 if (setting.startsWith("title") || setting.equals("tabsChanTitles")) {
                     updateState(true);
@@ -5128,7 +5207,7 @@ public class MainGui extends JFrame implements Runnable {
                 }
             }
             if (type == Setting.LIST) {
-                if (setting.equals("highlight") || setting.equals("highlightBlacklist")) {
+                if (setting.equals("highlight") || setting.equals("highlightBlacklist") || setting.equals("matchingSubstitutes")) {
                     updateHighlight();
                 } else if (setting.equals("ignore") || setting.equals("ignoreBlacklist")) {
                     updateIgnore();
@@ -5205,7 +5284,9 @@ public class MainGui extends JFrame implements Runnable {
                 updateChannelsSettings();
             }
             else if (setting.equals("ignoredEmotes")) {
-                emoticons.setIgnoredEmotes(client.settings.getList("ignoredEmotes"));
+                @SuppressWarnings("unchecked") // Setting
+                List<String> data = client.settings.getList("ignoredEmotes");
+                emoticons.setIgnoredEmotes(data);
             }
             else if (LaF.shouldUpdate(setting)) {
                 updateLaF();

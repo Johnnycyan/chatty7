@@ -460,10 +460,14 @@ public class SettingsDialog extends JDialog implements ActionListener {
                     imageSettings.addUsericonOfBadgeType(icon.type, icon.badgeType.id);
                 } else if (action.equals("selectHighlight")) {
                     showPanel(Page.HIGHLIGHT);
-                    highlightSettings.selectItems((Collection<String>) parameter);
+                    @SuppressWarnings("unchecked") // By convention
+                    Collection<String> data = (Collection<String>) parameter;
+                    highlightSettings.selectItems(data);
                 } else if (action.equals("selectIgnore")) {
                     showPanel(Page.IGNORE);
-                    ignoreSettings.selectItems((Collection<String>) parameter);
+                    @SuppressWarnings("unchecked") // By convention
+                    Collection<String> data = (Collection<String>) parameter;
+                    ignoreSettings.selectItems(data);
                 } else if (action.equals("selectMsgColor")) {
                     showPanel(Page.MSGCOLORS);
                     msgColorSettings.selectItem((String) parameter);
@@ -503,6 +507,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         usercolorSettings.setData(owner.getUsercolorData());
         msgColorSettings.setData(owner.getMsgColorData());
         imageSettings.setData(owner.getUsericonData());
+        imageSettings.setHiddenBadgesData(owner.getHiddenBadgesData());
         imageSettings.setTwitchBadgeTypes(owner.getTwitchBadgeTypes());
         hotkeySettings.setData(owner.hotkeyManager.getActionsMap(),
                 owner.hotkeyManager.getData(), owner.hotkeyManager.globalHotkeysAvailable());
@@ -581,6 +586,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         owner.setUsercolorData(usercolorSettings.getData());
         owner.setMsgColorData(msgColorSettings.getData());
         owner.setUsericonData(imageSettings.getData());
+        owner.setHiddenBadgesData(imageSettings.getHiddenBadgesData());
         owner.hotkeyManager.setData(hotkeySettings.getData());
         owner.setNotificationData(notificationSettings.getData());
         owner.localEmotes.setData(emoteSettings.getData());
@@ -1000,7 +1006,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
                     Matcher m = PARSE_LINE.matcher(line);
                     if (m.matches()) {
                         try {
-                            result.add(new SimpleTableEditor.MapItem(m.group(1), Long.valueOf(m.group(2))));
+                            result.add(new SimpleTableEditor.MapItem<>(m.group(1), Long.valueOf(m.group(2))));
                         }
                         catch (NumberFormatException ex) {
                             // Don't add

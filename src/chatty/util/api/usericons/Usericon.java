@@ -5,6 +5,7 @@ import chatty.Helper;
 import chatty.gui.Highlighter;
 import chatty.util.colors.HtmlColors;
 import chatty.util.ImageCache;
+import chatty.util.ImageCache.ImageResult;
 import chatty.util.StringUtil;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -69,6 +70,7 @@ public class Usericon implements Comparable {
         CHANNEL_LOGO(15, "Channel Logo", "CHL", null, null, null),
         FOUNDER(16, "Founder", "FND", "%", "founder", null),
         ALL(17, "All Types", "ALL", "", null, null),
+        FIRSTMSG(18, "First Message in Channel", "FMG", "'", null, null),
         UNDEFINED(-1, "Undefined", "UDF", null, null, null);
         
         public Color color;
@@ -395,8 +397,9 @@ public class Usericon implements Comparable {
         if (url == null) {
             return null;
         }
-        ImageIcon icon = ImageCache.getImage(url, "usericon", CACHE_TIME);
-        if (icon != null) {
+        ImageResult result = ImageCache.getImage(new ImageCache.ImageRequest(url), "usericon", CACHE_TIME);
+        if (result != null && result.icon != null) {
+            ImageIcon icon = result.icon;
             if (targetImageSize != null) {
                 icon.setImage(getScaledImage(icon.getImage(), targetImageSize.width, targetImageSize.height));
             }
@@ -478,6 +481,17 @@ public class Usericon implements Comparable {
                 channelRestriction,
                 restriction,
                 image != null ? "L" : (removeBadge ? "R" : "E"));
+    }
+    
+    public String readableLenientType() {
+        Type type = this.type;
+        if (type == Type.TWITCH) {
+            type = typeFromBadgeId(badgeType.id);
+        }
+        if (type == null) {
+            return badgeType.id;
+        }
+        return type.label;
     }
     
     public static String typeToString(Type type) {

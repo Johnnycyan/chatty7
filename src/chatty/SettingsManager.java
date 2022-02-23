@@ -256,12 +256,15 @@ public class SettingsManager {
         
         settings.addString("emoji", "twemoji");
         settings.addBoolean("emojiReplace", true);
+        settings.addLong("emojiZWJ", 2);
         settings.addString("cheersType", "animated");
 
         settings.addBoolean("usericonsEnabled", true);
         
         settings.addList("customUsericons", new ArrayList(), Setting.LIST);
         settings.addBoolean("customUsericonsEnabled", false);
+        
+        settings.addList("hiddenUsericons", new ArrayList(), Setting.LIST);
         
         settings.addBoolean("botBadgeEnabled", true);
         settings.addBoolean("botNamesBTTV", true);
@@ -602,6 +605,7 @@ public class SettingsManager {
         settings.addBoolean("highlightOwnText", false);
         settings.addBoolean("highlightNextMessages", false);
         settings.addBoolean("highlightIgnored", false);
+        settings.addBoolean("highlightOverrideIgnored", false);
         settings.addList("noHighlightUsers", new ArrayList(), Setting.STRING);
         settings.addList("highlightBlacklist", new ArrayList(), Setting.STRING);
         settings.addBoolean("highlightMatches", true);
@@ -632,6 +636,8 @@ public class SettingsManager {
         matchingPresetsDefault.add("# _special replaces every letter of words surrounded by ~ with: (<letter>[\\W_]*?)+");
         matchingPresetsDefault.add("_special $replace($1-,$\"~([^~]+)~\",$replace($(g1),$\"(\\w)\",$\"($1[\\\\W_]*?)+\",regRef),regCustom)");
         settings.addList("matchingPresets", matchingPresetsDefault, Setting.STRING);
+        settings.addList("matchingSubstitutes", new ArrayList(), Setting.STRING);
+        settings.addBoolean("matchingSubstitutesEnabled", false);
         
         // Repeated Messages
         settings.addBoolean("repeatMsg", false);
@@ -856,10 +862,17 @@ public class SettingsManager {
         }
     }
     
+    private static String previousVersion;
+    
     /**
      * Override some now unused settings or change settings on version change.
      */
     public void overrideSettings() {
+        previousVersion = settings.getString("currentVersion");
+        if (!Chatty.VERSION.equals(previousVersion)) {
+            LOGGER.info("Changed from version "+previousVersion);
+        }
+        
         settings.setBoolean("ignoreJoinsParts", false);
         if (switchedFromVersionBefore("0.7.2")) {
             String value = settings.getString("timeoutButtons");
@@ -935,8 +948,11 @@ public class SettingsManager {
              * not all favorites were migrated correctly).
              */
             LOGGER.info("Migrating Favorites/History");
+            @SuppressWarnings("unchecked") // Setting
             List<String> favs = settings.getList("channelFavorites");
+            @SuppressWarnings("unchecked") // Setting
             Map<String, Long> history = settings.getMap("channelHistory");
+            @SuppressWarnings("unchecked") // Setting
             Map<String, List> data = settings.getMap("roomFavorites");
             // Migrate history
             for (String stream : history.keySet()) {
@@ -994,12 +1010,17 @@ public class SettingsManager {
      * the given one, this returns true. Usually the current version would be
      * used if a new condition is added, to change a setting only on the switch
      * to the given version.
+     * 
+     * This can be used after the settings have been properly loaded.
      *
      * @param version The version to check against
      * @return true if the given version is greater than the current version
      */
-    private boolean switchedFromVersionBefore(String version) {
-        return Version.compareVersions(settings.getString("currentVersion"), version) == 1;
+    public static boolean switchedFromVersionBefore(String version) {
+        if (previousVersion != null) {
+            return Version.compareVersions(previousVersion, version) == 1;
+        }
+        return false;
     }
     
     public void debugSettings() {
@@ -1052,6 +1073,7 @@ public class SettingsManager {
         for (DefaultHotkey hotkey : defaultHotkeys) {
             // Check version of when the default hotkey was added
             if (switchedFromVersionBefore(hotkey.version)) {
+                @SuppressWarnings("unchecked") // Setting
                 List<List> setting = settings.getList("hotkeys");
                 Iterator<List> it = setting.iterator();
                 // Remove hotkey if already in setting
