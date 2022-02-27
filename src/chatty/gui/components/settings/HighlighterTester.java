@@ -72,7 +72,8 @@ import javax.swing.text.StyledDocument;
 public class HighlighterTester extends JDialog implements StringEditor {
     
     public static Map<String, CustomCommand> testPresets;
-    public static Replacer2 substitutionItem;
+    public static Replacer2 substitutesItem;
+    public static boolean substitutesDefault;
     
     private static final int MAX_INPUT_LENGTH = 50*1000;
 
@@ -365,8 +366,10 @@ public class HighlighterTester extends JDialog implements StringEditor {
     private String getTestText() {
         String text = testInput.getText();
         if (type.equals("highlight")) {
-            if (substitutionItem != null) {
-                substitutionResult = substitutionItem.replace(text);
+            if (substitutesItem != null
+                    && highlightItem != null
+                    && highlightItem.substitutesEnabled(substitutesDefault)) {
+                substitutionResult = substitutesItem.replace(text);
                 if (substitutionResult != null) {
                     text = substitutionResult.getChangedText();
                 }
@@ -385,11 +388,11 @@ public class HighlighterTester extends JDialog implements StringEditor {
         } else {
             highlightItem = createItem(value);
         }
-        updateParseResult();
         updateInfoText();
         updateMatches(doc);
         updateSaveButton();
         updateTestText();
+        updateParseResult();
         
         itemFields.update();
 //        System.out.println(highlightItem.getMatchInfo());
@@ -404,11 +407,11 @@ public class HighlighterTester extends JDialog implements StringEditor {
             blacklistItem = createItem(value);
             addToBlacklistButton.setEnabled(!blacklistItem.hasError());
         }
-        updateParseResult();
         updateInfoText();
         updateMatches(doc);
         updateSaveButton();
         updateTestText();
+        updateParseResult();
     }
         
     public void updateParseResult() {
@@ -444,7 +447,7 @@ public class HighlighterTester extends JDialog implements StringEditor {
             text += "\n### Blacklist ###\n"+blacklistItem.getMatchInfo();
         }
         if (substitutionResult != null) {
-            text += "---\nTest text after applying substitutions: "+substitutionResult.getChangedText();
+            text += "---\nTest text after applying substitutes: "+substitutionResult.getChangedText();
         }
         parseResult.setText(text);
     }
