@@ -169,6 +169,7 @@ public class Helper {
     public static final Pattern CHANNEL_PATTERN = Pattern.compile("(?i)^#?"+USERNAME_REGEX+"$");
     public static final Pattern CHATROOM_PATTERN = Pattern.compile("(?i)^#?chatrooms:[0-9a-z-:]+$");
     public static final Pattern STREAM_PATTERN = Pattern.compile("(?i)^"+USERNAME_REGEX+"$");
+    public static final Pattern WHISPER_PATTERN = Pattern.compile("(?i)^\\$"+USERNAME_REGEX+"$");
     private static final Pattern CHANNEL_URL_PATTERN = Pattern.compile("(?:https?://)?(?:www\\.)?twitch\\.tv/("+USERNAME_REGEX+")[/a-z]*");
     
     /**
@@ -236,6 +237,14 @@ public class Helper {
         try {
             return channel.startsWith("#") && CHATROOM_PATTERN.matcher(channel).matches();
         } catch (Exception ex) {
+            return false;
+        }
+    }
+    
+    public static boolean isValidWhisperChannel(String channel) {
+        try {
+            return WHISPER_PATTERN.matcher(channel).matches();
+        } catch (PatternSyntaxException | NullPointerException ex) {
             return false;
         }
     }
@@ -951,7 +960,11 @@ public class Helper {
     public static void addUserParameters(User user, String msgId, String autoModMsgId, Parameters parameters) {
         if (msgId != null) {
             parameters.put("msg-id", msgId);
-            parameters.put("msg", user.getMessageText(msgId));
+            User.TextMessage m = user.getMessage(msgId);
+            if (m != null) {
+                parameters.put("msg", m.text);
+                parameters.put("msg-time", String.valueOf(m.getTime()));
+            }
         }
         if (autoModMsgId != null) {
             parameters.put("automod-msg-id", autoModMsgId);

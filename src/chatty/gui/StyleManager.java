@@ -5,7 +5,7 @@ import chatty.util.colors.HtmlColors;
 import chatty.gui.components.textpane.ChannelTextPane.Attribute;
 import chatty.gui.components.textpane.ChannelTextPane.Setting;
 import chatty.gui.components.textpane.MyStyleConstants;
-import chatty.util.DateTime;
+import chatty.util.Timestamp;
 import chatty.util.colors.ColorCorrector;
 import chatty.util.settings.Settings;
 import java.awt.Color;
@@ -15,7 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.text.*;
@@ -42,7 +41,8 @@ public class StyleManager implements StyleServer {
             "deletedMessagesMode", "deletedMessagesMaxLength","searchResultColor",
             "lineSpacing", "bufferSize", "actionColored","combineBanMessages",
             "timestampTimezone", "autoScrollTimeout", "searchResultColor2",
-            "inputFont","emoteScale", "emoteMaxHeight", "botBadgeEnabled",
+            "inputFont","emoteScale", "emoteMaxHeight", "usericonScale",
+            "customUsericonScaleMode", "botBadgeEnabled",
             "filterCombiningCharacters", "pauseChatOnMouseMove",
             "pauseChatOnMouseMoveCtrlRequired", "showAnimatedEmotes",
             "animatedEmotes",
@@ -200,6 +200,8 @@ public class StyleManager implements StyleServer {
         addBooleanSetting(Setting.EMOTICONS_ENABLED, "emoticonsEnabled");
         addLongSetting(Setting.EMOTICON_SCALE_FACTOR, "emoteScale");
         addLongSetting(Setting.EMOTICON_MAX_HEIGHT, "emoteMaxHeight");
+        addLongSetting(Setting.USERICON_SCALE_FACTOR, "usericonScale");
+        addLongSetting(Setting.CUSTOM_USERICON_SCALE_MODE, "customUsericonScaleMode");
         addBooleanSetting(Setting.USERICONS_ENABLED, "usericonsEnabled");
         addBooleanSetting(Setting.SHOW_BANMESSAGES, "showBanMessages");
         addBooleanSetting(Setting.AUTO_SCROLL, "autoScroll");
@@ -316,25 +318,18 @@ public class StyleManager implements StyleServer {
     }
     
     @Override
-    public SimpleDateFormat getTimestampFormat() {
-        return makeTimestampFormat("timestamp", null);
+    public Timestamp getTimestampFormat() {
+        return makeTimestampFormat("timestamp");
     }
     
-    public SimpleDateFormat makeTimestampFormat(String setting, SimpleDateFormat defaultValue) {
+    public Timestamp makeTimestampFormat(String setting) {
         String timestamp = settings.getString(setting);
         String timezone = settings.getString("timestampTimezone");
-        if (!timestamp.equals("off")) {
-            try {
-                SimpleDateFormat sdf = DateTime.createSdfAmPm(timestamp);
-                if (!timezone.isEmpty() && !timezone.equalsIgnoreCase("local")) {
-                    sdf.setTimeZone(TimeZone.getTimeZone(timezone));
-                }
-                return sdf;
-            } catch (IllegalArgumentException ex) {
-                LOGGER.warning("Invalid timestamp: "+timestamp);
-            }
+        Timestamp timestampFormat = new Timestamp(timestamp, timezone);
+        if (timestampFormat.isEnabled()) {
+            return timestampFormat;
         }
-        return defaultValue;
+        return null;
     }
 
     @Override

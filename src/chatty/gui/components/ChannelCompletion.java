@@ -7,8 +7,8 @@ import chatty.User;
 import chatty.gui.MainGui;
 import chatty.util.StringUtil;
 import chatty.util.api.Emoticon;
-import chatty.util.api.Emoticon.ImageType;
 import chatty.util.api.Emoticons;
+import chatty.util.api.CachedImage.ImageType;
 import chatty.util.settings.Settings;
 import chatty.util.ForkUtil;
 import java.awt.Component;
@@ -32,6 +32,7 @@ import java.util.function.Function;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import javax.swing.ImageIcon;
+import chatty.util.api.CachedImage.CachedImageUser;
 
 /**
  *
@@ -296,7 +297,7 @@ public class ChannelCompletion implements AutoCompletionServer {
         return new CompletionItem(code, info) {
             public ImageIcon getImage(Component c) {
                 float scale = (float)(currentEmoteScaling / 100.0);
-                ImageIcon icon = emote.getIcon(scale, 0, currentEmoteImageType, new Emoticon.EmoticonUser() {
+                ImageIcon icon = emote.getIcon(scale, 0, currentEmoteImageType, new CachedImageUser() {
 
                     @Override
                     public void iconLoaded(Image oldImage, Image newImage, boolean sizeChanged) {

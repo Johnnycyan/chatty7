@@ -30,13 +30,13 @@ import chatty.util.RepeatMsgHelper;
 import chatty.util.ReplyManager;
 import chatty.util.RingBuffer;
 import chatty.util.StringUtil;
+import chatty.util.Timestamp;
 import chatty.util.api.CheerEmoticon;
 import chatty.util.api.Emoticon;
-import chatty.util.api.Emoticon.EmoticonImage;
-import chatty.util.api.Emoticon.EmoticonUser;
-import chatty.util.api.Emoticon.ImageType;
 import chatty.util.api.Emoticons;
 import chatty.util.api.Emoticons.TagEmotes;
+import chatty.util.api.CachedImage;
+import chatty.util.api.CachedImage.ImageType;
 import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.colors.ColorCorrectionNew;
 import chatty.util.colors.ColorCorrector;
@@ -72,6 +72,7 @@ import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import javax.swing.text.*;
 import javax.swing.text.html.HTML;
+import chatty.util.api.CachedImage.CachedImageUser;
 
 
 /**
@@ -93,7 +94,7 @@ import javax.swing.text.html.HTML;
  * 
  * @author tduva
  */
-public class ChannelTextPane extends JTextPane implements LinkListener, EmoticonUser {
+public class ChannelTextPane extends JTextPane implements LinkListener, CachedImageUser {
     
     private static final Logger LOGGER = Logger.getLogger(ChannelTextPane.class.getName());
     
@@ -167,7 +168,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         BAN_DURATION_MESSAGE, BAN_REASON_MESSAGE,
         
         ACTION_COLORED, LINKS_CUSTOM_COLOR, BUFFER_SIZE, AUTO_SCROLL_TIME,
-        EMOTICON_MAX_HEIGHT, EMOTICON_SCALE_FACTOR, BOT_BADGE_ENABLED,
+        EMOTICON_MAX_HEIGHT, EMOTICON_SCALE_FACTOR, USERICON_SCALE_FACTOR,
+        CUSTOM_USERICON_SCALE_MODE, BOT_BADGE_ENABLED,
         FILTER_COMBINING_CHARACTERS, PAUSE_ON_MOUSEMOVE,
         PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED, EMOTICONS_BTTV_SHOW_ANIMATED,
         EMOTICONS_ANIMATED,
@@ -2060,7 +2062,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         java.util.List<Usericon> badges = user.getBadges(botBadgeEnabled, tags, localUser, type == Type.STREAM_CHAT);
         if (badges != null) {
             for (Usericon badge : badges) {
-                if (badge.image != null && !badge.removeBadge) {
+                if (!badge.removeBadge) {
                     print(badge.getSymbol(), styles.makeIconStyle(badge, user));
                 }
             }
@@ -2651,12 +2653,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                 int start = range.getKey();
                 int end = range.getValue();
                 MutableAttributeSet style = rangesStyle.get(start);
-                EmoticonImage image = (EmoticonImage) style.getAttribute(Attribute.EMOTICON);
+                CachedImage<Emoticon> image = (CachedImage<Emoticon>) style.getAttribute(Attribute.EMOTICON);
                 // Only affect emotes that aren't GIFs
                 if (image != null && !image.isAnimated()) {
                     // Check for emote that can overlay over another one, and
                     // that there is an emote to modify directly before that
-                    if (cei.containsCode(image.getEmoticon().code)
+                    if (cei.containsCode(image.getObject().code)
                             && !emotes.isEmpty()
                             && lastEnd + 2 == start) {
                         // Extend original emote to span to the end of this one
@@ -2676,8 +2678,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
                     }
                     // Add all emotes, if this is not an overlay emote it will
                     // start empty (and only add each emote only once)
-                    if (!emotes.contains(image.getEmoticon())) {
-                        emotes.add(image.getEmoticon());
+                    if (!emotes.contains(image.getObject())) {
+                        emotes.add(image.getObject());
                     }
                     lastEnd = end;
                 }
@@ -2854,16 +2856,14 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             Map<Integer, Integer> ranges,
             Map<Integer, MutableAttributeSet> rangesStyle) {
         if (!inRanges(start, ranges) && !inRanges(end, ranges)) {
-            if (emoticon.getIcon(this) != null) {
-                ranges.put(start, end);
-                MutableAttributeSet attr = styles.emoticon(emoticon);
-                // Add an extra attribute, making this Style unique
-                // (else only one icon will be output if two of the same
-                // follow in a row)
-                attr.addAttribute("start", start);
-                rangesStyle.put(start, attr);
-                return true;
-            }
+            ranges.put(start, end);
+            MutableAttributeSet attr = styles.emoticon(emoticon);
+            // Add an extra attribute, making this Style unique
+            // (else only one icon will be output if two of the same
+            // follow in a row)
+            attr.addAttribute("start", start);
+            rangesStyle.put(start, attr);
+            return true;
         }
         return false;
     }
@@ -3019,8 +3019,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
      * @param style
      */
     protected void printTimestamp(AttributeSet style) {
-        if (styles.timestampFormat() != null) {
-            print(DateTime.currentTime(styles.timestampFormat())+" ", styles.timestamp(style));
+        Timestamp timestamp = styles.timestampFormat();
+        if (timestamp != null) {
+            print(timestamp.make(-1, channel != null ? channel.getRoom() : null)+" ", styles.timestamp(style));
         }
         else {
             // Inserts the linebreak with a style that shouldn't break anything
@@ -3035,8 +3036,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
     }
 
     protected String getTimePrefixFromString(String timestamp) {
-        if (styles.timestampFormat() != null) {
-            return DateTime.format(Long.parseLong(timestamp), styles.timestampFormat())+" ";
+        Timestamp timestampFormat = styles.timestampFormat();
+        if (timestampFormat != null) {
+            return timestampFormat.make(
+                Long.parseLong(timestamp),
+                channel != null ? channel.getRoom() : null) + " ";
         }
         return "";
     }
@@ -3497,7 +3501,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         /**
          * Store the timestamp format
          */
-        private SimpleDateFormat timestampFormat;
+        private Timestamp timestampFormat;
         
         private int bufferSize = -1;
         
@@ -3508,25 +3512,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
          * only be done once per icon.
          */
         private final HashMap<Usericon, MutableAttributeSet> savedIcons = new HashMap<>();
-        
-        /**
-         * Creates a new ImageIcon based on the given ImageIcon that has a small
-         * space on the side, so it can be displayed properly.
-         * 
-         * @param icon
-         * @return 
-         */
-        private ImageIcon addSpaceToIcon(ImageIcon icon) {
-            int width = icon.getIconWidth();
-            int height = icon.getIconHeight();
-            int hspace = 3;
-            BufferedImage res = new BufferedImage(width + hspace, height, BufferedImage.TYPE_INT_ARGB);
-            Graphics g = res.getGraphics();
-            g.drawImage(icon.getImage(), 0, 0, null);
-            g.dispose();
-
-            return new ImageIcon(res);
-        }
         
         /**
          * Get the current styles from the StyleServer and also set some
@@ -3703,6 +3688,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             addNumericSetting(Setting.AUTO_SCROLL_TIME, 30, 5, 1234);
             addNumericSetting(Setting.EMOTICON_MAX_HEIGHT, 200, 0, 300);
             addNumericSetting(Setting.EMOTICON_SCALE_FACTOR, 100, 1, 200);
+            addNumericSetting(Setting.USERICON_SCALE_FACTOR, 100, 1, 200);
+            addNumericSetting(Setting.CUSTOM_USERICON_SCALE_MODE, 0, 0, 10);
             addNumericSetting(Setting.DISPLAY_NAMES_MODE, 0, 0, 10);
             addNumericSetting(Setting.BOTTOM_MARGIN, -1, -1, 100);
             addNumericSetting(Setting.HIGHLIGHT_HOVERED_USER, 0, 0, 4);
@@ -4057,26 +4044,16 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
          * @return The created style (or read from the cache)
          */
         public MutableAttributeSet makeIconStyle(Usericon icon, User user) {
-            MutableAttributeSet style = savedIcons.get(icon);
-            if (style == null) {
-                //System.out.println("Creating icon style: "+icon);
-                style = new SimpleAttributeSet(nick());
-                if (icon != null && icon.image != null) {
-                    StyleConstants.setIcon(style, addSpaceToIcon(icon.image));
-                    style.addAttribute(Attribute.USERICON, icon);
-                }
-                savedIcons.put(icon, style);
-            }
-            // Update per-user information every time
+            MutableAttributeSet style = new SimpleAttributeSet(nick());
+            CachedImage<Usericon> usericonImage = icon.getIcon(usericonScaleFactor(), getInt(Setting.CUSTOM_USERICON_SCALE_MODE), ChannelTextPane.this);
+            StyleConstants.setIcon(style, usericonImage.getImageIcon());
+            style.addAttribute(Attribute.USERICON, usericonImage);
             if (icon.type == Usericon.Type.TWITCH
                     && (Usericon.typeFromBadgeId(icon.badgeType.id) == Usericon.Type.SUB
                     || Usericon.typeFromBadgeId(icon.badgeType.id) == Usericon.Type.FOUNDER)
                     && user != null
                     && user.getSubMonths() > 0) {
                 style.addAttribute(Attribute.USERICON_INFO, DateTime.formatMonthsVerbose(user.getSubMonths()));
-            }
-            else {
-                style.removeAttribute(Attribute.USERICON_INFO);
             }
             return style;
         }
@@ -4087,6 +4064,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         
         public float emoticonScaleFactor() {
             return (float)(numericSettings.get(Setting.EMOTICON_SCALE_FACTOR) / 100.0);
+        }
+        
+        public float usericonScaleFactor() {
+            return (float)(numericSettings.get(Setting.USERICON_SCALE_FACTOR) / 100.0);
         }
         
         public int getInt(Setting setting) {
@@ -4132,7 +4113,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
         public MutableAttributeSet emoticon(Emoticon emoticon) {
             // Does this need any other attributes e.g. standard?
             SimpleAttributeSet emoteStyle = new SimpleAttributeSet();
-            EmoticonImage emoteImage = emoticon.getIcon(
+            CachedImage<Emoticon> emoteImage = emoticon.getIcon(
                     emoticonScaleFactor(), emoticonMaxHeight(), emoticonImageType(), ChannelTextPane.this);
             StyleConstants.setIcon(emoteStyle, emoteImage.getImageIcon());
             
@@ -4146,7 +4127,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             return Emoticon.makeImageType(isEnabled(Setting.EMOTICONS_ANIMATED));
         }
         
-        public SimpleDateFormat timestampFormat() {
+        public Timestamp timestampFormat() {
             return timestampFormat;
         }
         
@@ -4172,6 +4153,25 @@ public class ChannelTextPane extends JTextPane implements LinkListener, Emoticon
             style.addAttribute(Attribute.REPLY_PARENT_MSG_ID, parentMsgId);
             return style;
         }
+    }
+    
+    /**
+     * Creates a new ImageIcon based on the given ImageIcon that has a small
+     * space on the side, so it can be displayed properly.
+     *
+     * @param icon
+     * @return
+     */
+    public static ImageIcon addSpaceToIcon(ImageIcon icon) {
+        int width = icon.getIconWidth();
+        int height = icon.getIconHeight();
+        int hspace = 3;
+        BufferedImage res = new BufferedImage(width + hspace, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics g = res.getGraphics();
+        g.drawImage(icon.getImage(), 0, 0, null);
+        g.dispose();
+
+        return new ImageIcon(res);
     }
     
     private static class MentionCheck {

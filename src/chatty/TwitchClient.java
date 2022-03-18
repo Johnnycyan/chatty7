@@ -48,6 +48,7 @@ import chatty.util.Speedruncom;
 import chatty.util.StreamHighlightHelper;
 import chatty.util.StreamStatusWriter;
 import chatty.util.StringUtil;
+import chatty.util.Timestamp;
 import chatty.util.TwitchEmotesApi;
 import chatty.util.UserRoom;
 import chatty.util.Webserver;
@@ -264,6 +265,7 @@ public class TwitchClient {
         api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
         bttvEmotes = new BTTVEmotes(new EmoteListener(), api);
         TwitchEmotesApi.api.setTwitchApi(api);
+        Timestamp.setTwitchApi(api);
         
         Language.setLanguage(settings.getString("language"));
         
@@ -1491,6 +1493,29 @@ public class TwitchClient {
             }
             else {
                 g.printSystem("Usage: /foreach [list] > [command]");
+            }
+        });
+        commands.add("runin", p -> {
+            String[] split;
+            if (!p.hasArgs() || (split = p.getArgs().split(" ", 2)).length != 2) {
+                g.printSystem("Usage: /runin [channel] [command]");
+                return;
+            }
+            String chan = split[0];
+            String command = split[1];
+            if (Helper.isValidStream(chan)) {
+                chan = Helper.toChannel(chan);
+            }
+            chan = StringUtil.toLowerCase(chan);
+            /**
+             * Whisper channels ($) don't count as "open" in the same way
+             * regular channels do.
+             */
+            if (isChannelOpen(chan) || Helper.isValidWhisperChannel(chan)) {
+                textInput(c.getRoomByChannel(chan), command, p.getParameters().copy());
+            }
+            else {
+                g.printSystem("Invalid channel: " + chan);
             }
         });
     }
