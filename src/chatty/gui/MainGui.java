@@ -802,7 +802,7 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
         
-        hotkeyManager.registerAction("window.toggleUserlist", "Window: Toggle Userlist", new AbstractAction() {
+        addMenuAction("window.toggleUserlist", "Window: Toggle Userlist", KeyEvent.VK_U, new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
