@@ -469,6 +469,21 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
         
+        hotkeyManager.registerAction("tabs.switch", "Tabs: Switch to tab (specify index or #chan)", new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String target = e.getActionCommand();
+                try {
+                    int index = Integer.parseInt(target);
+                    channels.switchToTabIndex(index - 1);
+                }
+                catch (NumberFormatException ex) {
+                    channels.switchToTabId(target);
+                }
+            }
+        });
+        
         hotkeyManager.registerAction("tabs.close", "Tabs: Close tab/popout", new AbstractAction() {
 
             @Override
@@ -3576,7 +3591,7 @@ public class MainGui extends JFrame implements Runnable {
             if (m instanceof SubscriberMessage) {
                 m.user.addSub(message, text);
             } else {
-                m.user.addInfo(message, text);
+                m.user.addInfo(message, m.text);
             }
             updateUserInfoDialog(m.user);
         }
