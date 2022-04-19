@@ -267,6 +267,7 @@ public class Channels {
         dock.setSetting(DockSetting.Type.TAB_SCROLL, gui.getSettings().getBoolean("tabsMwheelScrolling"));
         dock.setSetting(DockSetting.Type.TAB_SCROLL_ANYWHERE, gui.getSettings().getBoolean("tabsMwheelScrollingAnywhere"));
         dock.setSetting(DockSetting.Type.TAB_CLOSE_MMB, gui.getSettings().getBoolean("tabsCloseMMB"));
+        dock.setSetting(DockSetting.Type.TAB_CLOSE_SWITCH_TO_PREV, gui.getSettings().getBoolean("tabsCloseSwitchToPrev"));
         dock.setSetting(DockSetting.Type.TAB_ORDER, DockSetting.TabOrder.INSERTION);
         dock.setSetting(DockSetting.Type.FILL_COLOR, UIManager.getColor("TextField.selectionBackground"));
         dock.setSetting(DockSetting.Type.LINE_COLOR, UIManager.getColor("TextField.selectionForeground"));
@@ -528,6 +529,7 @@ public class Channels {
         updateKeepEmptySetting();
         loadingLayout = false;
         checkDefaultChannel();
+        setActiveTabs(layout);
         
         Debugging.println("layout", "Finished loading layout. Add: %s Join: %s Closing: %s Channels: %s", d.getAddChannels(), d.getJoinChannels(), closingChannels, channels);
     }
@@ -620,6 +622,7 @@ public class Channels {
             loadingLayout = false;
             updateTabComparator();
             updateKeepEmptySetting();
+            setActiveTabs(layout);
         }
     }
     
@@ -627,6 +630,23 @@ public class Channels {
         lastLoadedLayout = layout;
         openedSinceLayoutLoad.clear();
         dock.loadLayout(layout);
+    }
+    
+    /**
+     * Switches to each content id that was marked as active tab in the layout.
+     * For areas that only contain a single content or tabs that are already
+     * active this probably doesn't do much, but otherwise it switches to the
+     * previously active tab for each tab pane.
+     *
+     * @param layout 
+     */
+    private void setActiveTabs(DockLayout layout) {
+        for (String id : layout.getActiveContentIds()) {
+            DockContent content = dock.getContentById(id);
+            if (content != null) {
+                dock.setActiveContent(content);
+            }
+        }
     }
     
     //==========================

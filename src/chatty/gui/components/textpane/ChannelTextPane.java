@@ -524,15 +524,18 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             }
         }
         String text = String.format("[%s] %s", message.type, message.infoText);
-        print(text, userStyle);
+        int offset = text.length();
+        printSpecials(message.user, text, userStyle, message.highlightMatches);
         if (!StringUtil.isNullOrEmpty(message.attachedMessage)) {
             boolean showBrackets = !isAnnouncement;
             if (showBrackets) {
                 print(" [", style);
+                offset += 2;
             }
             // Output with emotes, but don't turn URLs into clickable links
             boolean ignoreLinks = !isAnnouncement;
-            printSpecialsNormal(message.attachedMessage, message.user, style, message.emotes, ignoreLinks, false, null, null, null, message.tags);
+            java.util.List<Match> highlightMatches = Match.shiftMatchList(message.highlightMatches, -offset);
+            printSpecialsNormal(message.attachedMessage, message.user, style, message.emotes, ignoreLinks, false, highlightMatches, null, null, message.tags);
             if (showBrackets) {
                 print("]", style);
             }
@@ -548,9 +551,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         userStyle.addAttribute(Attribute.ID_AUTOMOD, message.msgId);
         // Should be the same as the start of the "text" in the AutoModMessage,
         // so highlight matches are displayed properly
-        String startText = "[AutoMod] <"+message.user.getDisplayNick()+">";
-        print(startText, userStyle);
-        printSpecialsInfo(" "+message.message, style,
+        String startText = "[AutoMod] <"+message.user.getDisplayNick()+"> ";
+        printSpecials(message.user, startText, userStyle, message.highlightMatches);
+        printSpecialsInfo(message.message, style,
                 Match.shiftMatchList(message.highlightMatches, -startText.length()));
         finishLine();
     }
@@ -2343,6 +2346,18 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         
         // Actually output it
         printSpecials(user, text, style, ranges, rangesStyle, highlightMatches);
+    }
+    
+    /**
+     * Only custom style and highlight matches.
+     * 
+     * @param user
+     * @param text
+     * @param style
+     * @param highlightMatches 
+     */
+    private void printSpecials(User user, String text, AttributeSet style, java.util.List<Match> highlightMatches) {
+        printSpecials(user, text, style, new TreeMap<>(), new HashMap<>(), highlightMatches);
     }
     
     private void printSpecials(User user, String text,
