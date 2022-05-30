@@ -110,6 +110,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import chatty.util.dnd.DockPopout;
+import chatty.util.gif.FocusUpdates;
+import chatty.util.gif.GifUtil;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -1061,6 +1063,9 @@ public class MainGui extends JFrame implements Runnable {
         dockedDialogs.loadSettings();
         
         updateTokenScopes();
+
+        FocusUpdates.set(client.settings);
+        GifUtil.setSettings(client.settings);
 
         //FORK SETTINGS
         updateForkSettings();
@@ -3741,10 +3746,29 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     public void printSystem(final String line) {
+        printSystem(null, line);
+    }
+    
+    public void printSystem(final Room room, final String line) {
         GuiUtil.edt(() -> {
-            Channel panel = channels.getActiveChannel();
-            if (panel != null) {
-                printInfo(panel, InfoMessage.createSystem(line));
+            Channel channel;
+            if (room == null || room == Room.EMPTY) {
+                channel = channels.getActiveChannel();
+            }
+            else {
+                channel = channels.getChannel(room);
+            }
+            if (channel != null) {
+                printInfo(channel, InfoMessage.createSystem(line));
+            }
+        });
+    }
+    
+    public void printSystemMultline(final Room room, final String text) {
+        GuiUtil.edt(() -> {
+            String[] lines = text.split("\n");
+            for (String line : lines) {
+                printSystem(room, line);
             }
         });
     }
@@ -3959,6 +3983,10 @@ public class MainGui extends JFrame implements Runnable {
                 debugWindow.printLinePubSub(line);
             }
         });
+    }
+    
+    public void printTimerLog(String line) {
+        GuiUtil.edt(() -> debugWindow.printTimerLog(line));
     }
     
     public void printModerationAction(final ModeratorActionData data,

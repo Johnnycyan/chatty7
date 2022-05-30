@@ -10,6 +10,7 @@ import chatty.util.commands.CustomCommands;
 import chatty.util.api.usericons.Usericon;
 import chatty.util.api.usericons.UsericonManager;
 import chatty.ChannelStateManager.ChannelStateListener;
+import chatty.Commands.CommandParsedArgs;
 import chatty.util.api.TwitchApiResultListener;
 import chatty.util.api.Emoticon;
 import chatty.util.api.StreamInfoListener;
@@ -49,6 +50,8 @@ import chatty.util.StreamHighlightHelper;
 import chatty.util.StreamStatusWriter;
 import chatty.util.StringUtil;
 import chatty.util.Timestamp;
+import chatty.util.TimerCommand;
+import chatty.util.TimerCommand.TimerResult;
 import chatty.util.TwitchEmotesApi;
 import chatty.util.UserRoom;
 import chatty.util.Webserver;
@@ -197,6 +200,7 @@ public class TwitchClient {
     private final SpamProtection spamProtection;
     public final CustomCommands customCommands;
     public final Commands commands = new Commands();
+    private final TimerCommand timerCommand;
     
     private final StreamHighlightHelper streamHighlights;
     
@@ -335,6 +339,28 @@ public class TwitchClient {
         g.showGui();
         
         autoModCommandHelper = new AutoModCommandHelper(g, api);
+        
+        timerCommand = new TimerCommand(settings, new TimerCommand.TimerAction() {
+            @Override
+            public void performAction(String command, String chan, Parameters parameters, Set<TimerCommand.Option> options) {
+                if (isChannelOpen(chan)) {
+                    textInput(c.getRoomByChannel(chan), command, parameters);
+                }
+                else if (options.contains(TimerCommand.Option.CHANNEL_LENIENT)) {
+                    parameters.put(TimerCommand.TIMER_PARAMETERS_KEY_CHANGED_CHANNEL, "true");
+                    textInput(g.getActiveRoom(), command, parameters);
+                }
+                else {
+                    g.printSystem("Timed command not run, channel " + chan + " not open or not valid");
+                    g.printTimerLog("Timed command not run, channel " + chan + " not open or not valid: " + command);
+                }
+            }
+
+            @Override
+            public void log(String line) {
+                g.printTimerLog(line);
+            }
+        });
         
         if (Chatty.DEBUG) {
             Room testRoom =  Room.createRegular("");
@@ -500,6 +526,11 @@ public class TwitchClient {
         
         customCommandLaunch(launchCommand);
         launchCommand = null;
+        
+        String timerCommandLoadResult = timerCommand.loadFromSettings(settings);
+        if (timerCommandLoadResult != null) {
+            g.printSystem(timerCommandLoadResult);
+        }
     }
     
 
@@ -871,7 +902,7 @@ public class TwitchClient {
         else if (text.startsWith("/")) {
             commandInput(room, text, commandParameters);
         }
-        else {
+        else if (!checkRejectTimedMessage(room, commandParameters)) {
             if (c.onChannel(channel)) {
                 sendMessage(channel, text, true);
             }
@@ -990,6 +1021,32 @@ public class TwitchClient {
         else {
             g.printLine("# Message not sent to prevent ban: " + text);
         }
+    }
+    
+    private boolean checkRejectTimedMessage(Room room, Parameters parameters) {
+        User localUser = getLocalUser(room.getChannel());
+        boolean isTimed = parameters != null
+                            && parameters.hasKey(TimerCommand.TIMER_PARAMETERS_KEY);
+        boolean rejected = isTimed &&
+                            (
+                                !Helper.isRegularChannelStrict(room.getChannel())
+                                || localUser == null
+                                || !localUser.hasModeratorRights()
+                                || parameters.hasKey(TimerCommand.TIMER_PARAMETERS_KEY_CHANGED_CHANNEL)
+                            );
+        if (rejected) {
+            g.printSystem(room, "Could not send timed message (not a moderator or invalid channel)");
+        }
+        return rejected;
+    }
+    
+    private boolean rejectTimedMessage(String command, Room room, Parameters parameters) {
+        boolean rejected = parameters != null && parameters.hasKey(TimerCommand.TIMER_PARAMETERS_KEY);
+        if (rejected) {
+            g.printSystem(room, "Could not send timed message (command /"+command+" not allowed)");
+            g.printTimerLog("Could not send timed message (command /"+command+" not allowed): "+parameters.getArgs());
+        }
+        return rejected;
     }
     
     /**
@@ -1119,14 +1176,23 @@ public class TwitchClient {
             }
         });
         commands.add("raw", p -> {
+            if (rejectTimedMessage("raw", p.getRoom(), p.getParameters())) {
+                return;
+            }
             if (p.hasArgs()) {
                 c.sendRaw(p.getArgs());
             }
         });
         commands.add("me", p -> {
+            if (checkRejectTimedMessage(p.getRoom(), p.getParameters())) {
+                return;
+            }
             commandActionMessage(p.getChannel(), p.getArgs());
         });
         commands.add("say", p -> {
+            if (checkRejectTimedMessage(p.getRoom(), p.getParameters())) {
+                return;
+            }
             if (p.hasArgs()) {
                 sendMessage(p.getChannel(), p.getArgs());
             }
@@ -1135,9 +1201,15 @@ public class TwitchClient {
             }
         });
         commands.add("msg", p -> {
+            if (rejectTimedMessage("msg", p.getRoom(), p.getParameters())) {
+                return;
+            }
             commandCustomMessage(p.getArgs());
         });
         commands.add("msgreply", p -> {
+            if (checkRejectTimedMessage(p.getRoom(), p.getParameters())) {
+                return;
+            }
             if (p.getParameters().notEmpty("nick", "msg-id", "msg") && p.hasArgs()) {
                     String atUsername = p.getParameters().get("nick");
                     String atMsgId = p.getParameters().get("msg-id");
@@ -1150,6 +1222,9 @@ public class TwitchClient {
             }
         });
         commands.add("w", p -> {
+            if (rejectTimedMessage("w", p.getRoom(), p.getParameters())) {
+                return;
+            }
             w.whisperCommand(p.getArgs(), false);
         });
         commands.add("changetoken", p -> {
@@ -1268,6 +1343,33 @@ public class TwitchClient {
         commands.add("appinfo", p -> {
             g.printSystem(LogUtil.getAppInfo()+" [Connection] "+c.getConnectionInfo());
         });
+        commands.add("timer", p -> {
+            TimerResult result = timerCommand.command(p.getArgs(), p.getRoom(), p.getParameters());
+            if (result.message != null) {
+                g.printSystemMultline(null, result.message);
+                g.printTimerLog(result.message);
+            }
+        });
+        commands.add("exportText", p -> {
+            CommandParsedArgs args = p.parsedArgs(2);
+            if (args != null) {
+                boolean success = MiscUtil.exportText(args.get(0),
+                        args.hasOption("n")
+                            ? args.get(1).replace("\\n", "\n")
+                            : args.get(1), args.hasOption("a"));
+                if (success) {
+                    if (!args.hasOption("s")) {
+                        g.printSystem("File written successfully.");
+                    }
+                }
+                else {
+                    g.printSystem("Failed to write file, see debug log.");
+                }
+            }
+            else {
+                g.printSystem("Usage: /exportText <fileName> <text>");
+            }
+        });
         
         //-----------------------
         // Settings/Customization
@@ -1277,6 +1379,15 @@ public class TwitchClient {
         });
         commands.add("set2", p -> {
             g.printSystem(settings.setTextual(p.getArgs(), false));
+        });
+        commands.add("setSwitch", p -> {
+            g.printSystem(settings.setSwitchTextual(p.getArgs(), true));
+        });
+        commands.add("setSwitch2", p -> {
+            g.printSystem(settings.setSwitchTextual(p.getArgs(), false));
+        });
+        commands.add("setList", p -> {
+            g.printSystem(settings.setListTextual(p.getArgs()));
         });
         commands.add("get", p -> {
             g.printSystem(settings.getTextual(p.getArgs()));
@@ -1493,6 +1604,15 @@ public class TwitchClient {
                     else {
                         for (String item : splitList) {
                             Parameters param = Parameters.create(item);
+                            /**
+                             * Transfer this one if present. Not sure why not
+                             * just all are copied (except for args), but
+                             * keeping it like this at least doesn't change
+                             * behaviour.
+                             */
+                            if (p.getParameters().hasKey(TimerCommand.TIMER_PARAMETERS_KEY)) {
+                                param.put(TimerCommand.TIMER_PARAMETERS_KEY, p.getParameters().get(TimerCommand.TIMER_PARAMETERS_KEY));
+                            }
                             Debugging.println("foreach", "Foreach command: %s Param: %s", customCommand, param);
                             anonCustomCommand(p.getRoom(), customCommand, param);
                         }
@@ -1526,6 +1646,18 @@ public class TwitchClient {
                 g.printSystem("Invalid channel: " + chan);
             }
         });
+        commands.add("debug", p -> {
+            if (rejectTimedMessage("debug", p.getRoom(), p.getParameters())) {
+                return;
+            }
+            String[] split = p.getArgs().split(" ", 2);
+            String actualCommand = split[0];
+            String actualParamter = null;
+            if (split.length == 2) {
+                actualParamter = split[1];
+            }
+            testCommands(p.getRoom(), actualCommand, actualParamter);
+        });
     }
     
     /**
@@ -1547,8 +1679,10 @@ public class TwitchClient {
             // Already done if true
         }
         
-        else if (c.command(channel, command, parameter, null)) {
-            // Already done if true
+        else if (TwitchCommands.isCommand(command)) {
+            if (!checkRejectTimedMessage(room, parameters)) {
+                c.command(channel, command, parameter, null);
+            }
         }
         
         // Has to be tested last, so regular commands with the same name take
@@ -1556,23 +1690,6 @@ public class TwitchClient {
         else if (customCommands.containsCommand(command, room)) {
             customCommand(room, command, parameters);
         }
-        
-        else if (command.equals("debug")) {
-            String[] split = parameter.split(" ", 2);
-            String actualCommand = split[0];
-            String actualParamter = null;
-            if (split.length == 2) {
-                actualParamter = split[1];
-            }
-            testCommands(room, actualCommand, actualParamter);
-        }
-        
-        //--------------------
-        // Only for testing
-        else if (Chatty.DEBUG || settings.getBoolean("debugCommands")) {
-            testCommands(room, command, parameter);
-        }
-        //----------------------
         
         else {
             g.printLine(Language.getString("chat.unknownCommand", command));
@@ -1751,16 +1868,6 @@ public class TwitchClient {
             if (raw != null) {
                 c.simulate(raw);
             }
-        } else if (command.equals("lb")) {
-            String[] split = parameter.split("&");
-            String message = "";
-            for (int i=0;i<split.length;i++) {
-                if (!message.isEmpty()) {
-                    message += "\r";
-                }
-                message += split[i];
-            }
-            sendMessage(channel, message);
         } else if (command.equals("c1")) {
             sendMessage(channel, (char)1+parameter);
         } else if (command.equals("gc")) {
@@ -1821,13 +1928,7 @@ public class TwitchClient {
             String[] split = parameter.split(" ", 2);
             int count = Integer.parseInt(split[0]);
             for (int i=0;i<count;i++) {
-                commandInput(room, "/"+split[1]);
-            }
-        } else if (command.equals("chain")) {
-            String[] split = parameter.split("\\|");
-            for (String part : split) {
-                System.out.println("Command: "+part.trim());
-                commandInput(room, "/"+part.trim());
+//                commandInput(room, "/"+split[1]);
             }
         } else if (command.equals("modactiontest3")) {
             List<String> args = new ArrayList<>();

@@ -79,7 +79,7 @@ public class ChannelCompletion implements AutoCompletionServer {
     
     private final Set<String> settingCommands = new TreeSet<>(Arrays.asList(new String[]{
         "set", "set2", "add", "add2", "addUnique", "addUnique2", "clearSetting",
-        "remove", "remove2", "get", "reset"
+        "remove", "remove2", "get", "reset", "setSwitch", "setList"
     }));
     
     private boolean isSettingPrefix(String prefix) {
@@ -168,6 +168,9 @@ public class ChannelCompletion implements AutoCompletionServer {
             //--------------
             input.setCompleteToCommonPrefix(true);
             items = filterCompletionItems(main.getSettingNames(), search);
+        } else if (prefix.matches("/timer (-[a-z]+ )?:")) {
+            // Prevent Emoji popup when entering timer id
+            items = new ArrayList<>();
         } else if (prefix.equals("/")) {
                 //--------------
             // Command Names

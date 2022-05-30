@@ -111,7 +111,6 @@ public class SettingsManager {
 
         settings.addBoolean("dontSaveSettings", false);
         settings.addLong("autoSaveSettings", 15);
-        settings.addBoolean("debugCommands", false, false);
         settings.addBoolean("debugLogIrc", false);
         settings.addBoolean("debugLogIrcFile", false);
         settings.addBoolean("autoRequestMods", false);
@@ -250,6 +249,9 @@ public class SettingsManager {
         settings.addBoolean("bttvEmotes", true);
         settings.addBoolean("showAnimatedEmotes", true);
         settings.addBoolean("animatedEmotes", true);
+        settings.addLong("animationPause", 2);
+        settings.addLong("animationPauseFrame", 2);
+        settings.addBoolean("legacyAnimations", false);
         settings.addList("ignoredEmotes", new ArrayList(), Setting.STRING);
         settings.addList("favoriteEmotes", new ArrayList(), Setting.LIST);
         settings.addLong("smilies", 10);
@@ -332,6 +334,7 @@ public class SettingsManager {
         commandsDefault.add("/permit !permit $$1");
         settings.addList("commands", commandsDefault, Setting.STRING);
         settings.addMap("var", new HashMap(), Setting.STRING);
+        settings.addList("timers", new ArrayList<>(), Setting.LIST);
 
         // Menu Entries
         settings.addString("timeoutButtons","/Ban[B], /Unban[U], 5s[1], 2m[2], 10m[3], 30m[4], /ModUnmod"
