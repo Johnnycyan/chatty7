@@ -7,12 +7,14 @@ import chatty.gui.GuiUtil;
 import chatty.util.api.usericons.Usericon.Type;
 import chatty.gui.MainGui;
 import chatty.util.StringUtil;
+import chatty.util.irc.IrcBadges;
 import chatty.util.irc.MsgTags;
 import chatty.util.settings.Settings;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -74,7 +76,7 @@ public class UsericonManager {
     }
     
     public synchronized void setThirdPartyIcons(List<Usericon> icons) {
-        LOGGER.info(String.format("Added %d third-party badges", icons.size()));
+        LOGGER.info(String.format(Locale.ROOT, "Added %d third-party badges", icons.size()));
         this.thirdParty.clear();
         this.thirdParty.addAll(icons);
     }
@@ -188,7 +190,7 @@ public class UsericonManager {
         return result;
     }
     
-    public synchronized List<Usericon> getBadges(Map<String, String> badgesDef,
+    public synchronized List<Usericon> getBadges(IrcBadges badgesDef,
             User user, User localUser, boolean botBadgeEnabled, MsgTags tags, boolean channelLogo) {
         List<Usericon> icons = getTwitchBadges(badgesDef, user, tags);
         if (user.isBot() && botBadgeEnabled) {
@@ -218,13 +220,14 @@ public class UsericonManager {
         return icons;
     }
 
-    private List<Usericon> getTwitchBadges(Map<String, String> badgesDef, User user, MsgTags tags) {
+    private List<Usericon> getTwitchBadges(IrcBadges badgesDef, User user, MsgTags tags) {
         if (badgesDef == null || badgesDef.isEmpty()) {
             return new ArrayList<>();
         }
         List<Usericon> result = new ArrayList<>();
-        for (String id : badgesDef.keySet()) {
-            String value = badgesDef.get(id);
+        for (int i=0; i<badgesDef.size(); i++) {
+            String id = badgesDef.getId(i);
+            String value = badgesDef.getVersion(i);
             Usericon icon = getIcon(Type.TWITCH, id, value, user, tags);
             if (icon != null) {
                 result.add(icon);
@@ -407,13 +410,13 @@ public class UsericonManager {
      */
     private boolean iconMatchesUser(Usericon icon, User user, MsgTags tags) {
         if (icon.badgeTypeRestriction.id != null) {
-            Map<String, String> badges = user.getTwitchBadges();
+            IrcBadges badges = user.getTwitchBadges();
             String id = icon.badgeTypeRestriction.id;
             String version = icon.badgeTypeRestriction.version;
             if (badges == null) {
                 return false;
             }
-            if (!badges.containsKey(id)) {
+            if (!badges.hasId(id)) {
                 return false;
             }
             if (version != null && !badges.get(id).equals(version)) {
@@ -596,9 +599,9 @@ public class UsericonManager {
     }
  
     public synchronized void debug() {
-        LOGGER.info(String.format("Default usericons (%d): %s",
+        LOGGER.info(String.format(Locale.ROOT, "Default usericons (%d): %s",
                 defaultIcons.size(), defaultIcons));
-        LOGGER.info(String.format("Custom usericons (%d): %s",
+        LOGGER.info(String.format(Locale.ROOT, "Custom usericons (%d): %s",
                 customIcons.size(), customIcons));
     }
 

@@ -5,6 +5,7 @@ import chatty.Chatty;
 import chatty.Helper;
 import chatty.gui.emoji.EmojiUtil;
 import chatty.util.CombinedEmoticon;
+import chatty.util.LogUtil;
 import chatty.util.MiscUtil;
 import chatty.util.StringUtil;
 import chatty.util.TwitchEmotesApi.EmotesetInfo;
@@ -26,6 +27,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -186,15 +188,23 @@ public class Emoticons {
     
     private final EmoticonFavorites favorites = new EmoticonFavorites();
     
+    private static final int DEFAULT_IMAGE_EXPIRE_MINUTES = 4*60;
+    private static final int FASTER_IMAGE_EXPIRE_MINUTES = 1*60;
+    
     public Emoticons() {
         Timer timer = new Timer(1*60*60*1000, e -> {
-            int removedCount = 0;
-            removedCount += clearOldEmoticonImages(twitchEmotesById.values());
-            removedCount += clearOldEmoticonImages(otherGlobalEmotes);
-            for (Set<Emoticon> emotes : streamEmoticons.values()) {
-                removedCount += clearOldEmoticonImages(emotes);
+            int imageExpireMinutes = DEFAULT_IMAGE_EXPIRE_MINUTES;
+            if (LogUtil.getMemoryPercentageOfMax() > 80) {
+                imageExpireMinutes = FASTER_IMAGE_EXPIRE_MINUTES;
             }
-            LOGGER.info("Cleared " + removedCount + " unused emoticon images");
+            int removedCount = 0;
+            removedCount += clearOldEmoticonImages(twitchEmotesById.values(), imageExpireMinutes);
+            removedCount += clearOldEmoticonImages(otherGlobalEmotes, imageExpireMinutes);
+            for (Set<Emoticon> emotes : streamEmoticons.values()) {
+                removedCount += clearOldEmoticonImages(emotes, imageExpireMinutes);
+            }
+            LOGGER.info(String.format("Cleared %d unused emoticon images (%dm)",
+                    removedCount, imageExpireMinutes));
         });
         timer.setRepeats(true);
         timer.start();
@@ -295,7 +305,7 @@ public class Emoticons {
             localEmotes.clear();
         }
         if (removedCount >= 0) {
-            LOGGER.info(String.format("Removed %d emotes (%s/%s/%s/%s)",
+            LOGGER.info(String.format(Locale.ROOT, "Removed %d emotes (%s/%s/%s/%s)",
                     removedCount,
                     update.typeToRemove,
                     update.subTypeToRemove,
@@ -463,10 +473,11 @@ public class Emoticons {
         return allHelixEmoteIds.contains(emote.stringId);
     }
     
-    private static int clearOldEmoticonImages(Collection<Emoticon> emotes) {
+    private static int clearOldEmoticonImages(Collection<Emoticon> emotes,
+                                              int imageExpireMinutes) {
         int removedCount = 0;
         for (Emoticon emote : emotes) {
-            removedCount += emote.clearOldImages();
+            removedCount += emote.clearOldImages(imageExpireMinutes);
         }
         return removedCount;
     }

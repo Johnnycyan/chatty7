@@ -17,6 +17,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import chatty.util.api.CachedImage.CachedImageUser;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * A single emoticon, that contains a pattern, an URL to the image and
@@ -81,7 +84,7 @@ public class Emoticon {
     public final String creator;
     
     private String stream;
-    private Set<String> infos;
+    private ArrayList<String> infos;
     private String emotesetInfo;
     private boolean isAnimated;
     
@@ -113,7 +116,7 @@ public class Emoticon {
         private String stream;
         private String emotesetInfo;
         private Set<String> streamRestrictions;
-        private Set<String> infos;
+        private ArrayList<String> infos;
         private String emoteset = SET_NONE;
         private String stringId = null;
         private String stringIdAlias = null;
@@ -190,7 +193,7 @@ public class Emoticon {
         public Builder addInfo(String info) {
             if (info != null) {
                 if (infos == null) {
-                    infos = new HashSet<>();
+                    infos = new ArrayList<>(1);
                 }
                 infos.add(info);
             }
@@ -245,11 +248,11 @@ public class Emoticon {
     public static String getTwitchEmoteUrlById(String id, int factor, ImageType imageType) {
         switch (imageType) {
             case STATIC:
-                return String.format("https://static-cdn.jtvnw.net/emoticons/v2/%s/static/dark/%d.0", id, factor);
+                return String.format(Locale.ROOT, "https://static-cdn.jtvnw.net/emoticons/v2/%s/static/dark/%d.0", id, factor);
             case ANIMATED_DARK:
-                return String.format("https://static-cdn.jtvnw.net/emoticons/v2/%s/default/dark/%d.0", id, factor);
+                return String.format(Locale.ROOT, "https://static-cdn.jtvnw.net/emoticons/v2/%s/default/dark/%d.0", id, factor);
             case ANIMATED_LIGHT:
-                return String.format("https://static-cdn.jtvnw.net/emoticons/v2/%s/default/light/%d.0", id, factor);
+                return String.format(Locale.ROOT, "https://static-cdn.jtvnw.net/emoticons/v2/%s/default/light/%d.0", id, factor);
         }
         return null;
     }
@@ -327,6 +330,9 @@ public class Emoticon {
         this.stringIdAlias = builder.stringIdAlias;
         this.creator = builder.creator;
         this.infos = builder.infos;
+        if (this.infos != null) {
+            this.infos.trimToSize();
+        }
         this.isAnimated = builder.isAnimated;
         this.subType = builder.subtype;
     }
@@ -434,16 +440,10 @@ public class Emoticon {
     
     public synchronized void addInfos(Set<String> infosToAdd) {
         if (infos == null) {
-            infos = new HashSet<>();
+            infos = new ArrayList<>();
         }
         infos.addAll(infosToAdd);
-    }
-    
-    public synchronized void addInfo(String info) {
-        if (infos == null) {
-            infos = new HashSet<>();
-        }
-        infos.add(info);
+        infos.trimToSize();
     }
     
     /**
@@ -460,7 +460,7 @@ public class Emoticon {
         if (infos == null) {
             return new TreeSet<>();
         }
-        return new TreeSet<>(infos);
+        return new TreeSet<String>(infos);
     }
     
     public synchronized boolean isAnimated() {
@@ -566,7 +566,7 @@ public class Emoticon {
                 public boolean loadImage() {
                     return type != Type.NOT_FOUND_FAVORITE;
                 }
-            }, "emote_" + type);
+            }, ("emote_" + type).intern());
         }
         return images.getIcon(scaleFactor, maxHeight, null, imageType, user);
     }
@@ -585,11 +585,12 @@ public class Emoticon {
      * Set unused image objects to be garbage collected. Should only be called
      * from the EDT.
      *
-     * @return 
+     * @param imageExpireMinutes
+     * @return
      */
-    public int clearOldImages() {
+    public int clearOldImages(int imageExpireMinutes) {
         if (images != null) {
-            return images.clearOldImages();
+            return images.clearOldImages(imageExpireMinutes);
         }
         return 0;
     }

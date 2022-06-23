@@ -76,7 +76,7 @@ public class SettingsManager {
                     JSONParser parser = new JSONParser();
                     JSONObject root = (JSONObject)parser.parse(content);
                     JSONArray ab = (JSONArray)root.get("abEntries");
-                    return new FileManager.FileContentInfo(true, String.format("%d settings, %d addressbook entries",
+                    return new FileManager.FileContentInfo(true, String.format(Locale.ROOT, "%d settings, %d addressbook entries",
                             root.size(), ab != null ? ab.size() : 0));
                 }
                 catch (Exception ex) {
@@ -206,6 +206,7 @@ public class SettingsManager {
         settings.addString("lafScroll", "default");
         settings.addBoolean("lafNativeWindow", false);
         settings.addString("language", "");
+        settings.addString("locale", "");
         settings.addString("timezone", "");
         
         settings.addLong("dialogFontSize", -1);
@@ -332,6 +333,7 @@ public class SettingsManager {
         List<String> commandsDefault = new ArrayList<>();
         commandsDefault.add("/slap /me slaps $$1- around a bit with a large trout");
         commandsDefault.add("/permit !permit $$1");
+        commandsDefault.add("/j /join $$1-");
         settings.addList("commands", commandsDefault, Setting.STRING);
         settings.addMap("var", new HashMap(), Setting.STRING);
         settings.addList("timers", new ArrayList<>(), Setting.LIST);

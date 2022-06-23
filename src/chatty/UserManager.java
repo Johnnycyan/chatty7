@@ -1,6 +1,7 @@
 
 package chatty;
 
+import chatty.User.UserSettings;
 import chatty.gui.colors.UsercolorManager;
 import chatty.util.api.usericons.UsericonManager;
 import chatty.util.BotNameManager;
@@ -37,16 +38,11 @@ public class UserManager {
     private boolean capitalizedNames = false;
     
     private final User errorUser = new User("[Error]", Room.createRegular("#[error]"));
-    
-    // Stupid hack to get Usericons in ChannelTextPane without a user (twitchnotify messages)
-    public final User dummyUser = new User("", Room.createRegular("#[error]"));
 
     private CustomNames customNamesManager;
-    private UsericonManager usericonManager;
-    private UsercolorManager usercolorManager;
-    private Addressbook addressbook;
     private BotNameManager botNameManager;
     private Settings settings;
+    private UserSettings userSettings;
     
     public UserManager() {
         Timer clearMessageTimer = new Timer("Clear User Messages", true);
@@ -54,7 +50,7 @@ public class UserManager {
 
             @Override
             public void run() {
-                clearMessagesOfInactiveUsers();
+                clearLinesOfInactiveUsers();
             }
         }, CLEAR_MESSAGES_TIMER, CLEAR_MESSAGES_TIMER);
     }
@@ -112,21 +108,12 @@ public class UserManager {
         this.settings = settings;
     }
     
+    public void setUserSettings(UserSettings settings) {
+        this.userSettings = settings;
+    }
+    
     public void setCapitalizedNames(boolean capitalized) {
         capitalizedNames = capitalized;
-    }
-    
-    public void setUsericonManager(UsericonManager manager) {
-        usericonManager = manager;
-        dummyUser.setUsericonManager(manager);
-    }
-    
-    public void setUsercolorManager(UsercolorManager manager) {
-        usercolorManager = manager;
-    }
-    
-    public void setAddressbook(Addressbook addressbook) {
-        this.addressbook = addressbook;
     }
     
     public void setCustomNamesManager(CustomNames m) {
@@ -218,10 +205,13 @@ public class UserManager {
             if (capitalizedNames) {
                 capitalizedName = name.substring(0, 1).toUpperCase(Locale.ROOT) + name.substring(1);
             }
-            user = new User(capitalizedName, room);
-            user.setUsercolorManager(usercolorManager);
-            user.setAddressbook(addressbook);
-            user.setUsericonManager(usericonManager);
+            /**
+             * Use this constructor to provide the name already used for the map
+             * key, so that there aren't duplicate Strings (before it would
+             * lowercase the capitalized name in the User constructor).
+             */
+            user = new User(name, capitalizedName, null, room);
+            user.setUserSettings(userSettings);
             if (customNamesManager != null) {
                 user.setCustomNick(customNamesManager.getCustomName(name));
             }
@@ -253,12 +243,6 @@ public class UserManager {
             }
             // Put User into the map for the channel
             getUsersByChannel(room.getChannel()).put(name, user);
-            
-            // Set history length
-            int userDialogMessageLimit = settings.getInt("userDialogMessageLimit");
-            if (userDialogMessageLimit >= 0) {
-                user.setMaxNumberOfLines(userDialogMessageLimit);
-            }
         }
         return user;
     }
@@ -305,7 +289,7 @@ public class UserManager {
         getUsersByChannel(channel).clear();
     }
     
-    public synchronized void clearMessagesOfInactiveUsers() {
+    public synchronized void clearLinesOfInactiveUsers() {
         if (settings == null) {
             return;
         }
@@ -314,10 +298,47 @@ public class UserManager {
             int numRemoved = 0;
             for (Map<String, User> chan : users.values()) {
                 for (User user : chan.values()) {
-                    numRemoved += user.clearMessagesIfInactive(clearUserMessages*60*60*1000);
+                    numRemoved += user.clearLinesIfInactive(clearUserMessages*60*60*1000);
                 }
             }
             LOGGER.info("Cleared "+numRemoved+" user messages");
+        }
+    }
+    
+    /**
+     * Clear all lines of a user, or only the number of messages.
+     * 
+     * @param channel The channel to clear the lines on, or {@code null} for all
+     * channels
+     * @param messageNumberOnly Only reset the number of messages
+     * @return The number of users affected (whether something actually changed
+     * or not)
+     */
+    public synchronized int clearLines(String channel, boolean messageNumberOnly) {
+        if (channel == null) {
+            int result = 0;
+            for (String chan : users.keySet()) {
+                if (chan != null) {
+                    result += clearLines(chan, messageNumberOnly);
+                }
+            }
+            return result;
+        }
+        else {
+            int result = 0;
+            Map<String, User> usersOfChannel = users.get(channel);
+            if (usersOfChannel != null) {
+                result += usersOfChannel.size();
+                for (User user : usersOfChannel.values()) {
+                    if (messageNumberOnly) {
+                        user.clearNumberOfMessages();
+                    }
+                    else {
+                        user.clearLines();
+                    }
+                }
+            }
+            return result;
         }
     }
     

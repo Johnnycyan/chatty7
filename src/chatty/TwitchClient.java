@@ -241,8 +241,16 @@ public class TwitchClient {
         settingsManager.backupFiles();
         settingsManager.startAutoSave(this);
         
-        launchCommand = args.get("cc");
+        Language.setLanguage(settings.getString("language"));
+        /**
+         * Not sure how much there is that doesn't get affected by a locale
+         * change at this point, but it's pretty much as early as it can be when
+         * loaded from the settings.
+         */
+        Helper.setDefaultLocale(settings.getString("locale"));
         Helper.setDefaultTimezone(settings.getString("timezone"));
+        
+        launchCommand = args.get("cc");
         
         addressbook = new Addressbook(Chatty.getUserDataDirectory()+"addressbook",
             Chatty.getUserDataDirectory()+"addressbookImport.txt", settings);
@@ -271,8 +279,6 @@ public class TwitchClient {
         TwitchEmotesApi.api.setTwitchApi(api);
         Timestamp.setTwitchApi(api);
         
-        Language.setLanguage(settings.getString("language"));
-        
         pubsub = new chatty.util.api.pubsub.Manager(
                 settings.getString("pubsub"), pubsubListener, api);
         
@@ -296,9 +302,7 @@ public class TwitchClient {
         chatLog = new ChatLog(settings);
         chatLog.start();
         
-        testUser.setUsericonManager(usericonManager);
-        testUser.setUsercolorManager(usercolorManager);
-        testUser.setAddressbook(addressbook);
+        testUser.setUserSettings(new User.UserSettings(100, usercolorManager, addressbook, usericonManager));
         
         speedrunsLive = new SpeedrunsLive();
         speedruncom = new Speedruncom(api);
@@ -313,10 +317,10 @@ public class TwitchClient {
         channelFavorites = new ChannelFavorites(settings, roomManager);
         
         c = new TwitchConnection(new Messages(), settings, "main", roomManager);
-        c.setAddressbook(addressbook);
+        c.setUserSettings(new User.UserSettings(
+                settings.getInt("userDialogMessageLimit"),
+                usercolorManager, addressbook, usericonManager));
         c.setCustomNamesManager(customNames);
-        c.setUsercolorManager(usercolorManager);
-        c.setUsericonManager(usericonManager);
         c.setBotNameManager(botNameManager);
         c.addChannelStateListener(new ChannelStateUpdater());
         c.setMaxReconnectionAttempts(settings.getLong("maxReconnectionAttempts"));
@@ -388,7 +392,7 @@ public class TwitchClient {
             for (int i=0;i<80;i++) {
                 kb.addMessage("abc", false, null);
             }
-            kb.clearMessagesIfInactive(0);
+            kb.clearLinesIfInactive(0);
             kb.addMessage("abc", false, null);
             kb.setDisplayNick("reallyLongDisplayNickAndStuffBlahNeedsToBeLonger");
             kb.setBot(true);
@@ -397,7 +401,7 @@ public class TwitchClient {
             for (int i=0;i<120;i++) {
                 l.addMessage("abc", false, null);
             }
-            l.clearMessagesIfInactive(0);
+            l.clearLinesIfInactive(0);
             for (int i=0;i<100;i++) {
                 l.addMessage("abc", false, null);
             }
@@ -620,12 +624,12 @@ public class TwitchClient {
         //testUser.setAdmin(true);
         //testUser.setStaff(true);
         //testUser.setBroadcaster(true);
-        LinkedHashMap<String, String> badgesTest = new LinkedHashMap<>();
+//        LinkedHashMap<String, String> badgesTest = new LinkedHashMap<>();
 //        badgesTest.put("global_mod", "1");
 //        badgesTest.put("moderator", "1");
 //        badgesTest.put("premium", "1");
 //        badgesTest.put("bits", "1000000");
-        testUser.setTwitchBadges(badgesTest);
+//        testUser.setTwitchBadges(badgesTest);
     }
     
     /**
@@ -1370,6 +1374,20 @@ public class TwitchClient {
                 g.printSystem("Usage: /exportText <fileName> <text>");
             }
         });
+        commands.add("clearUserMessages", p -> {
+            CommandParsedArgs a = p.parsedArgs(0);
+            String chan = p.getChannel();
+            boolean numOnly = false;
+            if (a != null) {
+                chan = a.hasOption("a") ? null : p.getChannel();
+                numOnly = a.hasOption("n");
+            }
+            int result = c.clearLines(chan, numOnly);
+            g.printSystem(p.getRoom(), String.format("%s of %d users in %s",
+                    numOnly ? "Reset number of messages" : "Cleared message history",
+                    result,
+                    chan != null ? chan : "all channels"));
+        });
         
         //-----------------------
         // Settings/Customization
@@ -1992,6 +2010,16 @@ public class TwitchClient {
             }
         } else if (command.equals("threadinfo")) {
             LogUtil.logThreadInfo();
+        } else if (command.equals("addusers")) {
+            String[] split = parameter.split(" ", 2);
+            int amount = Integer.parseInt(split[0]);
+            int messageAmount = Integer.parseInt(split[1]);
+            for (int i=0;i<amount;i++) {
+                User user = c.getUser(channel, "user"+i);
+                for (int m=0;m<messageAmount;m++) {
+                    user.addMessage("abc"+i+" "+m, false, "abc id"+i+" "+m);
+                }
+            }
         }
     }
     
