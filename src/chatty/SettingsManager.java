@@ -176,8 +176,9 @@ public class SettingsManager {
         settings.setFile("userid", loginFile);
         settings.addString("password", "", false);
         settings.addBoolean("connectOnStartup", false, false);
-        settings.addLong("onStart", 1);
-        settings.addBoolean("connectDialogIfMissing", false);
+        settings.addLong("onStart", 3);
+        settings.addBoolean("connectDialogIfMissing", true);
+        settings.addLong("minimizeOnStart", 0);
         settings.addString("autojoinChannel", "");
         settings.addString("previousChannel", "");
         settings.addString("token","");
@@ -204,7 +205,7 @@ public class SettingsManager {
         settings.addLong("lafVariant", 0);
         settings.addString("lafStyle", "regular");
         settings.addString("lafScroll", "default");
-        settings.addBoolean("lafNativeWindow", false);
+        settings.addBoolean("lafNativeWindow", true);
         settings.addString("language", "");
         settings.addString("locale", "");
         settings.addString("timezone", "");
@@ -212,16 +213,16 @@ public class SettingsManager {
         settings.addLong("dialogFontSize", -1);
 
         // Chat Appearance
-        settings.addString("font","Consolas");
+        settings.addString("font","Dialog");
         settings.addLong("fontSize",14);
         settings.addBoolean("timestampFontEnabled", false);
-        settings.addString("timestampFont", "Consolas 14");
+        settings.addString("timestampFont", "Dialog 14");
         settings.addString("inputFont", "Dialog 14");
         settings.addString("userlistFont", "Dialog Bold 12");
         settings.addLong("lineSpacing", 2);
         settings.addLong("paragraphSpacing", 8);
         settings.addLong("bottomMargin", -1);
-        settings.addString("timestamp","[HH:mm]");
+        settings.addString("timestamp","HH:mm");
         settings.addString("timestampTimezone", "");
         settings.addBoolean("capitalizedNames", true);
         settings.addBoolean("ircv3CapitalizedNames", true);
@@ -432,6 +433,7 @@ public class SettingsManager {
         // Tray
         settings.addBoolean("closeToTray", false);
         settings.addBoolean("minimizeToTray", false);
+        settings.addBoolean("hidePopoutsIfTray", true);
         settings.addBoolean("trayIconAlways", false);
         settings.addBoolean("singleClickTrayOpen", true);
         
@@ -584,7 +586,7 @@ public class SettingsManager {
         settings.addBoolean("showModActions", true);
         settings.addBoolean("showModActionsRestrict", true);
         settings.addBoolean("showActionBy", true);
-        settings.addBoolean("showAutoMod", false);
+        settings.addBoolean("showAutoMod", true);
 
         // Timeouts/Bans
         settings.addBoolean("showBanMessages", false);
@@ -794,6 +796,10 @@ public class SettingsManager {
     
     public boolean getLoadSuccess() {
         return loadSuccess;
+    }
+    
+    public boolean wasMainFileLoaded() {
+        return settings.wasFileLoaded("settings");
     }
     
     /**

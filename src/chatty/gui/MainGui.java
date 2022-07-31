@@ -909,6 +909,25 @@ public class MainGui extends JFrame implements Runnable {
                 //newsDialog.autoRequestNews(true);
                 
                 client.init();
+                
+                /**
+                 * Do it here as well as with invokeLater to minimize possible
+                 * issues, for example with positioning windows that depend on
+                 * the main window showing (like connect dialog, but probably
+                 * others as well).
+                 */
+                switch ((int) client.settings.getLong("minimizeOnStart")) {
+                    case 1:
+                        SwingUtilities.invokeLater(() -> {
+                            minimize(true);
+                        });
+                        break;
+                    case 2:
+                        SwingUtilities.invokeLater(() -> {
+                            minimizeToTray(true);
+                        });
+                        break;
+                }
             }
         });
     }
@@ -955,6 +974,7 @@ public class MainGui extends JFrame implements Runnable {
         // Set visible was required to show it again after being minimized to tray
         setVisible(true);
         setState(NORMAL);
+        channels.getDock().showHiddenWindows();
         toFront();
         //cleanupAfterRestoredFromTray();
         //setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -5500,6 +5520,10 @@ public class MainGui extends JFrame implements Runnable {
         return client.customCommands.getCommandNames();
     }
     
+    public Collection<String> getCommandNames() {
+        return client.commands.getCommandNames();
+    }
+    
     public void updateEmoteNames(Set<String> emotesets, Set<String> allEmotesets) {
         SwingUtilities.invokeLater(new Runnable() {
 
@@ -5575,10 +5599,14 @@ public class MainGui extends JFrame implements Runnable {
         return (getExtendedState() & ICONIFIED) == ICONIFIED;
     }
     
+    private void minimizeToTray() {
+        minimizeToTray(client.settings.getBoolean("hidePopoutsIfTray"));
+    }
+    
     /**
      * Minimize window to tray.
      */
-    private void minimizeToTray() {
+    private void minimizeToTray(boolean includePopouts) {
         //trayIcon.displayInfo("Minimized to tray", "Double-click icon to show again..");
         
         trayIcon.setIconVisible(true);
@@ -5589,6 +5617,22 @@ public class MainGui extends JFrame implements Runnable {
             // Set visible to false, so it is removed from the taskbar, but only
             // if tray icon is actually added
             setVisible(false);
+            if (includePopouts) {
+                channels.getDock().minimizeWindows();
+                channels.getDock().hideWindows();
+            }
+        }
+        else {
+            if (includePopouts) {
+                channels.getDock().minimizeWindows();
+            }
+        }
+    }
+    
+    private void minimize(boolean includePopouts) {
+        setExtendedState(getExtendedState() | ICONIFIED);
+        if (includePopouts) {
+            channels.getDock().minimizeWindows();
         }
     }
     

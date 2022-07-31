@@ -62,19 +62,8 @@ public class ChannelCompletion implements AutoCompletionServer {
      */
     private final Set<String> commands = new TreeSet<>(Arrays.asList(new String[]{
         "subscribers", "subscribersOff", "timeout", "ban", "unban", "host", "unhost", "raid", "unraid", "clear", "mods", "commercial",
-        "join", "part", "close", "reconnect", "slow", "slowOff", "r9k", "r9koff", "emoteOnly", "emoteOnlyOff", "announce",
-        "connection", "uptime", "appInfo", "releaseInfo",
-        "dir", "wdir", "openDir", "openWdir", "showLogDir", "openLogDir",
-        "showBackupDir", "openBackupDir", "showDebugDir", "openDebugDir",
-        "showTempDir", "openTempDir", "showJavaDir", "openJavaDir",
-        "showFallbackFontDir", "openFallbackFontDir", "customCompletion",
-        "clearChat", "refresh", "changeToken", "testNotification", "triggerNotification", "server",
-        "clearStreamChat", "getStreamChatSize", "setStreamChatSize", "streamChatTest", "openStreamChat",
-        "customEmotes", "reloadCustomEmotes", "addStreamHighlight", "openStreamHighlights",
-        "ignore", "unignore", "ignoreWhisper", "unignoreWhisper", "ignoreChat", "unignoreChat",
-        "follow", "unfollow", "ffzws", "followers", "followersoff",
-        "setcolor", "untimeout", "userinfo", "joinHosted", "favorite", "unfavorite",
-        "popoutchannel", "setSize"
+        "slow", "slowOff", "r9k", "r9koff", "emoteOnly", "emoteOnlyOff", "announce",
+        "followers", "followersoff", "untimeout",
     }));
     
     private final Set<String> settingCommands = new TreeSet<>(Arrays.asList(new String[]{
@@ -162,6 +151,7 @@ public class ChannelCompletion implements AutoCompletionServer {
      */
     private AutoCompletionServer.CompletionItems getRegularCompletionItems(String prefix, String search, String searchCase) {
         List<String> items;
+        Map<String, String> info = new HashMap<>();
         if (prefix.startsWith("/") && isSettingPrefix(prefix)) {
                 //--------------
             // Setting Names
@@ -176,17 +166,24 @@ public class ChannelCompletion implements AutoCompletionServer {
             // Command Names
             //--------------
             List<String> c = new ArrayList<>();
+            Collection<String> customCommandNames = main.getCustomCommandNames();
             c.addAll(commands);
             c.addAll(settingCommands);
+            c.addAll(customCommandNames);
+            c.addAll(main.getCommandNames());
             items = filterCompletionItems(c, search);
-            items.addAll(filterCompletionItems(main.getCustomCommandNames(), search));
+            for (String item : items) {
+                if (customCommandNames.contains(item)) {
+                    info.put(item, "Custom Command");
+                }
+            }
         } else {
                 //--------------------
             // Depending on Config
             //--------------------
             return getMainItems(main.getSettings().getString("completionTab"), prefix, search, searchCase);
         }
-        return CompletionItems.createFromStrings(items, "");
+        return CompletionItems.createFromStrings(items, "", info);
     }
 
     /**
@@ -291,7 +288,14 @@ public class ChannelCompletion implements AutoCompletionServer {
         List<CompletionItem> items = new ArrayList<>();
         for (Emoticon emote : result) {
             String code = Emoticons.toWriteable(emote.code);
-            items.add(createEmoteItem(code, null, emote));
+            String info = emote.type.label;
+            if (info.equals("Custom2")) {
+                info = "Chatty Local Emote";
+            }
+            if (emote.hasStreamRestrictions()) {
+                info += ", Channel";
+            }
+            items.add(createEmoteItem(code, info, emote));
         }
         return new CompletionItems(items, prefix);
     }

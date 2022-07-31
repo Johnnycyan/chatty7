@@ -163,6 +163,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         NAMES("Names", Language.getString("settings.page.names")),
         MODERATION("Moderation", Language.getString("settings.page.moderation")),
         STREAM("Stream", Language.getString("settings.page.stream")),
+        SIMPLE("Simple Settings", Language.getString("settings.page.simple")),
         FORK("Fork", Language.getString("settings.page.fork"));
         
         public final String name;
@@ -224,6 +225,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
             Page.HOTKEYS,
             Page.FORK,
         }));
+        MENU.put(Page.SIMPLE, Arrays.asList(new Page[]{}));
     }
 
     public SettingsDialog(final MainGui owner, final Settings settings) {
@@ -317,6 +319,7 @@ public class SettingsDialog extends JDialog implements ActionListener {
         panels.put(Page.CHAT, new ChatSettings(this));
         panels.put(Page.NAMES, new NameSettings(this));
         panels.put(Page.STREAM, new StreamSettings(this));
+        panels.put(Page.SIMPLE, new SimpleSettings(this));
         panels.put(Page.FORK, new ForkSettings(this));
         
         for (Map.Entry<Page, SettingsPanel> entry : panels.entrySet()) {

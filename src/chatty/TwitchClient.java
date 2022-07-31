@@ -29,6 +29,7 @@ import chatty.gui.components.eventlog.EventLog;
 import chatty.gui.components.menus.UserContextMenu;
 import chatty.gui.components.textpane.ModLogInfo;
 import chatty.gui.components.updating.Stuff;
+import chatty.gui.defaults.DefaultsDialog;
 import chatty.splash.Splash;
 import chatty.util.BTTVEmotes;
 import chatty.util.BotNameManager;
@@ -263,6 +264,11 @@ public class TwitchClient {
         }
         
         initDxSettings();
+        
+        // After graphic settings (what is changed here shouldn't affect stuff before this
+        if (!settingsManager.wasMainFileLoaded()) {
+            DefaultsDialog.showAndWait(settings);
+        }
         
         IconManager.setCustomIcons(settings.getList("icons"));
         if (settings.getBoolean("splash")) {
@@ -584,7 +590,7 @@ public class TwitchClient {
             settings.setString("currentVersion", Chatty.VERSION);
             // Changed version, so should check for update properly again
             settings.setString("updateAvailable", "");
-            if (settingsManager.getLoadSuccess()) {
+            if (settingsManager.wasMainFileLoaded()) {
                 // Don't bother user if settings were probably corrupted
                 g.openReleaseInfo();
             }
@@ -1231,7 +1237,7 @@ public class TwitchClient {
             }
             w.whisperCommand(p.getArgs(), false);
         });
-        commands.add("changetoken", p -> {
+        commands.add("changeToken", p -> {
             g.changeToken(p.getArgs());
         });
         //------------
@@ -1562,6 +1568,16 @@ public class TwitchClient {
         commands.add("marker", p -> {
             commandAddStreamMarker(p.getRoom(), p.getArgs());
         });
+        for (String color : TwitchApi.ANNOUNCEMENT_COLORS) {
+            commands.add("announce"+color, p -> {
+                if (!p.hasArgs() || p.getArgs().trim().isEmpty()) {
+                    g.printSystem("Usage: /announce"+color+" <message>");
+                }
+                else {
+                    api.sendAnnouncement(p.getRoom().getStream(), p.getArgs(), color);
+                }
+            });
+        }
         commands.add("addStreamHighlight", p -> {
             commandAddStreamHighlight(p.getRoom(), p.getArgs());
         });
@@ -2117,17 +2133,7 @@ public class TwitchClient {
                 g.printLine("Custom command '" + command + "': No action specified");
             }
             else {
-                // Check what command is called in the result of this command
-                String[] resultSplit = result.split(" ", 2);
-                String resultCommand = resultSplit[0];
-                if (resultCommand.startsWith("/")
-                        && customCommands.containsCommand(resultCommand.substring(1), room)) {
-                    g.printLine("Custom command '" + command + "': Calling another custom "
-                            + "command ('" + resultCommand.substring(1) + "') is not allowed");
-                }
-                else {
-                    textInput(room, result, parameters);
-                }
+                textInput(room, result, parameters);
             }
         });
     }
@@ -2779,7 +2785,11 @@ public class TwitchClient {
             }
             g.setCheerEmotes(emoticons);
         }
-        
+
+        @Override
+        public void errorMessage(String error) {
+            g.printLine(error);
+        }
         
     }
 
