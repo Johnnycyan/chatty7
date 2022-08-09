@@ -27,6 +27,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.TableCellRenderer;
 import chatty.util.api.CachedImage.CachedImageUser;
+import chatty.util.seventv.WebPUtil;
 import javax.swing.JTabbedPane;
 
 /**
@@ -52,8 +53,7 @@ public class EmoteSettings extends SettingsPanel {
         JButton ignoredEmotesButton = new JButton(Language.getString("settings.emoticons.button.editIgnored"));
         ignoredEmotesButton.setMargin(GuiUtil.SMALL_BUTTON_INSETS);
         ignoredEmotesButton.addActionListener(e -> {
-            ignoredEmotesDialog.setLocationRelativeTo(d);
-            ignoredEmotesDialog.setVisible(true);
+            ignoredEmotesDialog.show(d);
         });
         main.add(ignoredEmotesButton,
                 d.makeGbc(2, 0, 3, 1, GridBagConstraints.EAST));
@@ -111,10 +111,12 @@ public class EmoteSettings extends SettingsPanel {
         JPanel twitchSettings = new JPanel(new GridBagLayout());
         JPanel ffzSettings = new JPanel(new GridBagLayout());
         JPanel bttvSettings = new JPanel(new GridBagLayout());
+        JPanel seventvSettings = new JPanel(new GridBagLayout());
         JPanel emojiSettings = new JPanel(new GridBagLayout());
         providerSettingsTabs.addTab("Twitch", twitchSettings);
         providerSettingsTabs.addTab("FFZ", ffzSettings);
         providerSettingsTabs.addTab("BTTV", bttvSettings);
+        providerSettingsTabs.addTab("7TV", seventvSettings);
         providerSettingsTabs.addTab(Language.getString("settings.section.emoji"), emojiSettings);
         
         GridBagConstraints gbc = d.makeGbc(0, 0, 1, 1, GridBagConstraints.WEST);
@@ -175,6 +177,28 @@ public class EmoteSettings extends SettingsPanel {
                 d.makeGbc(0, 1, 1, 1, GridBagConstraints.WEST));
         
         SettingsUtil.topAlign(bttvSettings, 10);
+        
+        //--------------------------
+        // SevenTV
+        //--------------------------
+        seventvSettings.add(d.addSimpleBooleanSetting("seventv"),
+                SettingsDialog.makeGbc(0, 0, 1, 1, GridBagConstraints.WEST));
+        
+        JLabel webpTest = new JLabel();
+        seventvSettings.add(webpTest,
+                SettingsDialog.makeGbc(0, 1, 1, 1, GridBagConstraints.WEST));
+        providerSettingsTabs.addChangeListener(e -> {
+            if (providerSettingsTabs.getSelectedComponent().equals(seventvSettings)) {
+                if (webpTest.getText().isEmpty()) {
+                    webpTest.setText("Required WebP decoding not available.");
+                    WebPUtil.runIfWebPAvailable(() -> {
+                        webpTest.setText("Required WebP decoding available.");
+                    });
+                }
+            }
+        });
+        
+        SettingsUtil.topAlign(seventvSettings, 10);
 
         //--------------------------
         // Emoji
@@ -226,8 +250,7 @@ public class EmoteSettings extends SettingsPanel {
         JButton localEmotesButton = new JButton("View Local Emotes");
         localEmotesButton.setMargin(GuiUtil.SMALL_BUTTON_INSETS);
         localEmotesButton.addActionListener(e -> {
-            localEmotesDialog.setLocationRelativeTo(d);
-            localEmotesDialog.setVisible(true);
+            localEmotesDialog.show(d);
         });
         localEmoteSettings.add(localEmotesButton,
                 d.makeGbc(0, 1, 2, 1, GridBagConstraints.WEST));
@@ -253,63 +276,79 @@ public class EmoteSettings extends SettingsPanel {
         return localEmotesDialog.getData();
     }
     
-    private static class IgnoredEmotesDialog extends JDialog {
+    private static class IgnoredEmotesDialog extends LazyDialog {
+        
+        private final SettingsDialog d;
+        private final ListSelector setting;
         
         private IgnoredEmotesDialog(SettingsDialog d) {
-            super(d);
-            setTitle(Language.getString("settings.ignoredEmotes.title"));
-            setModal(true);
-            setLayout(new GridBagLayout());
-            
-            GridBagConstraints gbc;
-            
-            gbc = d.makeGbc(0, 0, 1, 1);
-            gbc.fill = GridBagConstraints.BOTH;
-            gbc.weightx = 1;
-            gbc.weighty = 1;
-            add(d.addListSetting("ignoredEmotes", "Ignored Emote", 180, 220, false, true), gbc);
-            
-            gbc = d.makeGbc(1, 0, 1, 1);
-            gbc.anchor = GridBagConstraints.NORTH;
-            add(new JLabel("<html><body style='width:160px;'>"
-                    + "<p style='padding:5px;'>"+Language.getString("settings.ignoredEmotes.info1")+"</p>"
-                    + "<p style='padding:5px;'>"+Language.getString("settings.ignoredEmotes.info2")+"</p>"), gbc);
-            
-            JButton closeButton = new JButton(Language.getString("dialog.button.close"));
-            closeButton.addActionListener(e -> {
-                setVisible(false);
-            });
-            gbc = d.makeGbc(0, 1, 2, 1);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.weightx = 1;
-            add(closeButton, gbc);
-            
-            pack();
-            GuiUtil.installEscapeCloseOperation(this);
+            this.d = d;
+            this.setting = d.addListSetting("ignoredEmotes", "Ignored Emote", 180, 220, false, true);
         }
-        
+
+        @Override
+        public JDialog createDialog() {
+            return new Dialog();
+        }
+
+        private class Dialog extends JDialog {
+
+            private Dialog() {
+                super(d);
+                setTitle(Language.getString("settings.ignoredEmotes.title"));
+                setModal(true);
+                setLayout(new GridBagLayout());
+
+                GridBagConstraints gbc;
+
+                gbc = d.makeGbc(0, 0, 1, 1);
+                gbc.fill = GridBagConstraints.BOTH;
+                gbc.weightx = 1;
+                gbc.weighty = 1;
+                add(setting, gbc);
+
+                gbc = d.makeGbc(1, 0, 1, 1);
+                gbc.anchor = GridBagConstraints.NORTH;
+                add(new JLabel("<html><body style='width:160px;'>"
+                        + "<p style='padding:5px;'>" + Language.getString("settings.ignoredEmotes.info1") + "</p>"
+                        + "<p style='padding:5px;'>" + Language.getString("settings.ignoredEmotes.info2") + "</p>"), gbc);
+
+                JButton closeButton = new JButton(Language.getString("dialog.button.close"));
+                closeButton.addActionListener(e -> {
+                    setVisible(false);
+                });
+                gbc = d.makeGbc(0, 1, 2, 1);
+                gbc.fill = GridBagConstraints.HORIZONTAL;
+                gbc.weightx = 1;
+                add(closeButton, gbc);
+
+                pack();
+                GuiUtil.installEscapeCloseOperation(this);
+            }
+
+        }
+
     }
     
-    private static class LocalEmotesDialog extends JDialog {
+    private static class LocalEmotesDialog extends LazyDialog {
+        
+
         
         private final TableEditor<Emoticon> editor;
+        private final SettingsDialog d;
         
         private LocalEmotesDialog(SettingsDialog d) {
-            super(d);
-            setTitle("Local Emotes");
-            setModal(true);
-            setLayout(new GridBagLayout());
-            
-            editor = new TableEditor<>(TableEditor.SORTING_MODE_SORTED, false);
-            editor.setItemEditor(new TableEditor.ItemEditor() {
+            this.d = d;
+            this.editor = new TableEditor<>(TableEditor.SORTING_MODE_SORTED, false);
+            editor.setItemEditor(() -> new TableEditor.ItemEditor<Emoticon>() {
                 @Override
-                public Object showEditor(Object preset, Component c, boolean edit, int column) {
+                public Emoticon showEditor(Emoticon preset, Component c, boolean edit, int column) {
                     JOptionPane.showMessageDialog(c, "Emotes should be added through the Emote Context Menu (e.g. right-click on an Emote in chat).");
                     return null;
                 }
             });
             editor.setModel(new ListTableModel<Emoticon>(new String[]{"Image", "Code", "Id"}) {
-                
+
                 @Override
                 public Object getValueAt(int rowIndex, int columnIndex) {
                     switch (columnIndex) {
@@ -326,16 +365,31 @@ public class EmoteSettings extends SettingsPanel {
                     editor.repaint();
                 }
             }));
-            
-            GridBagConstraints gbc;
-            gbc = SettingsDialog.makeGbc(0, 1, 1, 1);
-            gbc.weightx = 1;
-            gbc.weighty = 1;
-            gbc.fill = GridBagConstraints.BOTH;
-            add(editor, gbc);
-            
-            pack();
-            GuiUtil.installEscapeCloseOperation(this);
+        }
+        
+        @Override
+        public JDialog createDialog() {
+            return new Dialog();
+        }
+        
+        private class Dialog extends JDialog {
+
+            private Dialog() {
+                super(d);
+                setTitle("Local Emotes");
+                setModal(true);
+                setLayout(new GridBagLayout());
+
+                GridBagConstraints gbc;
+                gbc = SettingsDialog.makeGbc(0, 1, 1, 1);
+                gbc.weightx = 1;
+                gbc.weighty = 1;
+                gbc.fill = GridBagConstraints.BOTH;
+                add(editor, gbc);
+
+                pack();
+                GuiUtil.installEscapeCloseOperation(this);
+            }
         }
         
         public void setData(Collection<Emoticon> data) {

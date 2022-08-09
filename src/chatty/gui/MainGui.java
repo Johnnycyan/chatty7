@@ -2369,6 +2369,8 @@ public class MainGui extends JFrame implements Runnable {
                 url = TwitchUrl.makeTwitchTurboUrl();
             } else if (e.getActionCommand().equals("bttvlink")) {
                 url = TwitchUrl.makeBttvUrl();
+            } else if (e.getActionCommand().equals("seventvlink")) {
+                url = "https://7tv.app/";
             } else if (e.getActionCommand().equals("emoteDetails")) {
                 openEmotesDialogEmoteDetails(emote);
             }
@@ -4602,6 +4604,9 @@ public class MainGui extends JFrame implements Runnable {
             if (client.settings.getBoolean("bttvEmotes")) {
                 client.bttvEmotes.requestEmotes(stream, true);
             }
+            if (client.settings.getBoolean("seventv")) {
+                client.sevenTV.requestEmotes(stream, true);
+            }
         }
         else if (type.equals("globaltwitch")) {
             client.api.refreshSets(new HashSet<>(Arrays.asList(new String[]{"0"})));
@@ -4612,6 +4617,9 @@ public class MainGui extends JFrame implements Runnable {
             }
             if (client.settings.getBoolean("bttvEmotes")) {
                 client.bttvEmotes.requestEmotes(BTTVEmotes.GLOBAL, true);
+            }
+            if (client.settings.getBoolean("seventv")) {
+                client.sevenTV.requestEmotes(null, true);
             }
         }
     }

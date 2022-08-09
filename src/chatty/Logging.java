@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.Date;
 import java.util.logging.*;
 
@@ -81,7 +82,7 @@ public class Logging {
             @Override
             public void publish(LogRecord record) {
                 if (record.getLevel() != USERINFO) {
-                    client.debug(record.getMessage());
+                    client.debug(simpleFormatMessage(record));
                     // WebsocketClient/WebsocketManager
                     if (record.getMessage().startsWith("[FFZ-WS]")) {
                         client.debugFFZ(record.getMessage());
@@ -120,28 +121,38 @@ public class Logging {
 
         @Override
         public String format(LogRecord record) {
-            return formatRecord(record);
-        }
-        
-    }
-    
-    public static String formatRecord(LogRecord record) {
-        return String.format("[%1$tF %1$tT/%1$tL %5$s] %2$s%6$s [%3$s/%4$s]\n",
+            return String.format("[%1$tF %1$tT/%1$tL %5$s] %2$s%6$s [%3$s/%4$s]\n",
                 new Date(record.getMillis()),
-                record.getMessage(),
+                simpleFormatMessage(record),
                 record.getSourceClassName(),
                 record.getSourceMethodName(),
                 record.getLevel().getName(),
                 getStacktraceForLogging(record.getThrown()));
+        }
+        
     }
     
     public static String formatRecordCompact(LogRecord record) {
         return String.format("[%1$tT/%1$tL] %2$s%5$s [%3$s/%4$s]\n",
                 new Date(record.getMillis()),
-                record.getMessage(),
+                simpleFormatMessage(record),
                 record.getSourceClassName(),
                 record.getSourceMethodName(),
                 getStacktraceForLogging(record.getThrown()));
+    }
+    
+    private static String simpleFormatMessage(LogRecord record) {
+        // Probably just third-party code has records with parameters currently
+        Object[] params = record.getParameters();
+        if (params == null || params.length == 0) {
+            return record.getMessage();
+        }
+        try {
+            return MessageFormat.format(record.getMessage(), params);
+        }
+        catch (Exception ex) {
+            return record.getMessage();
+        }
     }
     
     public static String getStacktrace(Throwable t) {
