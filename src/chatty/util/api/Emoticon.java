@@ -46,23 +46,40 @@ public class Emoticon {
      */
     public static final String SET_UNKNOWN = "";
     
+    /**
+     * Note that the declaration order is relevant for sorting by Type.
+     */
     public static enum Type {
-        TWITCH("Twitch", TypeCategory.OFFICIAL),
-        FFZ("FFZ", TypeCategory.THIRD_PARTY),
-        BTTV("BTTV", TypeCategory.THIRD_PARTY),
-        SEVENTV("7TV", TypeCategory.THIRD_PARTY),
-        CUSTOM("Custom", TypeCategory.OTHER),
-        EMOJI("Emoji", TypeCategory.OTHER),
-        NOT_FOUND_FAVORITE("NotFoundFavorite", TypeCategory.OTHER),
-        CUSTOM2("Custom2", TypeCategory.OTHER);
+        TWITCH("twitch", "Twitch", TypeCategory.OFFICIAL),
+        CUSTOM2("chattylocal", "Custom2", TypeCategory.OFFICIAL),
+        FFZ("ffz", "FFZ", TypeCategory.THIRD_PARTY),
+        BTTV("bttv", "BTTV", TypeCategory.THIRD_PARTY),
+        SEVENTV("7tv", "7TV", TypeCategory.THIRD_PARTY),
+        CUSTOM("custom", "Custom", TypeCategory.OTHER),
+        EMOJI("emoji", "Emoji", TypeCategory.OTHER),
+        NOT_FOUND_FAVORITE("fav", "NotFoundFavorite", TypeCategory.OTHER);
         
+        // Must not be changed
+        public String id;
+        // For display
         public String label;
         public TypeCategory category;
         
-        Type(String label, TypeCategory category) {
+        Type(String id, String label, TypeCategory category) {
+            this.id = id;
             this.label = label;
             this.category = category;
         }
+        
+        public static Type fromId(String id) {
+            for (Type type : values()) {
+                if (type.id.equals(id)) {
+                    return type;
+                }
+            }
+            return null;
+        }
+        
     }
     
     public static enum TypeCategory {
@@ -585,7 +602,7 @@ public class Emoticon {
 
                 @Override
                 public boolean loadImage() {
-                    return type != Type.NOT_FOUND_FAVORITE;
+                    return true;
                 }
             }, ("emote_" + type).intern());
         }

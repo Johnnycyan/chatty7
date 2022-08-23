@@ -72,6 +72,7 @@ import javax.swing.event.CaretListener;
 import javax.swing.text.*;
 import javax.swing.text.html.HTML;
 import chatty.util.api.CachedImage.CachedImageUser;
+import chatty.util.api.IgnoredEmotes;
 import chatty.util.api.usericons.UsericonFactory;
 import chatty.util.api.usericons.UsericonManager;
 
@@ -2652,10 +2653,18 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             addTwitchTagsEmoticons(user, emoticonsById, text, ranges, rangesStyle, tagEmotes);
         }
         
+        if (user.isLocalUser()) {
+            findEmoticons(main.emoticons.getUsableGlobalTwitchEmotes(), text, ranges, rangesStyle);
+            findEmoticons(main.emoticons.getSmilies(), text, ranges, rangesStyle);
+        }
+        
+        // Channel based (may also have a emoteset restriction)
+        HashSet<Emoticon> channelEmotes = main.emoticons.getEmoticonsByStream(user.getStream());
+        findEmoticons(user, channelEmotes, text, ranges, rangesStyle, main.emoticons.getAllLocalEmotesets());
+        
         // All-channels emotes
         if (user.isLocalUser()) {
-            findEmoticons(main.emoticons.getSmilies(), text, ranges, rangesStyle);
-            findEmoticons(main.emoticons.getUsableGlobalEmotes(), text, ranges, rangesStyle);
+            findEmoticons(main.emoticons.getUsableGlobalOtherEmotes(), text, ranges, rangesStyle);
         }
         else {
             if (tagEmotes == null) {
@@ -2665,10 +2674,6 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             Set<Emoticon> emoticons = main.emoticons.getOtherGlobalEmotes();
             findEmoticons(emoticons, text, ranges, rangesStyle);
         }
-
-        // Channel based (may also have a emoteset restriction)
-        HashSet<Emoticon> channelEmotes = main.emoticons.getEmoticonsByStream(user.getStream());
-        findEmoticons(user, channelEmotes, text, ranges, rangesStyle, main.emoticons.getAllLocalEmotesets());
         
         // Special Combined Emotes
         CombinedEmotesInfo cei = ChattyMisc.getCombinedEmotesInfo();
@@ -2791,7 +2796,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
                         emoticon = b.build();
                         main.emoticons.addTempEmoticon(emoticon);
                     }
-                    if (!main.emoticons.isEmoteIgnored(emoticon)) {
+                    if (!main.emoticons.isEmoteIgnored(emoticon, IgnoredEmotes.CHAT)) {
                         addEmoticon(emoticon, start, end, ranges, rangesStyle);
                     }
                 }
@@ -2825,7 +2830,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             if (!emoticon.matchesUser(user, accessToSets)) {
                 continue;
             }
-            if (main.emoticons.isEmoteIgnored(emoticon)) {
+            if (main.emoticons.isEmoteIgnored(emoticon, IgnoredEmotes.CHAT)) {
                 continue;
             }
             if (emoticon.isAnimated()
@@ -2868,7 +2873,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
                         // CONTINUE
                         continue;
                     }
-                    boolean ignored = main.emoticons.isEmoteIgnored(emote);
+                    boolean ignored = main.emoticons.isEmoteIgnored(emote, IgnoredEmotes.CHAT);
                     if (!ignored && addEmoticon(emote, start, end - bitsLength, ranges, rangesStyle)) {
                         // Add emote
                         addFormattedText(emote.color, end - bitsLength + 1, end, ranges, rangesStyle);
