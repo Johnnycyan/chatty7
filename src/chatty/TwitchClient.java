@@ -341,7 +341,7 @@ public class TwitchClient {
         c.addChannelStateListener(new ChannelStateUpdater());
         c.setMaxReconnectionAttempts(settings.getLong("maxReconnectionAttempts"));
         
-        w = new WhisperManager(new MyWhisperListener(), settings, c);
+        w = new WhisperManager(new MyWhisperListener(), settings, c, this);
         
         streamStatusWriter = new StreamStatusWriter(Chatty.getUserDataDirectory(), api);
         streamStatusWriter.setSetting(settings.getString("statusWriter"));
@@ -1578,16 +1578,7 @@ public class TwitchClient {
         commands.add("marker", p -> {
             commandAddStreamMarker(p.getRoom(), p.getArgs());
         });
-        for (String color : TwitchApi.ANNOUNCEMENT_COLORS) {
-            commands.add("announce"+color, p -> {
-                if (!p.hasArgs() || p.getArgs().trim().isEmpty()) {
-                    g.printSystem("Usage: /announce"+color+" <message>");
-                }
-                else {
-                    api.sendAnnouncement(p.getRoom().getStream(), p.getArgs(), color);
-                }
-            });
-        }
+        c.addNewCommands(commands, this);
         commands.add("addStreamHighlight", p -> {
             commandAddStreamHighlight(p.getRoom(), p.getArgs());
         });
@@ -3038,6 +3029,7 @@ public class TwitchClient {
         else {
             // Editor must use command
             if (isChannelOpen(channel)) {
+                // Call this directly instead so the command added to "commands" is not called
                 c.command(channel, "commercial", String.valueOf(length), null);
             }
             else {
