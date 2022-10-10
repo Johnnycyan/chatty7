@@ -724,6 +724,7 @@ public class SettingsManager {
         settings.addString("groupChatPort", "");
         settings.addBoolean("whisperAutoRespond", false);
         settings.addString("whisperAutoRespondCustom", "");
+        settings.addBoolean("whisperApi", false);
         
         // Copy Messages
         settings.addBoolean("cmEnabled", false);
@@ -1013,6 +1014,9 @@ public class SettingsManager {
             for (String setting : new String[]{"timestamp", "logTimestamp", "userDialogTimestamp"}) {
                 settings.setString(setting, settings.getString(setting).replace("Y", "y"));
             }
+        }
+        if (switchedFromVersionBefore("0.21-b3")) {
+            settings.setBoolean("ffzEvent", false);
         }
         
         overrideHotkeySettings();
