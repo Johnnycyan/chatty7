@@ -5,7 +5,7 @@ str = file.readlines()[1];
 sub = str[45:48];
 print(sub);
 
-partVersion = '0.21.0';
+partVersion = '0.22.0';
 finalVersion = f"{partVersion}.{sub}";
 
 path = "src/chatty/Chatty.java";

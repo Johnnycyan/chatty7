@@ -184,6 +184,9 @@ public class MainMenu extends JMenuBar {
         extra.add(streamHighlights);
         
         extra.addSeparator();
+        addItem(extra,"transparency","Transparency");
+        
+        extra.addSeparator();
         JMenu debugOptions = new JMenu("Options");
         addCheckboxItem(debugOptions,"globalHotkeysEnabled","Global Hotkeys");
         extra.add(debugOptions);
@@ -216,7 +219,7 @@ public class MainMenu extends JMenuBar {
         add(main);
         add(view);
         add(channels);
-        add(srl);
+//        add(srl);
         add(extra);
         add(help);
     }

@@ -1,6 +1,8 @@
 
 package chatty.gui;
 
+import chatty.gui.transparency.TransparencyManager;
+import chatty.gui.laf.LaF;
 import chatty.util.colors.HtmlColors;
 import chatty.Addressbook;
 import chatty.gui.components.textpane.UserMessage;
@@ -34,7 +36,7 @@ import chatty.util.api.usericons.Usericon;
 import chatty.WhisperManager;
 import chatty.gui.Highlighter.HighlightItem;
 import chatty.gui.Highlighter.Match;
-import chatty.gui.LaF.LaFSettings;
+import chatty.gui.laf.LaF.LaFSettings;
 import chatty.gui.colors.ColorItem;
 import chatty.gui.colors.MsgColorItem;
 import chatty.gui.colors.MsgColorManager;
@@ -51,6 +53,7 @@ import chatty.gui.components.srl.SRL;
 import chatty.gui.components.SearchDialog;
 import chatty.gui.components.ImageDialog;
 import chatty.gui.components.StreamChat;
+import chatty.gui.transparency.TransparencyDialog;
 import chatty.gui.components.admin.SelectGameDialog;
 import chatty.gui.components.updating.UpdateDialog;
 import chatty.gui.components.menus.CommandActionEvent;
@@ -113,9 +116,6 @@ import javax.swing.event.MenuListener;
 import chatty.util.dnd.DockPopout;
 import chatty.util.gif.FocusUpdates;
 import chatty.util.gif.GifUtil;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.function.Consumer;
 import org.json.simple.JSONValue;
 
@@ -308,7 +308,7 @@ public class MainGui extends JFrame implements Runnable {
         StreamChatContextMenu.client = client;
         
         moderationLog = new ModerationLog(this, dockedDialogs);
-        autoModDialog = new AutoModDialog(this, client.api, client);
+        autoModDialog = new AutoModDialog(this, client.api, client, dockedDialogs);
         eventLog = new EventLog(this);
         EventLog.setMain(eventLog);
         
@@ -367,6 +367,8 @@ public class MainGui extends JFrame implements Runnable {
         
         ToolTipManager.sharedInstance().setInitialDelay(555);
         ToolTipManager.sharedInstance().setDismissDelay(20*1000);
+        
+        TransparencyManager.init(channels);
         
         guiCreated = true;
     }
@@ -842,6 +844,14 @@ public class MainGui extends JFrame implements Runnable {
             @Override
             public void actionPerformed(ActionEvent e) {
                 openStreamChat();
+            }
+        });
+        
+        hotkeyManager.registerAction("dialog.toggleTransparency", "Window: Toggle Transparency", new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                TransparencyManager.toggleTransparent();
             }
         });
         
@@ -1813,6 +1823,11 @@ public class MainGui extends JFrame implements Runnable {
             } else if (cmd.startsWith("layouts.remove.")) {
                 String layoutName = cmd.substring("layouts.remove.".length());
                 removeLayout(layoutName, true);
+            } else if (cmd.equals("transparency")) {
+                TransparencyDialog dialog = TransparencyDialog.instance(MainGui.this);
+                dialog.setLocationRelativeTo(MainGui.this);
+                dialog.setVisible(true);
+                dialog.refresh();
             }
         }
 
@@ -2496,13 +2511,13 @@ public class MainGui extends JFrame implements Runnable {
             updateChannelInfoDialog(null);
             emotesDialog.updateStream(channels.getLastActiveChannel().getStreamName());
             moderationLog.setChannel(channels.getLastActiveChannel().getStreamName());
-            autoModDialog.setChannel(channels.getLastActiveChannel().getStreamName());
             if (!openedFirstChannel
                     && channels.getLastActiveChannel().getType() == Channel.Type.CHANNEL) {
                 openedFirstChannel = true;
                 if (adminDialog.isVisible()) {
                     openChannelAdminDialog();
                 }
+                autoModDialog.setStream(channels.getActiveChannel().getStreamName());
                 if (followerDialog.isVisible()) {
                     openFollowerDialog();
                 }
