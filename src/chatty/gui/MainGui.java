@@ -381,8 +381,10 @@ public class MainGui extends JFrame implements Runnable {
         hotkeyManager.registerPopout(popout);
     }
     
-    private void getSettingsDialog(Consumer<SettingsDialog> action) {
-        SettingsDialog.get(this, action);
+    public void getSettingsDialog(Consumer<SettingsDialog> action) {
+        GuiUtil.edt(() -> {
+            SettingsDialog.get(this, action);
+        });
     }
     
     /**
@@ -1097,6 +1099,7 @@ public class MainGui extends JFrame implements Runnable {
 
         FocusUpdates.set(client.settings);
         GifUtil.setSettings(client.settings);
+        TransparencyManager.loadSettings(client.settings);
 
         //FORK SETTINGS
         updateForkSettings();
@@ -1250,6 +1253,7 @@ public class MainGui extends JFrame implements Runnable {
         windowStateManager.saveWindowStates();
         client.settings.putList("popoutAttributes", channels.getPopoutAttributes());
         channels.saveLayout();
+        TransparencyManager.saveSettings(client.settings);
     }
     
     public void setWindowPosition(Window window) {
@@ -4049,6 +4053,10 @@ public class MainGui extends JFrame implements Runnable {
                 debugWindow.printLinePubSub(line);
             }
         });
+    }
+    
+    public void printDebugEventSub(String line) {
+        SwingUtilities.invokeLater(() -> debugWindow.printLineEventSub(line));
     }
     
     public void printTimerLog(String line) {

@@ -36,7 +36,8 @@ public class TokenInfo {
                 Scope.AUTOMOD,
                 Scope.BLOCKED_READ,
                 Scope.BLOCKED_MANAGE,
-                Scope.ANNOUNCEMENTS
+                Scope.ANNOUNCEMENTS,
+                Scope.MANAGE_SHIELD
         ),
         BROADCASTER("broadcaster",
                 Scope.MANAGE_MODS,
@@ -45,7 +46,8 @@ public class TokenInfo {
                 Scope.EDIT_BROADCAST,
                 Scope.COMMERICALS,
                 Scope.SUBSCRIBERS,
-                Scope.MANAGE_RAIDS
+                Scope.MANAGE_RAIDS,
+                Scope.MANAGE_POLLS
         );
         
         public List<Scope> scopes;
@@ -95,8 +97,10 @@ public class TokenInfo {
         MANAGE_MODS("channel:manage:moderators", "manageMods"),
         MANAGE_VIPS("channel:manage:vips", "manageVips"),
         MANAGE_MSGS("moderator:manage:chat_messages", "manageMsgs"),
+        MANAGE_SHIELD("moderator:manage:shield_mode", "manageShield"),
         MANAGE_COLOR("user:manage:chat_color", "manageColor"),
-        MANAGE_RAIDS("channel:manage:raids", "manageRaids");
+        MANAGE_RAIDS("channel:manage:raids", "manageRaids"),
+        MANAGE_POLLS("channel:manage:polls", "managePolls");
         
         public String scope;
         public String label;

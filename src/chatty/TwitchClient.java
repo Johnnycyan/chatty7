@@ -44,6 +44,7 @@ import chatty.util.LogUtil;
 import chatty.util.MiscUtil;
 import chatty.util.OtherBadges;
 import chatty.util.ProcessManager;
+import chatty.util.Pronouns;
 import chatty.util.RawMessageTest;
 import chatty.util.ReplyManager;
 import chatty.util.Speedruncom;
@@ -65,12 +66,18 @@ import chatty.util.api.EmoticonUpdate;
 import chatty.util.api.Emoticons;
 import chatty.util.api.Follower;
 import chatty.util.api.FollowerInfo;
+import chatty.util.api.ResultManager;
 import chatty.util.api.StreamCategory;
 import chatty.util.api.StreamInfo.StreamType;
 import chatty.util.api.StreamInfo.ViewerStats;
 import chatty.util.api.StreamTagManager.StreamTag;
 import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.UserInfo;
+import chatty.util.api.eventsub.EventSubListener;
+import chatty.util.api.eventsub.EventSubManager;
+import chatty.util.api.eventsub.payloads.PollPayload;
+import chatty.util.api.eventsub.payloads.RaidPayload;
+import chatty.util.api.eventsub.payloads.ShieldModePayload;
 import chatty.util.api.pubsub.RewardRedeemedMessageData;
 import chatty.util.api.pubsub.Message;
 import chatty.util.api.pubsub.ModeratorActionData;
@@ -147,6 +154,8 @@ public class TwitchClient {
     
     public final chatty.util.api.pubsub.Manager pubsub;
     private final PubSubResults pubsubListener = new PubSubResults();
+    
+    public final EventSubManager eventSub;
     
     public final EmotesetManager emotesetManager;
     
@@ -290,12 +299,15 @@ public class TwitchClient {
         createTestUser("tduva", "");
         
         api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
+        addTwitchApiResultListeners();
         bttvEmotes = new BTTVEmotes(new EmoteListener(), api);
         TwitchEmotesApi.api.setTwitchApi(api);
         Timestamp.setTwitchApi(api);
         
         pubsub = new chatty.util.api.pubsub.Manager(
                 settings.getString("pubsub"), pubsubListener, api);
+        eventSub = new EventSubManager("wss://eventsub-beta.wss.twitch.tv/ws", new EventSubResults(), api);
+//        eventSub = new EventSubManager("ws://localhost:8080/eventsub", new EventSubResults(), api);
         
         frankerFaceZ = new FrankerFaceZ(new EmoticonsListener(), settings, api);
         sevenTV = new SevenTV(new EmoteListener(), api);
@@ -690,6 +702,9 @@ public class TwitchClient {
             pubsub.unlistenModLog(room.getStream());
             pubsub.unlistenUserModeration(room.getStream());
             pubsub.unlistenPoints(room.getStream());
+            eventSub.unlistenRaid(room.getStream());
+            eventSub.unlistenPoll(room.getStream());
+            eventSub.unlistenShield(room.getStream());
         }
     }
     
@@ -1937,6 +1952,8 @@ public class TwitchClient {
             pubsub.disconnect();
         } else if (command.equals("psreconnect")) {
             pubsub.reconnect();
+        } else if (command.equals("eventsubreconnect")) {
+            eventSub.reconnect();
         } else if (command.equals("modaction")) {
             String by = "Blahfasel";
             String action = "timeout";
@@ -1978,6 +1995,8 @@ public class TwitchClient {
             g.printModerationAction(data, false);
         } else if (command.equals("simulatepubsub")) {
             pubsub.simulate(parameter);
+        } else if (command.equals("simulateeventsub")) {
+            eventSub.simulate(parameter);
         } else if (command.equals("repeat")) {
             String[] split = parameter.split(" ", 2);
             int count = Integer.parseInt(split[0]);
@@ -2314,6 +2333,9 @@ public class TwitchClient {
          * may sent those topics though.
          */
 //        pubsub.updateToken(token);
+
+        // Removed topics have a chance to reconnect
+        eventSub.tokenUpdated();
     }
     
     private void commandCustomCompletion(String parameter) {
@@ -2539,6 +2561,13 @@ public class TwitchClient {
         g.printDebugPubSub(line);
     }
     
+    public void debugEventSub(String line) {
+        if (shuttingDown || g == null) {
+            return;
+        }
+        g.printDebugEventSub(line);
+    }
+    
     /**
      * Output a warning to the user, instead of the debug window.
      * 
@@ -2603,36 +2632,6 @@ public class TwitchClient {
             g.printDebugPubSub(info);
         }
         
-        private void handleModAction(ModeratorActionData data) {
-            // A regular mod action that doesn't contain a mod action should be ignored
-            boolean empty = data.type == ModeratorActionData.Type.OTHER && data.moderation_action.isEmpty() && data.args.isEmpty();
-            if (data.stream != null && !empty) {
-                String channel = Helper.toChannel(data.stream);
-                g.printModerationAction(data, data.created_by.equals(c.getUsername()));
-                chatLog.modAction(data);
-
-                User modUser = c.getUser(channel, data.created_by);
-                modUser.addModAction(data);
-                g.updateUserinfo(modUser);
-
-                String bannedUsername = ModLogInfo.getBannedUsername(data);
-                if (bannedUsername != null) {
-                    // If this is actually a ban, add info to banned user
-                    User bannedUser = c.getUser(channel, bannedUsername);
-                    bannedUser.addBanInfo(data);
-                    g.updateUserinfo(bannedUser);
-                }
-                String unbannedUsername = ModLogInfo.getUnbannedUsername(data);
-                if (unbannedUsername != null) {
-                    // Add info to unbanned user
-                    User unbannedUser = c.getUser(channel, unbannedUsername);
-                    int type = User.UnbanMessage.getType(data.moderation_action);
-                    unbannedUser.addUnban(type, data.created_by);
-                    g.updateUserinfo(unbannedUser);
-                }
-            }
-        }
-        
         private void handleReward(RewardRedeemedMessageData data) {
             User user = c.getUser(Helper.toChannel(data.stream), data.username);
             // Uses added source and reward id for merging
@@ -2643,6 +2642,78 @@ public class TwitchClient {
         
         private void handleUserModeration(UserModerationMessageData data) {
             g.printLine(c.getRoomByChannel(Helper.toChannel(data.stream)), data.info);
+        }
+        
+    }
+    
+    private void handleModAction(ModeratorActionData data) {
+        // A regular mod action that doesn't contain a mod action should be ignored
+        boolean empty = data.type == ModeratorActionData.Type.OTHER && data.moderation_action.isEmpty() && data.args.isEmpty();
+        if (data.stream != null && !empty) {
+            String channel = Helper.toChannel(data.stream);
+            g.printModerationAction(data, data.created_by.equals(c.getUsername()));
+            chatLog.modAction(data);
+
+            User modUser = c.getUser(channel, data.created_by);
+            modUser.addModAction(data);
+            g.updateUserinfo(modUser);
+
+            String bannedUsername = ModLogInfo.getBannedUsername(data);
+            if (bannedUsername != null) {
+                // If this is actually a ban, add info to banned user
+                User bannedUser = c.getUser(channel, bannedUsername);
+                bannedUser.addBanInfo(data);
+                g.updateUserinfo(bannedUser);
+            }
+            String unbannedUsername = ModLogInfo.getUnbannedUsername(data);
+            if (unbannedUsername != null) {
+                // Add info to unbanned user
+                User unbannedUser = c.getUser(channel, unbannedUsername);
+                int type = User.UnbanMessage.getType(data.moderation_action);
+                unbannedUser.addUnban(type, data.created_by);
+                g.updateUserinfo(unbannedUser);
+            }
+        }
+    }
+    
+    private class EventSubResults implements EventSubListener {
+
+        @Override
+        public void messageReceived(chatty.util.api.eventsub.Message message) {
+            if (message.data instanceof RaidPayload) {
+                RaidPayload raid = (RaidPayload) message.data;
+                String channel = Helper.toChannel(raid.fromLogin);
+                String text = String.format("[Raid] Now raiding %s with %d viewers.",
+                        raid.toLogin, raid.viewers);
+                MsgTags tags = MsgTags.create("chatty-hosted", Helper.toChannel(raid.toLogin));
+                g.printInfo(c.getRoomByChannel(channel), text, tags);
+            }
+            String pollMessage = PollPayload.getPollMessage(message);
+            if (pollMessage != null) {
+                PollPayload poll = (PollPayload) message.data;
+                g.printInfo(c.getRoomByChannel(Helper.toChannel(poll.stream)), pollMessage, MsgTags.EMPTY);
+            }
+            if (message.data instanceof ShieldModePayload) {
+                ShieldModePayload mode = (ShieldModePayload) message.data;
+                String channel = Helper.toChannel(mode.stream);
+                ChannelState state = c.getChannelState(channel);
+                state.setShieldMode(mode.enabled);
+                String infoText = String.format("[Info] Shield mode turned %s (@%s)",
+                        mode.enabled ? "on" : "off",
+                        mode.moderatorLogin);
+                g.printInfo(c.getRoomByChannel(channel), infoText, MsgTags.EMPTY);
+                handleModAction(new ModeratorActionData(
+                        "", "chat_moderator_actions", "",
+                        mode.stream, mode.enabled ? "shieldMode" : "shieldModeOff",
+                        new ArrayList<>(),
+                        mode.moderatorLogin,
+                        null));
+            }
+        }
+
+        @Override
+        public void info(String info) {
+            g.printDebugEventSub(info);
         }
         
     }
@@ -2816,6 +2887,13 @@ public class TwitchClient {
             g.printLine(error);
         }
         
+    }
+    
+    private void addTwitchApiResultListeners() {
+        api.subscribe(ResultManager.Type.SHIELD_MODE_RESULT, (ResultManager.ShieldModeResult) (stream, enabled) -> {
+            String channel = Helper.toChannel(stream);
+            getChannelState(channel).setShieldMode(enabled);
+        });
     }
 
     private class MyRoomUpdatedListener implements RoomManager.RoomUpdatedListener {
@@ -3190,9 +3268,11 @@ public class TwitchClient {
         shuttingDown = true;
         saveSettings(true, false);
         logAllViewerstats();
+        Pronouns.instance().saveCache();
         c.disconnect();
         frankerFaceZ.disconnectWs();
         pubsub.disconnect();
+        eventSub.disconnect();
         g.cleanUp();
         chatLog.close();
         System.exit(0);
@@ -3285,6 +3365,23 @@ public class TwitchClient {
             }
         }
         
+        private void checkEventSubListen(User user) {
+            if (!user.getName().equals(c.getUsername())
+                    || user.getStream() == null) {
+                return;
+            }
+            eventSub.setLocalUsername(c.getUsername());
+            if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_POLLS.scope)
+                    && user.isBroadcaster()) {
+                eventSub.listenPoll(user.getStream());
+            }
+            if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_SHIELD.scope)
+                    && (user.isModerator() || user.isBroadcaster())) {
+                eventSub.listenShield(user.getStream());
+                api.getShieldMode(user.getRoom(), true);
+            }
+        }
+        
         @Override
         public void onChannelJoined(User user) {
             channelFavorites.addJoined(user.getRoom());
@@ -3307,6 +3404,9 @@ public class TwitchClient {
                 frankerFaceZ.joined(stream);
                 checkModLogListen(user);
                 checkPointsListen(user);
+                eventSub.listenRaid(user.getStream());
+                api.removeShieldModeCache(user.getRoom());
+                checkEventSubListen(user);
                 updateStreamInfoChannelOpen(user.getChannel());
             }
         }
@@ -3347,6 +3447,7 @@ public class TwitchClient {
             }
             g.updateUserinfo(user);
             checkModLogListen(user);
+            checkEventSubListen(user);
         }
 
         @Override
