@@ -1109,10 +1109,6 @@ public class TwitchClient {
         return c.isUserlistLoaded(channel);
     }
     
-    public String getHostedChannel(String channel) {
-        return c.getChannelState(channel).getHosting();
-    }
-    
     /**
      * Execute a command from input, which means the text starts with a '/',
      * followed by the command name and comma-separated arguments.
@@ -1201,14 +1197,6 @@ public class TwitchClient {
         }, "close");
         commands.add("rejoin", p -> {
             commandRejoinChannel(p.getChannel());
-        });
-        commands.add("joinHosted", p -> {
-            String hostedChan = getHostedChannel(p.getChannel());
-            if (hostedChan == null) {
-                g.printLine("No channel is currently being hosted.");
-            } else {
-                joinChannel(hostedChan);
-            }
         });
         commands.add("raw", p -> {
             if (rejectTimedMessage("raw", p.getRoom(), p.getParameters())) {
@@ -1388,10 +1376,20 @@ public class TwitchClient {
         commands.add("exportText", p -> {
             CommandParsedArgs args = p.parsedArgs(2);
             if (args != null) {
-                boolean success = MiscUtil.exportText(args.get(0),
-                        args.hasOption("n")
+                String file = args.get(0);
+                String text = args.hasOption("n")
                             ? args.get(1).replace("\\n", "\n")
-                            : args.get(1), args.hasOption("a"));
+                            : args.get(1);
+                boolean append = args.hasOption("a");
+                if (args.hasOption("A")) {
+                    text += "\n";
+                    append = true;
+                }
+                if (args.hasOption("L")) {
+                    text = "\n"+text;
+                    append = true;
+                }
+                boolean success = MiscUtil.exportText(file, text, append);
                 if (success) {
                     if (!args.hasOption("s")) {
                         g.printSystem("File written successfully.");
@@ -2080,7 +2078,7 @@ public class TwitchClient {
         }
     }
     
-    private void anonCustomCommand(Room room, String text, Parameters parameters) {
+    public void anonCustomCommand(Room room, String text, Parameters parameters) {
         CustomCommand command = CustomCommand.parse(text);
         if (parameters == null) {
             parameters = Parameters.create(null);
@@ -2685,7 +2683,7 @@ public class TwitchClient {
                 String channel = Helper.toChannel(raid.fromLogin);
                 String text = String.format("[Raid] Now raiding %s with %d viewers.",
                         raid.toLogin, raid.viewers);
-                MsgTags tags = MsgTags.create("chatty-hosted", Helper.toChannel(raid.toLogin));
+                MsgTags tags = MsgTags.create("chatty-channel-join", Helper.toChannel(raid.toLogin));
                 g.printInfo(c.getRoomByChannel(channel), text, tags);
             }
             String pollMessage = PollPayload.getPollMessage(message);
@@ -3032,28 +3030,6 @@ public class TwitchClient {
                     g.printLineByOwnerChannel(channel, "~" + newStatus + "~");
                 }
                 g.setChannelNewStatus(channel, newStatus);
-                
-                /**
-                 * Only do warning/unhost stuff if stream is only at most 15
-                 * minutes old. This prevents unhosting at the end of the stream
-                 * when the status may change from online -> offline -> online
-                 * due to cached data from the Twitch API and unhost when the
-                 * streamer already hosted someone else intentionally.
-                 */
-                if (info.getOnline()
-                        && info.getTimeStartedWithPicnicAgo() < 15*60*1000
-                        && getHostedChannel(channel) != null) {
-                    if (settings.getBoolean("autoUnhost")
-                            && c.onChannel(channel)
-                            && (
-                                info.stream.equals(c.getUsername())
-                                || settings.listContains("autoUnhostStreams", info.stream)
-                            )) {
-                        c.sendCommandMessage(channel, ".unhost", "Trying to turn off host mode.. (Auto-Unhost)");
-                    } else {
-                        g.printLine(roomManager.getRoom(channel), "** Still hosting another channel while streaming. **");
-                    }
-                }
             }
             g.statusNotification(channel, info);
         }
@@ -3366,11 +3342,13 @@ public class TwitchClient {
         }
         
         private void checkEventSubListen(User user) {
+            // Is user the local user (can be on any channel though)
             if (!user.getName().equals(c.getUsername())
                     || user.getStream() == null) {
                 return;
             }
             eventSub.setLocalUsername(c.getUsername());
+            eventSub.listenRaid(user.getStream());
             if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_POLLS.scope)
                     && user.isBroadcaster()) {
                 eventSub.listenPoll(user.getStream());
@@ -3404,7 +3382,6 @@ public class TwitchClient {
                 frankerFaceZ.joined(stream);
                 checkModLogListen(user);
                 checkPointsListen(user);
-                eventSub.listenRaid(user.getStream());
                 api.removeShieldModeCache(user.getRoom());
                 checkEventSubListen(user);
                 updateStreamInfoChannelOpen(user.getChannel());
@@ -3689,10 +3666,6 @@ public class TwitchClient {
         @Override
         public void onUserlistCleared(String channel) {
             g.clearUsers(channel);
-        }
-
-        @Override
-        public void onHost(Room room, String target) {
         }
         
         @Override

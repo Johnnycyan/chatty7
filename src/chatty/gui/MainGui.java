@@ -415,6 +415,15 @@ public class MainGui extends JFrame implements Runnable {
         client.command(channels.getLastActiveChannel().getRoom(), command, parameter);
     }
     
+    private void hotkeyCommandAnon(String command) {
+        Channel channel = channels.getActiveChannel();
+        User selectedUser = channel.getSelectedUser();
+        String selectedUserName = selectedUser != null ? selectedUser.getName() : "";
+        Parameters p = Parameters.create(null);
+        p.put("selectedUserName", selectedUserName);
+        client.anonCustomCommand(channel.getRoom(), command, p);
+    }
+    
     /**
      * Adds an action that is also represented in the main menu.
      * 
@@ -452,11 +461,21 @@ public class MainGui extends JFrame implements Runnable {
             }
         });
         
-        hotkeyManager.registerAction("custom.command", "Custom Command", new AbstractAction() {
+        hotkeyManager.registerAction("custom.command", "Custom Command",
+                "Enter the name of a Custom Command (only the name), as added to the Custom Commands list under \"Commands\". This is useful when you have it added to the Custom Commands list already anyway (for example if you want to use it in another context as well). Otherwise the \"Anon. Custom Command\" may be more convenient.", new AbstractAction() {
 
             @Override
             public void actionPerformed(ActionEvent e) {
                 hotkeyCommand(e.getActionCommand(), null, false);
+            }
+        });
+        
+        hotkeyManager.registerAction("custom.anonCommand", "Anon. Custom Command",
+                "Enter a Custom Command directly (for example \"/echo $datetime()\" to output the current time as an info message). This is an anonymous Custom Command because it is not added to the Custom Commands list and thus no name is specified for it. It can only be executed via this hotkey.", new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                hotkeyCommandAnon(e.getActionCommand());
             }
         });
 
@@ -1457,6 +1476,7 @@ public class MainGui extends JFrame implements Runnable {
                 client.settings.getString("liveStreamsSorting"),
                 client.settings.getBoolean("liveStreamsSortingFav")
         );
+        liveStreamsDialog.setFiltering(client.settings.getBoolean("liveStreamsFavsOnly"));
     }
     
     private void updateFollowerDialogs() {
@@ -2090,9 +2110,6 @@ public class MainGui extends JFrame implements Runnable {
             else if (cmd.equals("closeChannel")) {
                 client.closeChannel(channel.getChannel());
             }
-            else if (cmd.equals("joinHostedChannel")) {
-                client.command(channel.getRoom(), "joinhosted");
-            }
             else if (cmd.equals("srcOpen")) {
                 client.speedruncom.openCurrentGame(channel);
             }
@@ -2157,6 +2174,9 @@ public class MainGui extends JFrame implements Runnable {
                 JCheckBoxMenuItem item = (JCheckBoxMenuItem)e.getSource();
                 client.settings.setBoolean("liveStreamsSortingFav", item.isSelected());
             }
+            if (cmd.equals("filterOption_favsOnly")) {
+                client.settings.setBoolean("liveStreamsFavsOnly", ((JCheckBoxMenuItem)e.getSource()).isSelected());
+            }
             if (cmd.equals("favoriteGame")) {
                 for (StreamInfo info : streamInfos) {
                     if (!StringUtil.isNullOrEmpty(info.getGame())) {
@@ -2194,7 +2214,7 @@ public class MainGui extends JFrame implements Runnable {
          * stream parameter.
          */
         private final Set<String> streamCmds = new HashSet<>(
-                Arrays.asList("profile", "join", "hostchannel"));
+                Arrays.asList("profile", "join", "raidchannel"));
         
         /**
          * Any commands starting with these Strings is supposed to have a stream
@@ -2341,11 +2361,20 @@ public class MainGui extends JFrame implements Runnable {
                     // Request immediately in this case
                     client.api.requestEmotesNow();
                 }
-            } else if (cmd.equals("hostchannel")) {
+            } else if (cmd.equals("raidchannel")) {
                 if (firstStream != null && streams.size() == 1) {
-                    client.command(Room.EMPTY, "host2", StringUtil.toLowerCase(firstStream));
+                    String ownChannel = "#"+client.getUsername();
+                    Channel chan = channels.getExistingChannel(ownChannel);
+                    if (chan == null) {
+                        printSystem("Must have your own channel open to raid.");
+                    }
+                    else {
+                        client.command(chan.getRoom(), "raid", StringUtil.toLowerCase(firstStream));
+                        printSystem(String.format("Trying to raid %s from %s..",
+                                firstStream, ownChannel));
+                    }
                 } else {
-                    printLine("Can't host more than one channel.");
+                    printSystem("Can't raid more than one channel.");
                 }
             } else if (cmd.equals("copy") && !streams.isEmpty()) {
                 MiscUtil.copyToClipboard(StringUtil.join(streams, ", "));
@@ -5332,7 +5361,8 @@ public class MainGui extends JFrame implements Runnable {
                 }
             }
             if (setting.equals("liveStreamsSorting")
-                    || setting.equals("liveStreamsSortingFav")) {
+                    || setting.equals("liveStreamsSortingFav")
+                    || setting.equals("liveStreamsFavsOnly")) {
                 updateLiveStreamsDialog();
             }
             if (setting.equals("followersCompact") || setting.equals("followersReg")) {

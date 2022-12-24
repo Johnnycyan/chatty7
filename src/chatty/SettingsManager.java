@@ -488,6 +488,7 @@ public class SettingsManager {
         settings.addBoolean("tabsCloseSwitchToPrev", true);
         settings.addString("tabsPlacement", "top");
         settings.addString("tabsLayout", "wrap");
+        settings.addBoolean("tabsHideIfSingle", true);
         settings.addLong("tabsLive", 16);
         settings.addLong("tabsMessage", 4);
         settings.addLong("tabsHighlight", 8);
@@ -514,6 +515,7 @@ public class SettingsManager {
         settings.addString("liveStreamsCommand", "");
         settings.addBoolean("liveStreamsChatIcon", true);
         settings.addBoolean("liveStreamsNotificationAction", false);
+        settings.addBoolean("liveStreamsFavsOnly", false);
         settings.addLong("historyRange", 0);
         settings.addBoolean("historyVerticalZoom", false);
         
@@ -767,10 +769,6 @@ public class SettingsManager {
         // Stream Status Writer
         settings.addBoolean("enableStatusWriter", false);
         settings.addString("statusWriter", "");
-
-        // Auto-Unhost
-        settings.addBoolean("autoUnhost", false);
-        settings.addList("autoUnhostStreams", new ArrayList(), Setting.STRING);
         
         settings.addMap("rewards", new HashMap(), Setting.STRING);
         
