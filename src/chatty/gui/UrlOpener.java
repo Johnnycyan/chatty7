@@ -97,6 +97,7 @@ public class UrlOpener {
         if (url == null) {
             return false;
         }
+        url = url.trim();
         URI parsed;
         try {
             parsed = new URI(url);
@@ -184,7 +185,7 @@ public class UrlOpener {
         }
         switch (showUrlsPrompt(parent, urls)) {
             case 0: return openUrls(urls);
-            case 1: MiscUtil.copyToClipboard(urls.get(0));
+            case 1: MiscUtil.copyToClipboard(urls.get(0).trim());
         }
         return true;
     }
@@ -226,7 +227,7 @@ public class UrlOpener {
         int counterUrls = 0;
         String text = "<html><body style='width: " + widthBody + "px;'>";
         for (String url : urls) {
-            url = splitUrl(url);
+            url = splitUrl(url).trim();
 
             if (ForkUtil.SHOW_TITLE) {
                 String tooltip = ForkUtil.getTooltip(url);
