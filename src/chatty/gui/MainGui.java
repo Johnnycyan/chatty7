@@ -5481,12 +5481,16 @@ public class MainGui extends JFrame implements Runnable {
         MsgTags tags = MsgTags.EMPTY;
         if (data.startsWith("@")) {
             // Get the second space.
-            int endOfTags = data.indexOf(" ", data.indexOf(" ") + 1);
+            final int endOfTags = Math.min(
+                // Better but untested.
+                data.indexOf(" :"),
+                // Deprecated.
+                data.indexOf(" ", data.indexOf(" ") + 1));
             if (endOfTags == -1) {
                 return false;
             }
             tags = MsgTags.parse(data.substring(1, endOfTags));
-            data = data.substring(endOfTags+1);
+            data = data.substring(endOfTags + 1);
         }
 
         if (!tags.containsKey("display-name")) {
@@ -5510,9 +5514,7 @@ public class MainGui extends JFrame implements Runnable {
             : tags.containsKey(r)
             ? tags.get(r)
             : (System.currentTimeMillis() + "");
-        // 13.01.2022: Now the server sometimes gives tmi as the last object,
-        // which forms a space at the end.
-        final long messageSentTimestamp = Long.parseLong(tmi.split(" ")[0]);
+        final long messageSentTimestamp = Long.parseLong(tmi);
 
         // Check for duplicates.
         List<User.Message> messagesOfUser = user.getMessages();              
