@@ -5480,12 +5480,8 @@ public class MainGui extends JFrame implements Runnable {
         
         MsgTags tags = MsgTags.EMPTY;
         if (data.startsWith("@")) {
-            // Get the second space.
-            final int endOfTags = Math.min(
-                // Better but untested.
-                data.indexOf(" :"),
-                // Deprecated.
-                data.indexOf(" ", data.indexOf(" ") + 1));
+            data = data.replaceFirst(" :", ";:");
+            int endOfTags = data.indexOf(" ");
             if (endOfTags == -1) {
                 return false;
             }
