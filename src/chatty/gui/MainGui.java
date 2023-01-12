@@ -5510,7 +5510,9 @@ public class MainGui extends JFrame implements Runnable {
             : tags.containsKey(r)
             ? tags.get(r)
             : (System.currentTimeMillis() + "");
-        final long messageSentTimestamp = Long.parseLong(tmi);
+        // 13.01.2022: Now the server sometimes gives tmi as the last object,
+        // which forms a space at the end.
+        final long messageSentTimestamp = Long.parseLong(tmi.split(" ")[0]);
 
         // Check for duplicates.
         List<User.Message> messagesOfUser = user.getMessages();              
