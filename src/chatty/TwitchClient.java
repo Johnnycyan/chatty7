@@ -10,6 +10,7 @@ import chatty.util.commands.CustomCommands;
 import chatty.util.api.usericons.Usericon;
 import chatty.util.api.usericons.UsericonManager;
 import chatty.ChannelStateManager.ChannelStateListener;
+import chatty.Chatty.PathType;
 import chatty.Commands.CommandParsedArgs;
 import chatty.util.api.TwitchApiResultListener;
 import chatty.util.api.Emoticon;
@@ -70,7 +71,6 @@ import chatty.util.api.ResultManager;
 import chatty.util.api.StreamCategory;
 import chatty.util.api.StreamInfo.StreamType;
 import chatty.util.api.StreamInfo.ViewerStats;
-import chatty.util.api.StreamTagManager.StreamTag;
 import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.UserInfo;
 import chatty.util.api.eventsub.EventSubListener;
@@ -78,6 +78,7 @@ import chatty.util.api.eventsub.EventSubManager;
 import chatty.util.api.eventsub.payloads.PollPayload;
 import chatty.util.api.eventsub.payloads.RaidPayload;
 import chatty.util.api.eventsub.payloads.ShieldModePayload;
+import chatty.util.api.eventsub.payloads.ShoutoutPayload;
 import chatty.util.api.pubsub.RewardRedeemedMessageData;
 import chatty.util.api.pubsub.Message;
 import chatty.util.api.pubsub.ModeratorActionData;
@@ -104,6 +105,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import java.util.Timer;
@@ -234,13 +236,10 @@ public class TwitchClient {
         LOGGER.info(Chatty.chattyVersion());
         LOGGER.info(Helper.systemInfo());
         LOGGER.info("[Working Directory] "+System.getProperty("user.dir")
-                +" [Settings Directory] "+Chatty.getUserDataDirectory()
+                +" [Settings Directory] "+Chatty.getPath(PathType.SETTINGS)
                 +" [Classpath] "+System.getProperty("java.class.path")
                 +" [Launch Options] "+ManagementFactory.getRuntimeMXBean().getInputArguments());
         
-        if (Chatty.getOriginalWdir() != null) {
-            LOGGER.info("Working directory changed due to -appwdir (from: "+Chatty.getOriginalWdir()+")");
-        }
         Helper.checkSLF4JBinding();
         
         // Settings
@@ -254,6 +253,8 @@ public class TwitchClient {
         settingsManager.backupFiles();
         settingsManager.startAutoSave(this);
         
+        Chatty.setSettings(settings);
+        
         Language.setLanguage(settings.getString("language"));
         /**
          * Not sure how much there is that doesn't get affected by a locale
@@ -263,10 +264,15 @@ public class TwitchClient {
         Helper.setDefaultLocale(settings.getString("locale"));
         Helper.setDefaultTimezone(settings.getString("timezone"));
         
+        String pathDebug = Chatty.getPathDebug();
+        if (!StringUtil.isNullOrEmpty(pathDebug)) {
+            LOGGER.info(pathDebug);
+        }
+        
         launchCommand = args.get("cc");
         
-        addressbook = new Addressbook(Chatty.getUserDataDirectory()+"addressbook",
-            Chatty.getUserDataDirectory()+"addressbookImport.txt", settings);
+        addressbook = new Addressbook(Chatty.getPath(PathType.SETTINGS).resolve("addressbook").toString(),
+            Chatty.getPath(PathType.SETTINGS).resolve("addressbookImport.txt").toString(), settings);
         if (!addressbook.loadFromSettings()) {
             addressbook.loadFromFile();
         }
@@ -312,7 +318,7 @@ public class TwitchClient {
         frankerFaceZ = new FrankerFaceZ(new EmoticonsListener(), settings, api);
         sevenTV = new SevenTV(new EmoteListener(), api);
         
-        ImageCache.setDefaultPath(Paths.get(Chatty.getCacheDirectory()+"img"));
+        ImageCache.setDefaultPath(Chatty.getPathCreate(PathType.CACHE).resolve("img"));
         ImageCache.setCachingEnabled(settings.getBoolean("imageCache"));
         ImageCache.deleteExpiredFiles();
         EmoticonSizeCache.loadFromFile();
@@ -355,7 +361,7 @@ public class TwitchClient {
         
         w = new WhisperManager(new MyWhisperListener(), settings, c, this);
         
-        streamStatusWriter = new StreamStatusWriter(Chatty.getUserDataDirectory(), api);
+        streamStatusWriter = new StreamStatusWriter(Chatty.getPath(PathType.EXPORT), api);
         streamStatusWriter.setSetting(settings.getString("statusWriter"));
         streamStatusWriter.setEnabled(settings.getBoolean("enableStatusWriter"));
         settings.addSettingChangeListener(streamStatusWriter);
@@ -483,7 +489,7 @@ public class TwitchClient {
         
         if (!settingsManager.checkSettingsDir()) {
             warning("The settings directory could not be created, so Chatty"
-                    + " will not function correctly. Make sure that "+Chatty.getUserDataDirectory()
+                    + " will not function correctly. Make sure that "+Chatty.getPath(PathType.SETTINGS)
                     + " is accessible or change it using launch options.");
             return;
         }
@@ -562,6 +568,11 @@ public class TwitchClient {
         String timerCommandLoadResult = timerCommand.loadFromSettings(settings);
         if (timerCommandLoadResult != null) {
             g.printSystem(timerCommandLoadResult);
+        }
+        
+        String customPathsWarning = Chatty.getInvalidPathInfo();
+        if (!customPathsWarning.isEmpty()) {
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(g, customPathsWarning));
         }
     }
     
@@ -705,6 +716,7 @@ public class TwitchClient {
             eventSub.unlistenRaid(room.getStream());
             eventSub.unlistenPoll(room.getStream());
             eventSub.unlistenShield(room.getStream());
+            eventSub.unlistenShoutouts(room.getStream());
         }
     }
     
@@ -1257,16 +1269,16 @@ public class TwitchClient {
         // System/Util
         //------------
         commands.add("dir", p -> {
-            g.printSystem("Settings directory: '"+Chatty.getUserDataDirectory()+"'");
+            g.printSystem("Settings directory: "+Chatty.getPathInfo(PathType.SETTINGS));
         });
         commands.add("wdir", p -> {
-            g.printSystem("Working directory: '"+Chatty.getWorkingDirectory()+"'");
+            g.printSystem("Working directory: "+Chatty.getPathInfo(PathType.WORKING));
         });
         commands.add("opendir", p -> {
-            MiscUtil.openFolder(new File(Chatty.getUserDataDirectory()), g);
+            MiscUtil.openFile(Chatty.getPath(PathType.SETTINGS), g);
         });
         commands.add("openwdir", p -> {
-            MiscUtil.openFolder(new File(Chatty.getWorkingDirectory()), g);
+            MiscUtil.openFile(Chatty.getPath(PathType.WORKING), g);
         });
         commands.add("showJarDir", p -> {
             Path path = Stuff.determineJarPath();
@@ -1280,41 +1292,36 @@ public class TwitchClient {
         commands.add("openJarDir", p -> {
             Path path = Stuff.determineJarPath();
             if (path != null) {
-                MiscUtil.openFolder(path.getParent().toFile(), g);
+                MiscUtil.openFile(path.getParent().toFile(), g);
             }
             else {
                 g.printSystem("JAR directory unknown");
             }
         });
         commands.add("showBackupDir", p -> {
-            g.printSystem("Backup directory: "+Chatty.getBackupDirectory());
+            g.printSystem("Backup directory: "+Chatty.getPathInfo(PathType.BACKUP));
         });
         commands.add("openBackupDir", p -> {
-            MiscUtil.openFolder(new File(Chatty.getBackupDirectory()), g);
+            MiscUtil.openFile(Chatty.getPathCreate(PathType.BACKUP), g);
         });
         commands.add("showTempDir", p -> {
             g.printSystem("System Temp directory: "+Chatty.getTempDirectory());
         });
         commands.add("openTempDir", p -> {
-            MiscUtil.openFolder(new File(Chatty.getTempDirectory()), g);
+            MiscUtil.openFile(new File(Chatty.getTempDirectory()), g);
         });
         commands.add("showDebugDir", p -> {
-            g.printSystem("Debug Log Directory: "+Chatty.getDebugLogDirectory());
+            g.printSystem("Debug Log Directory: "+Chatty.getPathInfo(PathType.DEBUG));
         });
         commands.add("openDebugDir", p -> {
-            MiscUtil.openFolder(new File(Chatty.getDebugLogDirectory()), g);
+            MiscUtil.openFile(Chatty.getPath(PathType.DEBUG), g);
         });
         commands.add("showLogDir", p -> {
-            if (chatLog.getPath() != null) {
-                g.printSystem("Chat Log Directory: "+chatLog.getPath().toAbsolutePath().toString());
-            }
-            else {
-                g.printSystem("Invalid Chat Log Directory");
-            }
+            g.printSystem("Chat Log Directory: " + Chatty.getPathInfo(PathType.LOGS));
         });
         commands.add("openLogDir", p -> {
             if (chatLog.getPath() != null) {
-                MiscUtil.openFolder(chatLog.getPath().toAbsolutePath().toFile(), g);
+                MiscUtil.openFile(chatLog.getPath().toAbsolutePath().toFile(), g);
             }
             else {
                 g.printSystem("Invalid Chat Log Directory");
@@ -1324,7 +1331,7 @@ public class TwitchClient {
             g.printSystem("JRE directory: "+System.getProperty("java.home"));
         });
         commands.add("openJavaDir", p -> {
-            MiscUtil.openFolder(new File(System.getProperty("java.home")), g);
+            MiscUtil.openFile(new File(System.getProperty("java.home")), g);
         });
         commands.add("showFallbackFontDir", p -> {
             Path path = Paths.get(System.getProperty("java.home"), "lib", "fonts", "fallback");
@@ -1333,11 +1340,11 @@ public class TwitchClient {
         commands.add("openFallbackFontDir", p -> {
             Path path = Paths.get(System.getProperty("java.home"), "lib", "fonts", "fallback");
             if (Files.exists(path)) {
-                MiscUtil.openFolder(path.toFile(), g);
+                MiscUtil.openFile(path.toFile(), g);
             } else {
                 path = path.getParent();
                 g.showPopupMessage("Fallback font folder does not exist. Create a folder called 'fallback' in '"+path+"'.");
-                MiscUtil.openFolder(path.toFile(), g);
+                MiscUtil.openFile(path.toFile(), g);
             }
         });
         commands.add("copy", p -> {
@@ -2034,15 +2041,6 @@ public class TwitchClient {
         } else if (command.equals("clearoldsetups")) {
             Stuff.init();
             Stuff.clearOldSetups();
-        } else if (command.equals("tags")) {
-            Set<StreamTag> tags = new HashSet<>();
-            tags.add(new StreamTag("id", "name", "summary", false));
-            if (parameter != null) {
-                tags.add(new StreamTag(parameter, "name2", "summary", false));
-            }
-            api.getInvalidStreamTags(tags, (t,e) -> {
-                System.out.println(t+" "+e);
-            });
         } else if (command.equals("-")) {
             g.printSystem(Debugging.command(parameter));
         } else if (command.equals("connection")) {
@@ -2707,6 +2705,26 @@ public class TwitchClient {
                         mode.moderatorLogin,
                         null));
             }
+            if (message.data instanceof ShoutoutPayload) {
+                ShoutoutPayload shoutout = (ShoutoutPayload) message.data;
+                String channel = Helper.toChannel(shoutout.stream);
+                // Message
+                String infoText = String.format("[Shoutout] Was given to %s (@%s)",
+                        shoutout.target_name,
+                        shoutout.moderator_login);
+                MsgTags tags = MsgTags.create("chatty-channel-join", Helper.toChannel(shoutout.target_login));
+                g.printInfo(c.getRoomByChannel(channel), infoText, tags);
+                // Mod Action
+                List<String> args = new ArrayList<>();
+                args.add(shoutout.target_login);
+                handleModAction(new ModeratorActionData(
+                        "", "chat_moderator_actions", "",
+                        shoutout.stream,
+                        "shoutout",
+                        args,
+                        shoutout.moderator_login,
+                        null));
+            }
         }
 
         @Override
@@ -2766,8 +2784,8 @@ public class TwitchClient {
         }
     
         @Override
-        public void putChannelInfoResult(RequestResultCode result) {
-            g.putChannelInfoResult(result);
+        public void putChannelInfoResult(RequestResultCode result, String error) {
+            g.putChannelInfoResult(result, error);
         }
 
         @Override
@@ -3357,6 +3375,10 @@ public class TwitchClient {
                     && (user.isModerator() || user.isBroadcaster())) {
                 eventSub.listenShield(user.getStream());
                 api.getShieldMode(user.getRoom(), true);
+            }
+            if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_SHOUTOUTS.scope)
+                    && (user.isModerator() || user.isBroadcaster())) {
+                eventSub.listenShoutouts(user.getStream());
             }
         }
         

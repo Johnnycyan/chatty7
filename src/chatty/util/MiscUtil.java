@@ -2,6 +2,7 @@
 package chatty.util;
 
 import chatty.Chatty;
+import chatty.Chatty.PathType;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Graphics;
@@ -21,7 +22,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import java.nio.file.StandardOpenOption;
@@ -55,25 +55,20 @@ public class MiscUtil {
         c.setContents(new StringSelection(text), null);
     }
     
-    public static boolean openFolder(File folder, Component parent) {
-        try {
-            Desktop.getDesktop().open(folder);
-        } catch (Exception ex) {
-            if (parent != null) {
-                JOptionPane.showMessageDialog(parent, "Opening folder failed.\n"+ex.getLocalizedMessage());
-            }
-            return false;
-        }
-        return true;
+    public static boolean openFile(Path folder, Component parent) {
+        return openFile(folder.toString(), parent);
     }
     
-    public static boolean openFile(String path, Component parent) {
+    public static boolean openFile(File file, Component parent) {
+        return openFile(file.toString(), parent);
+    }
+    
+    public static boolean openFile(String file, Component parent) {
         try {
-            File file = new File(path);
-            Desktop.getDesktop().open(file);
+            Desktop.getDesktop().open(new File(file));
         } catch (Exception ex) {
             if (parent != null) {
-                JOptionPane.showMessageDialog(parent, "Opening folder failed.\n"+ex.getLocalizedMessage());
+                JOptionPane.showMessageDialog(parent, "Opening file/folder failed.\n"+ex.getLocalizedMessage());
             }
             return false;
         }
@@ -87,7 +82,7 @@ public class MiscUtil {
                 JOptionPane.OK_CANCEL_OPTION,
                 JOptionPane.QUESTION_MESSAGE, null, new String[]{"Open File", "Cancel"}, 0);
         if (chosenOption == 0) {
-            return openFile(path, parent);
+            return MiscUtil.openFile(path, parent);
         }
         return false;
     }
@@ -321,8 +316,8 @@ public class MiscUtil {
     }
     
     public static boolean exportText(String fileName, String text, boolean append) {
-        Path file = Paths.get(Chatty.getExportDirectory(), fileName).toAbsolutePath().normalize();
-        if (!file.startsWith(Chatty.getExportDirectory())) {
+        Path file = Chatty.getPathCreate(PathType.EXPORT).resolve(fileName).toAbsolutePath().normalize();
+        if (!file.startsWith(Chatty.getPath(PathType.EXPORT))) {
             LOGGER.warning("Invalid filename (may contain '..'?): " + fileName);
             return false;
         }

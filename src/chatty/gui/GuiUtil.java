@@ -66,6 +66,7 @@ import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
@@ -100,6 +101,10 @@ public class GuiUtil {
     
     public static void smallButtonInsets(AbstractButton button) {
         button.setMargin(LaF.defaultButtonInsets() ? null : new Insets(-1, 10, -1, 10));
+    }
+    
+    public static void smallButtonInsetsSquare(AbstractButton button) {
+        button.setMargin(LaF.defaultButtonInsets() ? null : new Insets(0, 0, 0, 0));
     }
     
     public static void installEscapeCloseOperation(final JDialog dialog) {
@@ -719,6 +724,28 @@ public class GuiUtil {
         } else {
             throw new IllegalArgumentException("Textcomponent not using AbstractDocument");
         }
+    }
+    
+    public static JLabel createInputLenghtLabel(JTextComponent comp, int max) {
+        JLabel label = new JLabel() {
+            
+            @Override
+            public Dimension getPreferredSize() {
+                int width = getFontMetrics(getFont()).stringWidth(max+"/"+max);
+                Dimension d = super.getPreferredSize();
+                return new Dimension(Math.max(d.width, width), d.height);
+            }
+            
+        };
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        Runnable action = () -> label.setText(String.format("%d/%d", comp.getText().length(), max));
+        GuiUtil.addChangeListener(comp.getDocument(), e -> {
+            // Set value after change
+            action.run();
+        });
+        // Set initial value
+        action.run();
+        return label;
     }
     
     /**
