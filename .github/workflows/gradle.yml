@@ -62,10 +62,10 @@ jobs:
         -PinnosetupPath="%programfiles(x86)%\Inno Setup 6\ISCC.exe" ^
         -PmtPath="%programfiles(x86)%\Windows Kits\10\bin\10.0.22000.0\x64\mt.exe"
     - name: Draft release.
-      uses: softprops/action-gh-release@v0.1.14
+      uses: softprops/action-gh-release@v0.1.15
       with:
         draft: true
-        files: build\releases\*
+        files: build/releases/*
         tag_name: v${{ env.NEW_TAG_TEXT }}
         name: "Chatty Fork ${{ env.NEW_TAG_TEXT }}"
         body: "- Updated version to official [${{ env.CHATTY_TAG_TEXT }}](https://github.com/chatty/chatty/releases/tag/${{ env.CHATTY_TAG }})."

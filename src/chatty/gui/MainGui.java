@@ -1070,7 +1070,7 @@ public class MainGui extends JFrame implements Runnable {
         updatePopoutSettings();
         
         loadCommercialDelaySettings();
-        UrlOpener.setPrompt(client.settings.getBoolean("urlPrompt"));
+        UrlOpener.setSettings(client.settings);
         UrlOpener.setCustomCommandEnabled(client.settings.getBoolean("urlCommandEnabled"));
         UrlOpener.setCustomCommand(client.settings.getString("urlCommand"));
         
@@ -2326,7 +2326,12 @@ public class MainGui extends JFrame implements Runnable {
                     }
                     urls.add(url);
                 }
-                UrlOpener.openUrlsPrompt(getActiveWindow(), urls, true);
+                if (urls.size() > 1) {
+                    UrlOpener.openUrlsPrompt(getActiveWindow(), urls, true);
+                }
+                else {
+                    UrlOpener.openUrlsPrompt(getActiveWindow(), urls);
+                }
             } else if (cmd.startsWith("streams")) {
                 ArrayList<String> streams2 = new ArrayList<>();
                 for (String stream : streams) {
@@ -5383,9 +5388,6 @@ public class MainGui extends JFrame implements Runnable {
             }
             if (setting.equals("spamProtection")) {
                 client.setLinesPerSeconds((String)value);
-            }
-            if (setting.equals("urlPrompt")) {
-                UrlOpener.setPrompt((Boolean)value);
             }
             if (setting.equals("urlCommandEnabled")) {
                 UrlOpener.setCustomCommandEnabled((Boolean)value);
