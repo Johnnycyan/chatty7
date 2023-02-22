@@ -6,6 +6,7 @@ import chatty.ChannelFavorites.Favorite;
 import chatty.lang.Language;
 import chatty.gui.colors.UsercolorManager;
 import chatty.gui.components.admin.StatusHistory;
+import chatty.util.api.pubsub.*;
 import chatty.util.commands.CustomCommands;
 import chatty.util.api.usericons.Usericon;
 import chatty.util.api.usericons.UsericonManager;
@@ -2623,6 +2624,30 @@ public class TwitchClient {
                         handleUserModeration(data);
                     }
                 }
+                else if (message.data instanceof LowTrustUserMessageData) {
+                    LowTrustUserMessageData data = (LowTrustUserMessageData) message.data;
+                    if (c.isChannelOpen(Helper.toChannel(data.stream))) {
+                        handleLowTrustUser(data);
+                    }
+                }
+                else if (message.data instanceof LowTrustUserUpdateData) {
+                    LowTrustUserUpdateData data = (LowTrustUserUpdateData) message.data;
+                    String channel = Helper.toChannel(data.stream);
+                    
+                    // Mod Action
+                    List<String> args = new ArrayList<>();
+                    args.add(data.targetUsername);
+                    handleModAction(new ModeratorActionData(
+                        "", "chat_moderator_actions", "",
+                        data.stream,
+                        data.treatment.name(),
+                        args,
+                        data.moderatorUsername,
+                        null));
+                    
+                    User targetUser = c.getUser(channel, data.targetUsername);
+                    targetUser.addInfo("", data.makeInfo());
+                }
             }
         }
 
@@ -2641,6 +2666,14 @@ public class TwitchClient {
         
         private void handleUserModeration(UserModerationMessageData data) {
             g.printLine(c.getRoomByChannel(Helper.toChannel(data.stream)), data.info);
+        }
+
+        private void handleLowTrustUser(LowTrustUserMessageData data) {
+            String channel = Helper.toChannel(data.stream);
+            
+            g.printLowTrustUserInfo(c.getUser(channel, data.username), data);
+            User targetUser = c.getUser(channel, data.username);
+            targetUser.addInfo("", data.makeInfo());
         }
         
     }

@@ -65,6 +65,12 @@ public class ModerationSettings extends SettingsPanel {
         modInfoPanel.add(new JLabel(SettingConstants.HTML_PREFIX
                 + "Approve/deny AutoMod messages in chat through their context menu (right-click) or the User Dialog (left-click) or <code>Extra - AutoMod</code>."),
                 d.makeGbc(1, 6, 2, 1, GridBagConstraints.CENTER));
+
+        modInfoPanel.add(d.addSimpleBooleanSetting("showLowTrustInfo"),
+            d.makeGbc(0, 7, 3, 1, GridBagConstraints.WEST));
+        
+        modInfoPanel.add(d.addSimpleBooleanSetting("showRestrictedMessages"),
+            d.makeGbc(0, 8, 3, 1, GridBagConstraints.WEST));
         
         //==========================
         // User Dialog

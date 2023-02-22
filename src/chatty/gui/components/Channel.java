@@ -15,6 +15,7 @@ import chatty.gui.components.textpane.ChannelTextPane;
 import chatty.gui.components.textpane.InfoMessage;
 import chatty.gui.components.textpane.Message;
 import chatty.util.StringUtil;
+import chatty.util.api.pubsub.LowTrustUserMessageData;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
@@ -27,10 +28,7 @@ import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 /**
  * A single channel window, combining styled text pane, userlist and input box.
@@ -304,7 +302,10 @@ public final class Channel extends JPanel {
     public void printMessage(Message message, String timestamp) {
         text.printMessage(message, timestamp);
     }
-    
+
+    public void printLowTrustInfo(User user, LowTrustUserMessageData data) {
+        text.printLowTrustInfo(user, data);
+    }
     
     // Style
     

@@ -320,7 +320,11 @@ public class UpdateDialog extends JDialog {
             b.append("[url:").append(forkUrl + assetName).append(" ").append(assetName).append("]");
             b.append("</li>");
         }
+        b.append("<li>");
+        b.append("[url:https://tduva.com/chatty/checksums/v").append(release.getVersion()).append(" View download checksums]");
+        b.append("</li>");
         b.append("</ul>");
+        
         return b.toString();
     }
     
