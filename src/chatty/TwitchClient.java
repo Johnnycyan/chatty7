@@ -93,6 +93,7 @@ import chatty.util.settings.FileManager;
 import chatty.util.settings.Settings;
 import chatty.util.settings.SettingsListener;
 import chatty.util.seventv.SevenTV;
+import chatty.util.seventv.WebPUtil;
 import chatty.util.srl.SpeedrunsLive;
 import java.awt.Color;
 import java.io.File;
@@ -313,7 +314,7 @@ public class TwitchClient {
         
         pubsub = new chatty.util.api.pubsub.Manager(
                 settings.getString("pubsub"), pubsubListener, api);
-        eventSub = new EventSubManager("wss://eventsub-beta.wss.twitch.tv/ws", new EventSubResults(), api);
+        eventSub = new EventSubManager("wss://eventsub.wss.twitch.tv/ws", new EventSubResults(), api);
 //        eventSub = new EventSubManager("ws://localhost:8080/eventsub", new EventSubResults(), api);
         
         frankerFaceZ = new FrankerFaceZ(new EmoticonsListener(), settings, api);
@@ -369,6 +370,11 @@ public class TwitchClient {
         
         LaF.setLookAndFeel(LaFSettings.fromSettings(settings));
         GuiUtil.addMacKeyboardActions();
+        
+        if (settings.getBoolean("webp")) {
+            WebPUtil.runIfWebPAvailable(() -> {});
+        }
+        WebPUtil.setUseWebP(settings.getBoolean("webp"));
         
         // Create GUI
         LOGGER.info("Create GUI..");
@@ -1050,7 +1056,8 @@ public class TwitchClient {
      * @param text The text to send (not null)
      * @param atUsername The username to address (not null)
      * @param atMsgId The msg-id to use as reply thread parent (not null)
-     * @param atMsg The parent msg text (may be null)
+     * @param atMsg The parent msg text (may be null, if responding to the
+     * parent id of a thread, not as a first response)
      */
     private void sendReply(String channel, String text, String atUsername, String atMsgId, String atMsg) {
         MsgTags tags = MsgTags.create("reply-parent-msg-id", atMsgId);
@@ -1251,12 +1258,22 @@ public class TwitchClient {
                     String atMsgId = p.getParameters().get("msg-id");
                     String atMsg = p.getParameters().get("msg");
                     String msg = p.getArgs();
+                    if (p.getEnteredCommandName().equalsIgnoreCase("msgreplythread")) {
+                        String parentMsgId = ReplyManager.getParentMsgId(atMsgId);
+                        if (parentMsgId != null) {
+                            // Overwrite result with parent msg-id if available
+                            // Msg should be null for this, since the selected.text
+                            // isn't the parent text
+                            atMsgId = parentMsgId;
+                            atMsg = null;
+                        }
+                    }
                     sendReply(p.getChannel(), msg, atUsername, atMsgId, atMsg);
             }
             else {
                 g.printLine("Invalid reply parameters");
             }
-        });
+        }, "msgreplythread");
         commands.add("w", p -> {
             if (rejectTimedMessage("w", p.getRoom(), p.getParameters())) {
                 return;
@@ -2476,8 +2493,8 @@ public class TwitchClient {
         return c.getSpecialUser();
     }
     
-    public Set<String> getEmotesets() {
-        return emotesetManager.getEmotesets();
+    public Set<String> getEmotesetsByChannel(String channel) {
+        return emotesetManager.getEmotesetsByChannel(channel);
     }
     
     private void commandFFZ(String channel) {
@@ -2647,6 +2664,7 @@ public class TwitchClient {
                     
                     User targetUser = c.getUser(channel, data.targetUsername);
                     targetUser.addInfo("", data.makeInfo());
+                    g.updateUserinfo(targetUser);
                 }
             }
         }
@@ -2673,7 +2691,8 @@ public class TwitchClient {
             
             g.printLowTrustUserInfo(c.getUser(channel, data.username), data);
             User targetUser = c.getUser(channel, data.username);
-            targetUser.addInfo("", data.makeInfo());
+            targetUser.addLowTrust(data);
+            g.updateUserinfo(targetUser);
         }
         
     }
@@ -2778,14 +2797,6 @@ public class TwitchClient {
         @Override
         public void receivedEmoticons(EmoticonUpdate update) {
             g.updateEmoticons(update);
-            
-            // After adding emotes, update sets
-            if (update.source == EmoticonUpdate.Source.USER_EMOTES
-                    && update.setsAdded != null) {
-                // setsAdded contains all sets (for USER_EMOTES)
-                // This may also update EmoteDialog etc.
-                emotesetManager.setUserEmotesets(update.setsAdded);
-            }
             
             // Other stuff
             if (refreshRequests.contains("emoticons")) {

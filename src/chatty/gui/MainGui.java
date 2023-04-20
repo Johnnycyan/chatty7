@@ -117,6 +117,7 @@ import javax.swing.event.MenuListener;
 import chatty.util.dnd.DockPopout;
 import chatty.util.gif.FocusUpdates;
 import chatty.util.gif.GifUtil;
+import chatty.util.seventv.WebPUtil;
 import java.util.function.Consumer;
 import org.json.simple.JSONValue;
 
@@ -2548,7 +2549,8 @@ public class MainGui extends JFrame implements Runnable {
         public void stateChanged(ChangeEvent e) {
             state.update(true);
             updateChannelInfoDialog(null);
-            emotesDialog.updateStream(channels.getLastActiveChannel().getStreamName());
+            String stream = channels.getLastActiveChannel().getStreamName();
+            emotesDialog.updateStream(stream, client.getEmotesetsByChannel(Helper.toChannel(stream)));
             moderationLog.setChannel(channels.getLastActiveChannel().getStreamName());
             if (!openedFirstChannel
                     && channels.getLastActiveChannel().getType() == Channel.Type.CHANNEL) {
@@ -3103,9 +3105,9 @@ public class MainGui extends JFrame implements Runnable {
         openEmotesDialog(channels.getLastActiveChannel().getStreamName());
     }
     
-    private void openEmotesDialog(String channel) {
+    private void openEmotesDialog(String stream) {
         windowStateManager.setWindowPosition(emotesDialog, getActiveWindow());
-        emotesDialog.showDialog(client.getEmotesets(), channel);
+        emotesDialog.showDialog(client.getEmotesetsByChannel(Helper.toChannel(stream)), stream);
         // Focus inputbox to be able to keep writing
         channels.setInitialFocus();
     }
@@ -4681,12 +4683,12 @@ public class MainGui extends JFrame implements Runnable {
         streamChat.setSize(width, height);
     }
     
-    public void updateEmotesDialog(Set<String> emotesets) {
+    public void updateEmotesDialog(String stream, Set<String> emotesets) {
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
             public void run() {
-                emotesDialog.updateEmotesets(emotesets);
+                emotesDialog.updateEmotesets(stream, emotesets);
             }
         });
     }
@@ -4728,6 +4730,7 @@ public class MainGui extends JFrame implements Runnable {
             emoticons.updateEmoticons(update);
             emotesDialog.update();
             autoSetSmilies(update);
+            emoticons.setLocalEmotesetManager(client.emotesetManager);
         });
     }
     
@@ -5323,6 +5326,11 @@ public class MainGui extends JFrame implements Runnable {
                     emotesDialog.setEmoteImageType(Emoticon.makeImageType(bool));
                 } else if (setting.equals("matchingSubstitutesEnabled")) {
                     updateHighlight();
+                } else if (setting.equals("webp")) {
+                    if (bool) {
+                        WebPUtil.runIfWebPAvailable(() -> {});
+                    }
+                    WebPUtil.setUseWebP(bool);
                 }
                 if (setting.startsWith("title") || setting.equals("tabsChanTitles")) {
                     updateState(true);
@@ -5615,12 +5623,12 @@ public class MainGui extends JFrame implements Runnable {
         return client.commands.getCommandNames();
     }
     
-    public void updateEmoteNames(Set<String> emotesets, Set<String> allEmotesets) {
+    public void updateEmoteNames(Set<String> localEmotesets) {
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
             public void run() {
-                emoticons.updateLocalEmotes(emotesets, allEmotesets);
+                emoticons.updateLocalEmotes(localEmotesets);
             }
         });
     }
