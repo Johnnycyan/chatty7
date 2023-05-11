@@ -2411,7 +2411,9 @@ public class MainGui extends JFrame implements Runnable {
             } else if (e.getActionCommand().equals("cheer")) {
                 url = "https://help.twitch.tv/customer/portal/articles/2449458";
             } else if (e.getActionCommand().equals("emoteImage")) {
-                url = emoteImage.getLoadedFrom();
+                url = emoteImage.getSourceUrl();
+            } else if (e.getActionCommand().equals("emoteImageLoaded")) {
+                url = emoteImage.getLoadedFromUrl();
             } else if (e.getActionCommand().equals("ffzlink")) {
                 url = TwitchUrl.makeFFZUrl();
             } else if (e.getActionCommand().equals("emoteId")) {
@@ -2512,7 +2514,7 @@ public class MainGui extends JFrame implements Runnable {
                 }
             }
             else if (e.getActionCommand().equals("badgeImage")) {
-                UrlOpener.openUrlPrompt(getActiveWindow(), usericonImage.getLoadedFrom(), true);
+                UrlOpener.openUrlPrompt(getActiveWindow(), usericonImage.getSourceUrl(), true);
             }
         }
         
@@ -3544,11 +3546,16 @@ public class MainGui extends JFrame implements Runnable {
                         ignoreMatches = ignoreList.getLastTextMatches();
                         ignoreSource = ignoreList.getLastMatchItems();
                     }
-                    ignoredMessages.addMessage(channel, user, text, action,
-                            tagEmotes, bitsForEmotes, whisper, ignoreMatches,
-                            ignoreSource, tags);
-                    client.chatLog.message("ignored", user, text, action, channel);
-                    ignoredMessagesHelper.ignoredMessage(channel);
+                    // No match item is set when ignored by "Ignored Users" list
+                    if (ignoredUser || !ignoreList.getLastMatchItem().hide()) {
+                        ignoredMessages.addMessage(channel, user, text, action,
+                                tagEmotes, bitsForEmotes, whisper, ignoreMatches,
+                                ignoreSource, tags);
+                        ignoredMessagesHelper.ignoredMessage(channel);
+                    }
+                    if (ignoredUser || !ignoreList.getLastMatchItem().noLog()) {
+                        client.chatLog.message("ignored", user, text, action, channel);
+                    }
                 }
                 long ignoreMode = client.settings.getLong("ignoreMode");
                 
@@ -3600,8 +3607,12 @@ public class MainGui extends JFrame implements Runnable {
                     }
                     chan.printMessage(message, timestamp);
                     if (highlighted) {
-                        highlightedMessages.addMessage(channel, message);
-                        client.chatLog.message("highlighted", user, text, action, channel);
+                        if (!highlighter.getLastMatchItem().hide()) {
+                            highlightedMessages.addMessage(channel, message);
+                        }
+                        if (!highlighter.getLastMatchItem().noLog()) {
+                            client.chatLog.message("highlighted", user, text, action, channel);
+                        }
                     }
                     if (client.settings.listContains("streamChatChannels", channel)) {
                         streamChat.printMessage(message);
@@ -3978,8 +3989,12 @@ public class MainGui extends JFrame implements Runnable {
                 }
                 // After colors and everything is set
                 if (highlighted) {
-                    highlightedMessages.addInfoMessage(channel.getChannel(), message);
-                    client.chatLog.info("highlighted", message.text, channel.getChannel());
+                    if (!highlighter.getLastMatchItem().hide()) {
+                        highlightedMessages.addInfoMessage(channel.getChannel(), message);
+                    }
+                    if (!highlighter.getLastMatchItem().noLog()) {
+                        client.chatLog.info("highlighted", message.text, channel.getChannel());
+                    }
                 }
             }
             channel.printInfoMessage(message);
@@ -3987,9 +4002,13 @@ public class MainGui extends JFrame implements Runnable {
                 channels.setChannelNewMessage(channel);
             }
         } else if (!message.isHidden()) {
-            ignoredMessages.addInfoMessage(channel.getChannel(), message.text,
-                    ignoreList.getLastTextMatches(), ignoreList.getLastMatchItems());
-            client.chatLog.info("ignored", message.text, channel.getChannel());
+            if (!ignoreList.getLastMatchItem().hide()) {
+                ignoredMessages.addInfoMessage(channel.getChannel(), message.text,
+                        ignoreList.getLastTextMatches(), ignoreList.getLastMatchItems());
+            }
+            if (!ignoreList.getLastMatchItem().noLog()) {
+                client.chatLog.info("ignored", message.text, channel.getChannel());
+            }
         }
         
         //----------
