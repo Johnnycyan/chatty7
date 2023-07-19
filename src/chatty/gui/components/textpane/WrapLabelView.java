@@ -127,6 +127,10 @@ public class WrapLabelView extends LabelView {
                 g.fillRect(r.x, r.y, r.width, r.height);
             }
         }
+        if (getAttributes().getAttribute(Attribute.HYPE_CHAT) != null) {
+            g.setColor(StyleConstants.getForeground(getAttributes()));
+            g.drawRoundRect(r.x, r.y, r.width - 1, r.height - 1, r.height / 2, r.height / 2);
+        }
         if (Debugging.isEnabled("labeloutlines")) {
             g.setColor(Color.red);
             g.drawRect(r.x, r.y, r.width, r.height);

@@ -353,6 +353,17 @@ public class StatusPanel extends JPanel {
             
             private void openContextMenu(MouseEvent e) {
                 if (e.isPopupTrigger()) {
+                    Parameters params = Parameters.create("");
+                    params.put("title", status.getText());
+                    params.put("game", game.getText());
+                    params.put("tag-ids", StringUtil.join(currentStreamTags, ",", o -> {
+                        return ((StreamTag) o).getName();
+                    }));
+                    params.put("tag-names", StringUtil.join(currentStreamTags, ",", o -> {
+                        return ((StreamTag) o).getDisplayName();
+                    }));
+                    Room room = Room.createRegular(Helper.toChannel(currentChannel));
+                    
                     ContextMenu m = new ContextMenu() {
 
                         @Override
@@ -360,23 +371,14 @@ public class StatusPanel extends JPanel {
                             if (e instanceof CommandActionEvent) {
                                 // Command Context Menu
                                 CommandActionEvent c = (CommandActionEvent)e;
-                                Parameters params = Parameters.create("");
-                                params.put("title", status.getText());
-                                params.put("game", game.getText());
-                                params.put("tag-ids", StringUtil.join(currentStreamTags, ",", o -> {
-                                    return ((StreamTag) o).getName();
-                                }));
-                                params.put("tag-names", StringUtil.join(currentStreamTags, ",", o -> {
-                                    return ((StreamTag) o).getDisplayName();
-                                }));
-                                main.anonCustomCommand(Room.createRegular(Helper.toChannel(currentChannel)), c.getCommand(), params);
+                                main.anonCustomCommand(room, c.getCommand(), params);
                                 addCurrentToHistory();
                             }
                             // Dock item
                             parent.helper.menuAction(e);
                         }
                     };
-                    CommandMenuItems.addCommands(CommandMenuItems.MenuType.ADMIN, m);
+                    CommandMenuItems.addCommands(CommandMenuItems.MenuType.ADMIN, m, params);
                     m.addSeparator();
                     parent.helper.addToContextMenu(m);
                     m.show(e.getComponent(), e.getPoint().x, e.getPoint().y);
@@ -423,7 +425,8 @@ public class StatusPanel extends JPanel {
     
     public void channelStatusReceived(ChannelStatus channelStatus, TwitchApi.RequestResultCode result) {
         if (channelStatus.channelLogin.equals(currentChannel)) {
-            if (channelStatusToCheck != null) {
+            if (channelStatusToCheck != null
+                    && channelStatusToCheck.channelLogin.equals(currentChannel)) {
                 String difference = channelStatusToCheck.getStatusDifference(channelStatus);
                 if (!difference.isEmpty()) {
                     JOptionPane.showMessageDialog(this,
@@ -437,8 +440,8 @@ public class StatusPanel extends JPanel {
                                     + "Tags: %s", difference, channelStatus.title, channelStatus.category, channelStatus.tags),
                             "Update failed", JOptionPane.WARNING_MESSAGE);
                 }
-                channelStatusToCheck = null;
             }
+            channelStatusToCheck = null;
             if (result == TwitchApi.RequestResultCode.SUCCESS) {
                 if (updateStatusAfterLoad) {
                     status.setText(channelStatus.title);
@@ -494,6 +497,8 @@ public class StatusPanel extends JPanel {
                 statusPutResult = "Update: Invalid title/game (possibly bad language)";
                 updated.setText("Error: Invalid title/game");
             }
+            // If error it's not updated anyway, so no need to check
+            channelStatusToCheck = null;
         }
         lastPutResult = System.currentTimeMillis();
         loadingStatus = false;

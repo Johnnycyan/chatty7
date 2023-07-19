@@ -160,6 +160,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         ACTION_REASON,
         
         REPLY_PARENT_MSG, REPLY_PARENT_MSG_ID,
+        HYPE_CHAT,
         
         OBJECT_ID
     }
@@ -661,6 +662,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             printTimestamp(style);
         } else {
             printTimestamp(style, timestamp);
+        }
+        String hypeChatText = message.tags.getHypeChatAmountText();
+        if (hypeChatText != null) {
+            print(" "+hypeChatText+" ", styles.hypeChat(style, message.tags));
+            print(" ", style);
         }
         printUser(user, message.localUser, action, message.whisper, message.id, background, message.tags);
         
@@ -1891,7 +1897,9 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
          */
         @Override
         public void userClicked(User user, String messageId, String autoModMsgId, MouseEvent e) {
-            if (e != null && ((e.isAltDown() && e.isControlDown()) || e.isAltGraphDown())) {
+            if (e != null
+                    && ((e.isAltDown() && e.isControlDown()) || e.isAltGraphDown())
+                    && !SwingUtilities.isMiddleMouseButton(e)) {
                 Element element = LinkController.getElement(e);
                 Element line = null;
                 while (element.getParentElement() != null) {
@@ -4393,6 +4401,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             CachedImage<Usericon> usericonImage = icon.getIcon(usericonScaleFactor(), getInt(Setting.CUSTOM_USERICON_SCALE_MODE), ChannelTextPane.this);
             StyleConstants.setIcon(style, usericonImage.getImageIcon());
             style.addAttribute(Attribute.USERICON, usericonImage);
+            return style;
+        }
+        
+        public MutableAttributeSet hypeChat(AttributeSet baseStyle, MsgTags tags) {
+            SimpleAttributeSet style = new SimpleAttributeSet(baseStyle);
+            style.addAttribute(Attribute.HYPE_CHAT, tags.getHypeChatInfo());
             return style;
         }
     }

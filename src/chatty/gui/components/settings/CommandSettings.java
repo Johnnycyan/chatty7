@@ -103,7 +103,7 @@ public class CommandSettings extends SettingsPanel {
                         JOptionPane.showMessageDialog(parent, result, "Command result", JOptionPane.INFORMATION_MESSAGE);
                     }
                 }, null, d.settings, null);
-                dialog.setUserDefinedButtonsDef(value);
+                dialog.setUserDefinedButtonsDef(value, true);
                 GuiUtil.setLocationRelativeTo(dialog, parent);
                 dialog.show(component, user, "s0m3-msg-1d", null, null);
                 return null;
@@ -137,6 +137,7 @@ public class CommandSettings extends SettingsPanel {
         addSetting("textContextMenu", "textMenu", 4, menus, menuTester);
         addSetting("adminContextMenu", "adminMenu", 5, menus, menuTester);
         menus.add(d.addSimpleBooleanSetting("menuCommandLabels"), SettingsDialog.makeGbc(0, 6, 2, 1, GridBagConstraints.WEST));
+        menus.add(d.addSimpleBooleanSetting("menuRestrictions"), SettingsDialog.makeGbc(0, 7, 2, 1, GridBagConstraints.WEST));
     }
     
     private void addSetting(String settingName, String infoName, int y, JPanel panel, Editor.Tester tester) {

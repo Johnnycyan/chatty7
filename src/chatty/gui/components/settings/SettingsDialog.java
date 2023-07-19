@@ -356,7 +356,12 @@ public class SettingsDialog extends JDialog implements ActionListener {
 
             @Override
             public void linkClicked(String type, String ref) {
-                owner.openHelp("help-settings.html", currentlyShown.name);
+                if (currentlyShown == Page.COMMANDS) {
+                    owner.openHelp("help-custom_commands.html", "");
+                }
+                else {
+                    owner.openHelp("help-settings.html", currentlyShown.name);
+                }
             }
         }), gbc);
         
@@ -1012,8 +1017,10 @@ public class SettingsDialog extends JDialog implements ActionListener {
         return result;
     }
     
-    protected SimpleTableEditor<String> addStringMapSetting(String name, int width, int height) {
-        SimpleTableEditor<String> table = new SimpleTableEditor<String>(this, String.class) {
+    protected SimpleTableEditor<String> addStringMapSetting(String name,
+            int width, int height,
+            String keyLabel, String valueLabel) {
+        SimpleTableEditor<String> table = new SimpleTableEditor<String>(this, String.class, keyLabel, valueLabel) {
 
             @Override
             protected String valueFromString(String input) {
@@ -1025,8 +1032,10 @@ public class SettingsDialog extends JDialog implements ActionListener {
         return table;
     }
     
-    protected SimpleTableEditor<Long> addLongMapSetting(String name, int width, int height) {
-        SimpleTableEditor<Long> table = new SimpleTableEditor<Long>(this, Long.class) {
+    protected SimpleTableEditor<Long> addLongMapSetting(String name,
+            int width, int height,
+            String keyLabel, String valueLabel) {
+        SimpleTableEditor<Long> table = new SimpleTableEditor<Long>(this, Long.class, keyLabel, valueLabel) {
 
             @Override
             protected Long valueFromString(String input) {

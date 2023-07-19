@@ -944,6 +944,11 @@ public class Highlighter {
                                 return tags.isRestrictedMessage();
                             });
                         }
+                        else if (part.equals("hypechat")) {
+                            addTagsItem("Hype Chat", null, tags -> {
+                                return tags.getHypeChatAmountText() != null;
+                            });
+                        }
                         else if (part.startsWith("repeatedmsg")) {
 //                            String options = parsePrefix(item, "repeatmsg:");
 //                            String[] split = options.split("/");
@@ -1936,6 +1941,14 @@ public class Highlighter {
                 }
                 if (ab == null) {
                     ab = user.getAddressbook();
+                }
+            }
+            if (localUser != null) {
+                if (channel == null) {
+                    channel = localUser.getChannel();
+                }
+                if (ab == null) {
+                    ab = localUser.getAddressbook();
                 }
             }
             if (tags == null) {

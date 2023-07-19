@@ -18,6 +18,7 @@ import chatty.gui.components.menus.TextSelectionMenu;
 import chatty.gui.components.menus.UrlContextMenu;
 import chatty.gui.components.menus.UserContextMenu;
 import chatty.gui.components.menus.UsericonContextMenu;
+import chatty.gui.components.textpane.ChannelTextPane.Attribute;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_CTRL;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS_CTRL_ALL;
@@ -212,7 +213,16 @@ public class LinkController extends MouseAdapter {
             if (element != null) {
                 handleSingleLeftClick(e, element);
             }
-        } else if (e.isPopupTrigger()) {
+        }
+        else if (e.getClickCount() == 1
+                && SwingUtilities.isMiddleMouseButton(e)
+                && !e.isPopupTrigger()) {
+            Element element = getElement(e);
+            if (element != null) {
+                handleSingleMiddleClick(e, element);
+            }
+        }
+        else if (e.isPopupTrigger()) {
             openContextMenu(e);
         }
     }
@@ -247,6 +257,18 @@ public class LinkController extends MouseAdapter {
         } else if ((usericonImage = getUsericonImage(element)) != null) {
             for (UserListener listener : userListener) {
                 listener.usericonClicked(usericonImage.getObject(), e);
+            }
+        }
+    }
+    
+    private void handleSingleMiddleClick(MouseEvent e, Element element) {
+        User user;
+        if ((user = getUser(element)) != null || (user = getMention(element)) != null) {
+            for (UserListener listener : userListener) {
+                final User finalUser = user;
+                SwingUtilities.invokeLater(() -> {
+                    listener.userClicked(finalUser, getMsgId(element), getAutoModMsgId(element), e);
+                });
             }
         }
     }
@@ -297,6 +319,7 @@ public class LinkController extends MouseAdapter {
         String replacedText = getReplacedText(element);
         String replyMsgId = getReplyText(element);
         User mention = getMention(element);
+        String hypeChatInfo = (String) element.getAttributes().getAttribute(Attribute.HYPE_CHAT);
         boolean isRestricted = element.getAttributes().getAttribute(ChannelTextPane.Attribute.IS_RESTRICTED) != null;
         if (emoteImage != null) {
             popup.show(textPane, element, p -> makeEmoticonPopupText(emoteImage, popupImagesEnabled, p, element), emoteImage.getImageIcon().getIconWidth());
@@ -310,6 +333,8 @@ public class LinkController extends MouseAdapter {
             popup.show(textPane, element, p -> makeMentionPopupText(mention, p, mentionMessages), 1);
         } else if (isRestricted) {
             popup.show(textPane, element, p -> p.setText(POPUP_HTML_PREFIX+"Message not posted to chat (restricted)"), 1);
+        } else if (hypeChatInfo != null) {
+            popup.show(textPane, element, p -> p.setText(POPUP_HTML_PREFIX+hypeChatInfo), 1);
         } else {
             popup.hide();
         }
@@ -321,7 +346,8 @@ public class LinkController extends MouseAdapter {
                 || mention != null
                 || emoteImage != null
                 || usericonImage != null
-                || isRestricted;
+                || isRestricted
+                || hypeChatInfo != null;
         
         if (isClickableElement) {
             textPane.setCursor(HAND_CURSOR);
@@ -885,6 +911,9 @@ public class LinkController extends MouseAdapter {
         }
         if (Debugging.isEnabled("tt")) {
             info += " ["+usericonImage.getImageIcon().getDescription()+"]";
+        }
+        if (usericon.metaDescription != null && !usericon.metaDescription.isEmpty()) {
+            info += "<br />"+usericon.metaDescription;
         }
         if (!StringUtil.isNullOrEmpty(moreInfo)) {
             info += "<br />("+moreInfo+")";
