@@ -154,7 +154,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         
         HIGHLIGHT_WORD, HIGHLIGHT_LINE, HIGHLIGHT_SOURCE, EVEN, PARAGRAPH_SPACING,
         CUSTOM_BACKGROUND, CUSTOM_BACKGROUND_ORIG, CUSTOM_FOREGROUND,
-        CUSTOM_COLOR_SOURCE,
+        CUSTOM_COLOR_SOURCE, ROUTING_SOURCE, IGNORE_SOURCE,
         
         IS_REPLACEMENT, REPLACEMENT_FOR, REPLACED_WITH, COMMAND, ACTION_BY,
         ACTION_REASON,
@@ -179,7 +179,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         
         ACTION_COLORED, LINKS_CUSTOM_COLOR, BUFFER_SIZE, AUTO_SCROLL_TIME,
         EMOTICON_MAX_HEIGHT, EMOTICON_SCALE_FACTOR, USERICON_SCALE_FACTOR,
-        CUSTOM_USERICON_SCALE_MODE, BOT_BADGE_ENABLED,
+        CUSTOM_USERICON_SCALE_MODE, BOT_BADGE_ENABLED, CHANNEL_LOGO_SIZE,
         FILTER_COMBINING_CHARACTERS, PAUSE_ON_MOUSEMOVE,
         PAUSE_ON_MOUSEMOVE_CTRL_REQUIRED,
         EMOTICONS_ANIMATED,
@@ -207,7 +207,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         REGULAR, STREAM_CHAT, HIGHLIGHTS, IGNORED
     }
     
-    private final Type type;
+    public final Type type;
     
     private final Map<User, LowTrustUserMessageData> pendingLowTrustInfoCache = new HashMap<>();
 
@@ -682,10 +682,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         if (message.highlighted) {
             setLineHighlighted(doc.getLength(), message.highlightSource);
         }
-        else if (type == Type.IGNORED) {
-            // For ignored messages, the "highlight" refers to what was ignored
-            setLineHighlightSource(doc.getLength(), message.highlightSource);
-        }
+        setParagraphAttribute(doc.getLength(), Attribute.IGNORE_SOURCE, message.ignoreSource);
+        setParagraphAttribute(doc.getLength(), Attribute.ROUTING_SOURCE, message.routingSource);
         if (message.backgroundColor != null || message.color != null) {
             setCustomColor(doc.getLength(), message.backgroundColor, message.colorSource);
         }
@@ -765,9 +763,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             if (message.highlighted) {
                 setLineHighlighted(doc.getLength(), message.highlightSource);
             }
-            else if (type == Type.IGNORED) {
-                setLineHighlightSource(doc.getLength(), message.highlightSource);
-            }
+            setParagraphAttribute(doc.getLength(), Attribute.IGNORE_SOURCE, message.ignoreSource);
+            setParagraphAttribute(doc.getLength(), Attribute.ROUTING_SOURCE, message.routingSource);
             if (message.bgColor != null || message.color != null) {
                 setCustomColor(doc.getLength(), message.bgColor, message.colorSource);
             }
@@ -1538,10 +1535,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         doc.setParagraphAttributes(offset, 1, attr, false);
     }
     
-    private void setLineHighlightSource(int offset, Object source) {
+    private void setParagraphAttribute(int offset, Attribute attribute, Object source) {
         if (source != null) {
             SimpleAttributeSet attr = new SimpleAttributeSet();
-            attr.addAttribute(Attribute.HIGHLIGHT_SOURCE, source);
+            attr.addAttribute(attribute, source);
             doc.setParagraphAttributes(offset, 1, attr, false);
         }
     }
@@ -2223,7 +2220,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
      */
     private void printUserIcons(User user, User localUser, MsgTags tags) {
         boolean botBadgeEnabled = styles.isEnabled(Setting.BOT_BADGE_ENABLED);
-        java.util.List<Usericon> badges = user.getBadges(botBadgeEnabled, tags, localUser, type == Type.STREAM_CHAT);
+        java.util.List<Usericon> badges = user.getBadges(botBadgeEnabled, tags, localUser, styles.getInt(Setting.CHANNEL_LOGO_SIZE));
         if (badges != null) {
             for (Usericon badge : badges) {
                 if (!badge.removeBadge) {
@@ -2852,10 +2849,11 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
                 MutableAttributeSet style = rangesStyle.get(start);
                 CachedImage<Emoticon> image = (CachedImage<Emoticon>) style.getAttribute(Attribute.EMOTICON);
                 // Only affect emotes that aren't GIFs
-                if (image != null && !image.isAnimated()) {
+                if (image != null) {
+                    Emoticon cEmote = image.getObject();
                     // Check for emote that can overlay over another one, and
                     // that there is an emote to modify directly before that
-                    if (cei.containsCode(image.getObject().code)
+                    if ((cei.containsCode(cEmote.code) || cEmote.isZeroWidth())
                             && !emotes.isEmpty()
                             && lastEnd + 2 == start) {
                         // Extend original emote to span to the end of this one
@@ -2866,7 +2864,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
                         // This isn't an overlay emote, so check if a previous
                         // combined emote still needs to be created
                         if (emotes.size() > 1) {
-                            Emoticon emote = main.emoticons.getCombinedEmote(emotes);
+                            Emoticon emote = main.emoticons.getCombinedEmote(emotes, styles.emoticonImageType());
                             styleChanges.put(baseStart, styles.emoticon(emote));
                         }
                         // Always reset when it's not an overlay emote
@@ -2883,7 +2881,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             }
             // Finish any remaining changes
             if (emotes.size() > 1) {
-                Emoticon emote = main.emoticons.getCombinedEmote(emotes);
+                Emoticon emote = main.emoticons.getCombinedEmote(emotes, styles.emoticonImageType());
                 styleChanges.put(baseStart, styles.emoticon(emote));
             }
             // Apply changes (except removing entries, which is already done)
@@ -3884,6 +3882,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             addNumericSetting(Setting.DISPLAY_NAMES_MODE, 0, 0, 10);
             addNumericSetting(Setting.BOTTOM_MARGIN, -1, -1, 100);
             addNumericSetting(Setting.HIGHLIGHT_HOVERED_USER, 0, 0, 4);
+            addNumericSetting(Setting.CHANNEL_LOGO_SIZE, -1, -1, 100);
             timestampFormat = styleServer.getTimestampFormat();
             linkController.setPopupEnabled(settings.get(Setting.SHOW_TOOLTIPS));
             linkController.setPopupImagesEnabled(settings.get(Setting.SHOW_TOOLTIP_IMAGES));

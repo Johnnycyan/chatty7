@@ -22,6 +22,7 @@ import chatty.gui.components.textpane.ChannelTextPane.Attribute;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_CTRL;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS_CTRL_ALL;
+import chatty.util.CombinedEmoticon;
 import chatty.util.DateTime;
 import chatty.util.Debugging;
 import chatty.util.ReplyManager;
@@ -429,12 +430,8 @@ public class LinkController extends MouseAdapter {
         return (String)(e.getAttributes().getAttribute(ChannelTextPane.Attribute.REPLY_PARENT_MSG_ID));
     }
     
-    private Object getHighlightSource(Element e) {
-        return e.getAttributes().getAttribute(ChannelTextPane.Attribute.HIGHLIGHT_SOURCE);
-    }
-    
-    private Object getCustomColorSource(Element e) {
-        return e.getAttributes().getAttribute(ChannelTextPane.Attribute.CUSTOM_COLOR_SOURCE);
+    private Object getSource(Attribute attribute, Element e) {
+        return e.getAttributes().getAttribute(attribute);
     }
     
     private String getSelectedText(MouseEvent e) {
@@ -843,28 +840,23 @@ public class LinkController extends MouseAdapter {
     
     private static String makeEmoticonPopupText2(CachedImage<Emoticon> emoticonImage, boolean showImage, MyPopup popup) {
         Emoticon emote = emoticonImage.getObject();
-        String result = "";
-        if (emote.type == Emoticon.Type.TWITCH) {
-            if (emote.subType == Emoticon.SubType.CHEER) {
-                result = "Cheering Emote";
-                if (emote.hasStreamRestrictions()) {
-                    result += " Local";
-                } else {
-                    result += " Global";
-                }
-            } else {
-                result = TwitchEmotesApi.getEmoteType(emote);
+        String result = getEmoteType(emote);
+        String code = emote.type == Emoticon.Type.EMOJI
+                ? emote.stringId
+                : Emoticons.toWriteable(emote.code);
+        
+        if (emote instanceof CombinedEmoticon) {
+            List<Emoticon> combinedEmotes = ((CombinedEmoticon) emote).getEmotes();
+            code = combinedEmotes.get(0).code;
+            String combinedWith = "";
+            for (int i=1; i<combinedEmotes.size(); i++) {
+                Emoticon cEmote = combinedEmotes.get(i);
+                combinedWith += String.format("<br />+ <span style='font-weight:bold'>%s</span> (%s)",
+                        Helper.htmlspecialchars_encode(cEmote.code),
+                        getEmoteType(cEmote));
             }
-        } else if (emote.type == Emoticon.Type.CUSTOM2) {
-            result = "Local Emote";
-        } else {
-            result = emote.type.label;
-            if (emote.type != Emoticon.Type.EMOJI) {
-                if (emote.hasStreamRestrictions()) {
-                    result += " Local";
-                } else {
-                    result += " Global";
-                }
+            if (!combinedWith.isEmpty()) {
+                result += "<br />"+combinedWith;
             }
         }
 
@@ -872,18 +864,50 @@ public class LinkController extends MouseAdapter {
             result += " [" + emoticonImage.getImageIcon().getDescription() + "]";
         }
 
-        if (showImage && !emote.isAnimated()) {
-            CachedImage<Emoticon> icon = emote.getIcon(2, 0, ImageType.STATIC, (o,n,c) -> {
+        if (showImage) {
+            CachedImage<Emoticon> icon = emote.getIcon(2, 0, ImageType.ANIMATED_DARK, (o,n,c) -> {
                 // The set ImageIcon will have been updated
                 popup.forceUpdate();
             });
             popup.setIcon(icon.getImageIcon());
         }
-        String code = emote.type == Emoticon.Type.EMOJI ? emote.stringId : Emoticons.toWriteable(emote.code);
         return String.format("%s%s<br /><span style='font-weight:normal'>%s</span>",
                 POPUP_HTML_PREFIX,
                 Helper.htmlspecialchars_encode(code),
                 result);
+    }
+    
+    private static String getEmoteType(Emoticon emote) {
+        String result;
+        if (emote.type == Emoticon.Type.TWITCH) {
+            if (emote.subType == Emoticon.SubType.CHEER) {
+                result = "Cheering Emote";
+                if (emote.hasStreamRestrictions()) {
+                    result += " Local";
+                }
+                else {
+                    result += " Global";
+                }
+            }
+            else {
+                result = TwitchEmotesApi.getEmoteType(emote);
+            }
+        }
+        else if (emote.type == Emoticon.Type.CUSTOM2) {
+            result = "Local Emote";
+        }
+        else {
+            result = emote.type.label;
+            if (emote.type != Emoticon.Type.EMOJI) {
+                if (emote.hasStreamRestrictions()) {
+                    result += " Local";
+                }
+                else {
+                    result += " Global";
+                }
+            }
+        }
+        return result;
     }
     
     //----------------
@@ -1020,36 +1044,22 @@ public class LinkController extends MouseAdapter {
      * @param element 
      */
     private void addMessageInfoItems(JPopupMenu m, Element element) {
-        Object highlightSource = getHighlightSource(element);
-        Object colorSource = getCustomColorSource(element);
-        String highlight = "Highlight";
-        if (type == ChannelTextPane.Type.IGNORED) {
-            // Highlight is used for ignore in Ignored Messages dialog
-            highlight = "Ignore";
-        }
-        if (highlightSource != null || colorSource != null) {
+        Object highlightSource = getSource(Attribute.HIGHLIGHT_SOURCE, element);
+        Object ignoreSource = getSource(Attribute.IGNORE_SOURCE, element);
+        Object colorSource = getSource(Attribute.CUSTOM_COLOR_SOURCE, element);
+        Object routingSource = getSource(Attribute.ROUTING_SOURCE, element);
+        
+        if (highlightSource != null
+                || ignoreSource != null
+                || colorSource != null
+                || routingSource != null) {
             JMenu menu = new JMenu("Message Info");
             
-            /**
-             * Treat a single highlight item (meaning no further text matches
-             * from other items, or setting disabled) as before and show
-             * combined if possible, otherwise show separately.
-             */
-            Object highlightSourceItem = null;
-            if (highlightSource != null && highlightSource instanceof List
-                    && ((List) highlightSource).size() == 1) {
-                highlightSourceItem = ((List) highlightSource).get(0);
-            }
-            else {
-                highlightSourceItem = highlightSource;
-            }
-            if (highlightSourceItem == colorSource) {
-                addMessageInfoItem(menu, highlight+"/Custom Color Source", highlightSourceItem);
-            }
-            else {
-                addMessageInfoItem(menu, highlight+" Source", highlightSource);
-                addMessageInfoItem(menu, "Custom Color Source", colorSource);
-            }
+            addMessageInfoItem(menu, "Highlight Source", highlightSource);
+            addMessageInfoItem(menu, "Ignore Source", ignoreSource);
+            addMessageInfoItem(menu, "Custom Color Source", colorSource);
+            addMessageInfoItem(menu, "Routing Source", routingSource);
+            
             m.addSeparator();
             m.add(menu);
         }
@@ -1091,21 +1101,43 @@ public class LinkController extends MouseAdapter {
                 sourceLabel = "Msg. Color: "+sourceText;
             }
             else if (source instanceof List) {
-                List<Highlighter.HighlightItem> list = (List) source;
-                JSONArray rawList = new JSONArray();
-                list.forEach(entry -> rawList.add(entry.getRaw()));
-                sourceText = rawList.toJSONString();
-                if (type == ChannelTextPane.Type.IGNORED) {
-                    sourceType = "ignoreSource";
-                    sourceLabel = "Ignore: ";
+                Object sourceItem = getSingleItem(source);
+                if (sourceItem instanceof Highlighter.HighlightItem) {
+                    Highlighter.HighlightItem hlItem = (Highlighter.HighlightItem) sourceItem;
+                    switch (hlItem.getUsedForFeature()) {
+                        case "highlight":
+                            sourceType = "highlightSource";
+                            sourceLabel = "[Highlight] ";
+                            break;
+                        case "ignore":
+                            sourceType = "ignoreSource";
+                            sourceLabel = "[Ignore] ";
+                            break;
+                        case "msgcolor":
+                            sourceType = "msgColorSource";
+                            sourceLabel = "[Msg. Color] ";
+                            break;
+                        case "routing":
+                            sourceType = "routingSource";
+                            sourceLabel = "[Routing] ";
+                            break;
+                        default:
+                            sourceType = "unknownSource";
+                            sourceLabel = "[Unknown] ";
+                    }
+                    List<Highlighter.HighlightItem> list = (List) source;
+                    JSONArray rawList = new JSONArray();
+                    list.forEach(entry -> rawList.add(entry.getRaw()));
+                    sourceText = rawList.toJSONString();
+                    sourceLabel += list.get(0).getRaw();
+                    if (list.size() > 1) {
+                        sourceLabel += " (and " + (list.size() - 1) + " more for marked matches)";
+                    }
                 }
                 else {
-                    sourceType = "highlightSource";
-                    sourceLabel = "Highlight: ";
-                }
-                sourceLabel += list.get(0).getRaw();
-                if (list.size() > 1) {
-                    sourceLabel += " (and " + (list.size() - 1) + " more for marked matches)";
+                    sourceType = "";
+                    sourceText = "";
+                    sourceLabel = "";
                 }
             }
             else {
@@ -1121,4 +1153,12 @@ public class LinkController extends MouseAdapter {
         }
     }
     
+    private static Object getSingleItem(Object o) {
+        if (o != null && o instanceof List
+                && !((List) o).isEmpty()) {
+            return ((List) o).get(0);
+        }
+        return o;
+    }
+
 }
