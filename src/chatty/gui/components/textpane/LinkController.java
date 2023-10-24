@@ -22,6 +22,8 @@ import chatty.gui.components.textpane.ChannelTextPane.Attribute;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_CTRL;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS;
 import static chatty.gui.components.textpane.SettingConstants.USER_HOVER_HL_MENTIONS_CTRL_ALL;
+import chatty.gui.notifications.Notification;
+import chatty.lang.Language;
 import chatty.util.CombinedEmoticon;
 import chatty.util.DateTime;
 import chatty.util.Debugging;
@@ -1098,37 +1100,56 @@ public class LinkController extends MouseAdapter {
             if (source instanceof ColorItem) {
                 sourceType = "msgColorSource";
                 sourceText = ((ColorItem)source).getId();
-                sourceLabel = "Msg. Color: "+sourceText;
+                sourceLabel = "["+Language.getString("settings.page.msgColors")+"] "+sourceText;
+            }
+            else if (source instanceof Notification) {
+                Notification n = (Notification) source;
+                sourceType = "notificationSource";
+                sourceText = String.valueOf(n.id);
+                sourceLabel = String.format("[%s] %s",
+                        Language.getString("settings.page.notifications"),
+                        n.toString());
             }
             else if (source instanceof List) {
                 Object sourceItem = getSingleItem(source);
                 if (sourceItem instanceof Highlighter.HighlightItem) {
                     Highlighter.HighlightItem hlItem = (Highlighter.HighlightItem) sourceItem;
-                    switch (hlItem.getUsedForFeature()) {
-                        case "highlight":
-                            sourceType = "highlightSource";
-                            sourceLabel = "[Highlight] ";
-                            break;
-                        case "ignore":
-                            sourceType = "ignoreSource";
-                            sourceLabel = "[Ignore] ";
-                            break;
-                        case "msgcolor":
-                            sourceType = "msgColorSource";
-                            sourceLabel = "[Msg. Color] ";
-                            break;
-                        case "routing":
-                            sourceType = "routingSource";
-                            sourceLabel = "[Routing] ";
-                            break;
-                        default:
-                            sourceType = "unknownSource";
-                            sourceLabel = "[Unknown] ";
+                    if (hlItem.getUsedForFeature() != null) {
+                        switch (hlItem.getUsedForFeature()) {
+                            case "highlight":
+                                sourceType = "highlightSource";
+                                sourceLabel = Language.getString("settings.page.highlight");
+                                break;
+                            case "ignore":
+                                sourceType = "ignoreSource";
+                                sourceLabel = Language.getString("settings.page.ignore");
+                                break;
+                            case "msgcolor":
+                                sourceType = "msgColorSource";
+                                sourceLabel = Language.getString("settings.page.msgColors");
+                                break;
+                            case "routing":
+                                sourceType = "routingSource";
+                                sourceLabel = Language.getString("settings.page.customTabs");
+                                break;
+                            case "noPresetsUsernameHighlight":
+                                sourceType = "highlightSource";
+                                sourceLabel = Language.getString("settings.boolean.highlightUsername");
+                                break;
+                            default:
+                                sourceType = "unknownSource";
+                                sourceLabel = "Unknown";
+                        }
+                    }
+                    else {
+                        sourceType = "unknownSource";
+                        sourceLabel = "UnknownType";
                     }
                     List<Highlighter.HighlightItem> list = (List) source;
                     JSONArray rawList = new JSONArray();
                     list.forEach(entry -> rawList.add(entry.getRaw()));
                     sourceText = rawList.toJSONString();
+                    sourceLabel = "["+sourceLabel+"] ";
                     sourceLabel += list.get(0).getRaw();
                     if (list.size() > 1) {
                         sourceLabel += " (and " + (list.size() - 1) + " more for marked matches)";

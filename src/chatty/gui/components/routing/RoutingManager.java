@@ -154,6 +154,17 @@ public class RoutingManager {
         }
     }
     
+    public void addNotification(String targetName, InfoMessage msg) {
+        RoutingTarget target = getTarget(targetName);
+        target.addInfoMessage(msg);
+        
+        switch (getEntry(targetName).openOnMessage) {
+            case 1: // Any message
+            case 3: // Info message
+                channels.addContent(target.getContent());
+        }
+    }
+    
     private void addRoutingTargets(RoutingTargets targets, UserMessage message, User localUser) {
         for (HighlightItem item : routing) {
             if (item.matches(HighlightItem.Type.REGULAR, message.text, message.user, localUser, message.tags)) {
@@ -234,7 +245,9 @@ public class RoutingManager {
         Collection<Object> settingsList = main.getSettings().getList("routingTargets");
         for (Object item : settingsList) {
             RoutingEntry entry = RoutingEntry.fromList((List) item);
-            entries.put(entry.getId(), entry);
+            if (entry != null) {
+                entries.put(entry.getId(), entry);
+            }
         }
     }
     
