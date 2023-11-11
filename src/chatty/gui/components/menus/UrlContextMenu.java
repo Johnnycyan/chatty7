@@ -41,7 +41,7 @@ public class UrlContextMenu extends ContextMenu {
         addItem("playerBest", "Open in player (Best)");
         
         channel = Helper.getChannelFromUrl(url);
-        if (channel != null) {
+        if (channel != null && Helper.isValidChannel(channel)) {
             addSeparator();
             addItem("join", "Join #"+channel);
             Helper.TwitchPopoutUrlInfo popoutInfo = Helper.getPopoutUrlInfo(url);

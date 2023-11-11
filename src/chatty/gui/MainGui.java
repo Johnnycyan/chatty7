@@ -274,7 +274,7 @@ public class MainGui extends JFrame implements Runnable {
         channels.getComponent().setPreferredSize(new Dimension(600,300));
         add(channels.getComponent(), BorderLayout.CENTER);
         channels.setChangeListener(new ChannelChangeListener());
-        routingManager = new RoutingManager(this, channels, styleManager, contextMenuListener);
+        routingManager = new RoutingManager(this, channels, styleManager, contextMenuListener, client.chatLog);
         
         dockedDialogs = new DockedDialogManager(this, channels, client.settings);
         
@@ -822,6 +822,33 @@ public class MainGui extends JFrame implements Runnable {
             @Override
             public void actionPerformed(ActionEvent e) {
                 hotkeyCommand("marker", null, false);
+            }
+        });
+        
+        // Scroll
+        Consumer<String> scrollAction = action -> {
+            DockContent content = channels.getActiveContent();
+            if (content.getComponent() instanceof Channel) {
+                ((Channel) content.getComponent()).scroll(action);
+            }
+            else if (content.getId().startsWith("'")) {
+                routingManager.scroll(content.getId(), action);
+            }
+        };
+        
+        hotkeyManager.registerAction("scroll.pageUp", "Scroll: Page Up", new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                scrollAction.accept("pageUp");
+            }
+        });
+        
+        hotkeyManager.registerAction("scroll.pageDown", "Scroll: Page Down", new AbstractAction() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                scrollAction.accept("pageDown");
             }
         });
         
@@ -2573,7 +2600,6 @@ public class MainGui extends JFrame implements Runnable {
          */
         @Override
         public void stateChanged(ChangeEvent e) {
-            state.update(true);
             updateChannelInfoDialog(null);
             String stream = channels.getLastActiveChannel().getStreamName();
             emotesDialog.updateStream(stream, client.getEmotesetsByChannel(Helper.toChannel(stream)));
@@ -2590,6 +2616,8 @@ public class MainGui extends JFrame implements Runnable {
                 }
             }
             dockedDialogs.activeContentChanged();
+            routingManager.setChannel(channels.getLastActiveChannel());
+            state.update(true);
         }
     }
     
