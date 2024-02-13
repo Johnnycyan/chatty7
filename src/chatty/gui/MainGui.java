@@ -6,6 +6,7 @@ import chatty.gui.laf.LaF;
 import chatty.util.api.pubsub.LowTrustUserMessageData;
 import chatty.util.colors.HtmlColors;
 import chatty.Addressbook;
+import chatty.ChannelState;
 import chatty.gui.components.textpane.UserMessage;
 import chatty.gui.components.DebugWindow;
 import chatty.gui.components.ChannelInfoDialog;
@@ -77,6 +78,7 @@ import chatty.gui.components.textpane.UserNotice;
 import chatty.gui.components.userinfo.UserInfoManager;
 import chatty.gui.components.userinfo.UserNotes;
 import chatty.gui.emoji.EmojiUtil;
+import chatty.gui.laf.LaFChanger;
 import chatty.gui.notifications.Notification;
 import chatty.gui.notifications.NotificationActionListener;
 import chatty.gui.notifications.NotificationManager;
@@ -1504,6 +1506,25 @@ public class MainGui extends JFrame implements Runnable {
             @Override
             public void run() {
                 updateUserInfoDialog(user);
+                updateModButtons(user);
+            }
+        });
+    }
+    
+    public void updateModButtons(User user) {
+        SwingUtilities.invokeLater(() -> {
+            if (user == null) {
+                for (Channel chan : channels.getChannelsOfType(Channel.Type.CHANNEL)) {
+                    chan.updateModButton();
+                }
+            }
+            else {
+                if (user.isLocalUser()) {
+                    Channel channel = channels.getExistingChannel(user.getChannel());
+                    if (channel != null) {
+                        channel.updateModButton();
+                    }
+                }
             }
         });
     }
@@ -3655,7 +3676,12 @@ public class MainGui extends JFrame implements Runnable {
                             hasReplacements ? filter.getLastReplacement() : null,
                             tags);
                     message.localUser = localUser;
-                    
+
+                    // Message comes from a history service
+                    if (tags.isHistoricMsg()) {
+                        message.historicTimeStamp = tags.getHistoricTimeStamp();
+                    }
+
                     // Custom color
                     boolean hlByPoints = tags.isHighlightedMessage() && client.settings.getBoolean("highlightByPoints");
                     if (highlighted) {
@@ -3720,7 +3746,7 @@ public class MainGui extends JFrame implements Runnable {
                 else {
                     // Stuff independent of highlight/ignore
                     if (timestamp == null) {
-                        user.addMessage(processMessage(text), action, tags.getId());
+                        user.addMessage(processMessage(text), action, tags.getId(), tags.getHistoricTimeStamp());
                     } else {
                         user.addMessage(processMessage(text), action, tags.getId(), timestamp);
                     }
@@ -4036,6 +4062,9 @@ public class MainGui extends JFrame implements Runnable {
         if (message instanceof UserNotice) {
             user = ((UserNotice)message).user;
         }
+        boolean noHighlightUser = user != null
+                && client.settings.listContains("noHighlightUsers", user.getName());
+
         MsgTags tags = message.tags;
         User localUser = client.getLocalUser(channel.getChannel());
         RoutingTargets routingTargets = new RoutingTargets();
@@ -4044,7 +4073,7 @@ public class MainGui extends JFrame implements Runnable {
         boolean ignoreCheck = !ignored
                 || highlighter.hasOverrideIgnored()
                 || client.settings.getBoolean("highlightOverrideIgnored");
-        if (ignoreCheck && !message.isHidden()) {
+        if (ignoreCheck && !message.isHidden() && !noHighlightUser) {
             boolean rejectIgnoredWithoutPrefix = client.settings.getBoolean("highlightOverrideIgnored") ? false : ignored;
             highlighted = checkInfoMsg(highlighter, "highlight", message.text, message.getMsgStart(), message.getMsgEnd(), user, tags, channel.getChannel(), client.addressbook, rejectIgnoredWithoutPrefix);
             if (highlighted) {
@@ -4114,7 +4143,7 @@ public class MainGui extends JFrame implements Runnable {
             }
         }
         
-        routingManager.addInfoMessage(routingTargets, message, user, localUser);
+        routingManager.addInfoMessage(routingTargets, message, user, localUser, channel);
         
         //----------
         // Chat Log
@@ -4485,8 +4514,17 @@ public class MainGui extends JFrame implements Runnable {
         });
     }
     
-    public void updateState() {
-        updateState(false);
+    public ChannelState getChannelState(String channel) {
+        return client.getChannelState(channel);
+    }
+    
+    public void channelStateUpdated(ChannelState state) {
+        SwingUtilities.invokeLater(() -> {
+            Channel channel = channels.getExistingChannel(state.getChannel());
+            if (channel != null) {
+                channel.updateModPanel();
+            }
+        });
     }
     
     public void updateState(final boolean forced) {
@@ -5388,8 +5426,7 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     private void updateLaF() {
-        LaF.setLookAndFeel(LaFSettings.fromSettings(client.settings));
-        LaF.updateLookAndFeel();
+        LaFChanger.changeLookAndFeel(LaFSettings.fromSettings(client.settings), this);
     }
 
     private class MySettingChangeListener implements SettingChangeListener {

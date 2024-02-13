@@ -661,7 +661,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             style = styles.standard(color);
         }
         if (timestamp == null) {
-            printTimestamp(style);
+            printTimestamp(style, message.historicTimeStamp);
         } else {
             printTimestamp(style, timestamp);
         }
@@ -705,7 +705,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
 
         lastUsers.add(new MentionCheck(user));
     }
-    
+
     public void printInfoMessage(InfoMessage message) {
         if (message.msgType == InfoMessage.Type.APPEND) {
             appendToMessage(message);
@@ -3248,14 +3248,24 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
     }
     
     /**
-     * Makes the time prefix.
+     * Makes the time prefix with current time
      * 
      * @param style
      */
     protected void printTimestamp(AttributeSet style) {
+        printTimestamp(style, -1);
+    }
+
+    /**
+     * Makes the time prefix.
+     * 
+     * @param style
+     * @param time as long epoch
+     */
+    protected void printTimestamp(AttributeSet style, long time) {
         Timestamp timestamp = styles.timestampFormat();
         if (timestamp != null) {
-            print(timestamp.make(-1, channel != null ? channel.getRoom() : null)+" ", styles.timestamp(style));
+            print(timestamp.make(time, channel != null ? channel.getRoom() : null)+" ", styles.timestamp(style));
         }
         else {
             // Inserts the linebreak with a style that shouldn't break anything

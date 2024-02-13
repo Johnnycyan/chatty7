@@ -219,6 +219,8 @@ public class SettingsManager {
         settings.addString("locale", "");
         settings.addString("timezone", "");
         
+        settings.addBoolean("inputLimitsEnabled", true);
+        
         settings.addBoolean("macScreenMenuBar", true);
         settings.addBoolean("macSystemAppearance", true);
         
@@ -237,7 +239,6 @@ public class SettingsManager {
         settings.addString("timestamp","HH:mm");
         settings.addString("timestampTimezone", "");
         settings.addBoolean("capitalizedNames", true);
-        settings.addBoolean("ircv3CapitalizedNames", true);
         settings.addBoolean("correctlyCapitalizedNames", false);
         settings.addMap("customNames", new HashMap<>(), Setting.STRING);
         settings.addBoolean("actionColored", false);
@@ -400,7 +401,11 @@ public class SettingsManager {
         settings.addLong("favoritesSorting", 20);
         
         settings.addList("gameFavorites", new ArrayList(), Setting.STRING);
-        
+
+        settings.addBoolean("historyServiceEnabled", false);
+        settings.addLong("historyServiceLimit", 30);
+        settings.addList("historyServiceExcluded", new ArrayList(), Setting.STRING);
+
         //=======================
         // Channel Admin Features
         //=======================
@@ -426,6 +431,10 @@ public class SettingsManager {
         settings.addString("commercialHotkey","");
         settings.addBoolean("adDelay", false);
         settings.addLong("adDelayLength", 300);
+        
+        // Moderation Presets
+        settings.addString("slowmodeDurations", "3s\n5s\n10s\n20s\n30s\n60s\n120s");
+        settings.addString("followeronlyDurations", "0m\n10m\n30m\n1h\n1d\n7d\n30d\n90d");
 
         //=======
         // Window
@@ -959,9 +968,6 @@ public class SettingsManager {
                 settings.setString("portDefault", "6697,6667,443,80");
             }
             settings.setAdd("securedPorts", (long)443);
-        }
-        if (switchedFromVersionBefore("0.8.4")) {
-            settings.setBoolean("ircv3CapitalizedNames", true);
         }
         if (switchedFromVersionBefore("0.8.5b4")) {
             String currentValue = settings.getString("timeoutButtons");

@@ -141,12 +141,20 @@ public class RoutingManager {
             }
             
             if (ts.shouldLog()) {
-                chatLog.message(ts.logFile, message.user, message.text, message.action, message.user.getChannel());
+                chatLog.message(ts.getPrefixedLogFilename(), message.user, message.text, message.action, message.user.getChannel());
             }
         }
     }
     
-    public void addInfoMessage(RoutingTargets targets, InfoMessage message, User user, User localUser) {
+    /**
+     * 
+     * @param targets
+     * @param message
+     * @param user
+     * @param localUser May be null (e.g. if before channel joined)
+     * @param channel 
+     */
+    public void addInfoMessage(RoutingTargets targets, InfoMessage message, User user, User localUser, Channel channel) {
         if (!filterTargets(targets)) {
             addRoutingTargets(targets, message, user, localUser);
         }
@@ -163,7 +171,7 @@ public class RoutingManager {
             InfoMessage thisMessage = message.copy();
             thisMessage.routingSource = hlItem;
             thisMessage.localUser = localUser;
-            target.addInfoMessage(localUser.getChannel(), thisMessage);
+            target.addInfoMessage(channel.getChannel(), thisMessage);
             
             RoutingTargetSettings ts = getSettings(name);
             
@@ -174,7 +182,7 @@ public class RoutingManager {
             }
             
             if (ts.shouldLog()) {
-                chatLog.info(ts.logFile, message.text, localUser != null ? localUser.getChannel() : null);
+                chatLog.info(ts.getPrefixedLogFilename(), message.text, channel.getChannel());
             }
         }
     }
@@ -204,7 +212,7 @@ public class RoutingManager {
         }
         
         if (ts.shouldLog()) {
-            chatLog.info(ts.logFile, msg.text, null);
+            chatLog.info(ts.getPrefixedLogFilename(), msg.text, null);
         }
     }
     

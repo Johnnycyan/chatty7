@@ -99,14 +99,14 @@ public class SettingsDialog extends JDialog implements ActionListener {
     private final Set<String> restartRequiredDef = new HashSet<>(Arrays.asList(
             "ffz", "nod3d", "noddraw",
             "userlistWidth", "userlistMinWidth", "userlistEnabled",
-            "capitalizedNames", "correctlyCapitalizedNames", "ircv3CapitalizedNames",
+            "capitalizedNames", "correctlyCapitalizedNames",
             "inputFont",
             "bttvEmotes", "botNamesBTTV", "botNamesFFZ", "ffzEvent", "seventv",
             "logPath", "logTimestamp", "logSplit", "logSubdirectories",
             "logLockFiles", "logMessageTemplate",
             "laf", "lafTheme", "lafFontScale", "language", "timezone", "locale",
             "userDialogMessageLimit", "cachePath", "imgPath", "exportPath",
-            "webp"
+            "webp", "inputLimitsEnabled"
     ));
     
     private final Set<String> reconnectRequiredDef = new HashSet<>(Arrays.asList(
@@ -800,6 +800,17 @@ public class SettingsDialog extends JDialog implements ActionListener {
         gbc.gridwidth = w;
         gbc.gridheight = h;
         gbc.insets = new Insets(1,18,2,5);
+        gbc.anchor = anchor;
+        return gbc;
+    }
+    
+    protected static GridBagConstraints makeGbcSub2(int x, int y, int w, int h, int anchor) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = x;
+        gbc.gridy = y;
+        gbc.gridwidth = w;
+        gbc.gridheight = h;
+        gbc.insets = new Insets(3,18,3,5);
         gbc.anchor = anchor;
         return gbc;
     }
