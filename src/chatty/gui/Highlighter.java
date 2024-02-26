@@ -607,6 +607,8 @@ public class Highlighter {
         
         private boolean overrideIgnored;
         
+        private boolean matchHistoric;
+        
         /**
          * 0 - Always disabled
          * 1 - Depends on default
@@ -951,6 +953,15 @@ public class Highlighter {
                                 return tags.getHypeChatAmountText() != null;
                             });
                         }
+                        else if (part.equals("historic")) {
+                            addTagsItem("History Service Message", null, tags -> {
+                                matchHistoric = true;
+                                return tags.isHistoricMsg();
+                            });
+                        }
+                        else if (part.equals("historic2")) {
+                            matchHistoric = true;
+                        }
                         else if (part.startsWith("repeatedmsg")) {
 //                            String options = parsePrefix(item, "repeatmsg:");
 //                            String[] split = options.split("/");
@@ -1007,6 +1018,25 @@ public class Highlighter {
                                 public boolean matches(Type type, String text, int msgStart, int msgEnd, Blacklist blacklist, String channel, Addressbook ab, User user, User localUser, MsgTags tags) {
                                     return matchesPattern(text, msgStart, msgEnd, part.startsWith("msg"), Helper.getUrlPattern(), blacklist);
                                 }
+                            });
+                        }
+                        else if (part.startsWith("afterban")) {
+                            String[] split = part.split("\\|");
+                            int matchNumber;
+                            if (split.length == 2 && split[1].matches("[0-9]+")) {
+                                matchNumber = Integer.parseInt(split[1]);
+                            }
+                            else {
+                                matchNumber = Integer.MAX_VALUE;
+                            }
+                            addUserItem("Messages after ban/timeout", matchNumber < Integer.MAX_VALUE ? matchNumber : null, user -> {
+                                /**
+                                 * When matching takes place the latest user
+                                 * message won't be added yet, so look for
+                                 * smaller than the current number.
+                                 */
+                                int msgs = user.getNumberOfMessagesAfterBan();
+                                return msgs != -1 && msgs < matchNumber;
                             });
                         }
                     });
@@ -1830,6 +1860,10 @@ public class Highlighter {
         
         public boolean overrideIgnored() {
             return overrideIgnored;
+        }
+        
+        public boolean matchHistoric() {
+            return matchHistoric;
         }
         
         public boolean substitutesEnabled(boolean substitutesDefault) {
