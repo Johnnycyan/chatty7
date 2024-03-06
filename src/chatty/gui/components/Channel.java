@@ -54,6 +54,7 @@ public final class Channel extends JPanel {
     
     private static final int DIVIDER_SIZE = 5;
     
+    private final JPanel inputPanel;
     private final ChannelEditBox input;
     private final ChannelTextPane text;
     private final UserList users;
@@ -118,7 +119,7 @@ public final class Channel extends JPanel {
         installLimits(input);
         TextSelectionMenu.install(input);
         
-        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel = new JPanel(new BorderLayout());
         inputPanel.add(input, BorderLayout.CENTER);
         
         modPanelButton = new JButton("M");
@@ -157,7 +158,7 @@ public final class Channel extends JPanel {
         }
     }
     
-    private void closeModPanel() {
+    public void closeModPanel() {
         if (modPanelPopup != null) {
             modPanelPopup.hide();
             modPanelPopup = null;
@@ -500,20 +501,20 @@ public final class Channel extends JPanel {
      * Toggle visibility for the text input box.
      */
     public final void toggleInput() {
-        input.setVisible(!input.isVisible());
+        inputPanel.setVisible(!inputPanel.isVisible());
         revalidate();
     }
     
     private boolean inputPreviouslyShown = true;
     
     public final void hideInput() {
-        inputPreviouslyShown = input.isVisible();
-        input.setVisible(false);
+        inputPreviouslyShown = inputPanel.isVisible();
+        inputPanel.setVisible(false);
         revalidate();
     }
     
     public final void restoreInput() {
-        input.setVisible(inputPreviouslyShown);
+        inputPanel.setVisible(inputPreviouslyShown);
         revalidate();
     }
     
