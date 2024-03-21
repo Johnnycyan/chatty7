@@ -2731,10 +2731,14 @@ public class MainGui extends JFrame implements Runnable {
         }
 
         @Override
-        public void linkClicked(Channel channel, String link) {
-            if (link.startsWith("join.")) {
-                String c = link.substring("join.".length());
-                client.joinChannel(c);
+        public void linkClicked(Channel channel, MsgTags.Link link) {
+            switch (link.type) {
+                case JOIN:
+                    client.joinChannel(link.target);
+                    break;
+                case URL:
+                    UrlOpener.openUrl(link.target);
+                    break;
             }
         }
         
@@ -2862,6 +2866,15 @@ public class MainGui extends JFrame implements Runnable {
             }
             else {
                 User user = client.getUser(channel, username);
+                openUserInfoDialog(user, p.getParameters().get("msg-id"), null);
+            }
+        });
+        client.commands.addEdt("userinfoRecent", p -> {
+            User user = RecentlyAffectedUsers.poll(p.getChannel());
+            if (user == null) {
+                printSystem(p.getRoom(), "No recently affected user found");
+            }
+            else {
                 openUserInfoDialog(user, p.getParameters().get("msg-id"), null);
             }
         });
