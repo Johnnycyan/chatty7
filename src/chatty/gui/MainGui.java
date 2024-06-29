@@ -4352,7 +4352,7 @@ public class MainGui extends JFrame implements Runnable {
                     );
                     printMessage(user, data.text, false, tags);
                 }
-                
+
                 //--------------------------
                 // Appended Info
                 //--------------------------

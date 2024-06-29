@@ -243,16 +243,16 @@ public class TwitchApi {
         StreamLabels.request(requests);
     }
     
-    public void getFollowers(String stream) {
-        followerManager.request(stream);
+    public void getFollowers(String stream, boolean forceRefresh) {
+        followerManager.request(stream, forceRefresh);
     }
 
     public Follower getSingleFollower(String stream, String streamId, String user, String userId, boolean refresh) {
         return followerManager.getSingleFollower(stream, streamId, user, userId, refresh);
     }
     
-    public void getSubscribers(String stream) {
-        subscriberManager.request(stream);
+    public void getSubscribers(String stream, boolean forceRefresh) {
+        subscriberManager.request(stream, forceRefresh);
     }
     
     public UserInfo getCachedUserInfo(String channel, Consumer<UserInfo> result) {
@@ -589,6 +589,12 @@ public class TwitchApi {
     public void shoutout(User targetUser, SimpleRequestResultListener listener) {
         runWithUserIds(targetUser, listener, (streamId, targetId) -> {
             requests.shoutout(streamId, targetId, listener);
+        });
+    }
+    
+    public void warn(User targetUser, String reason, SimpleRequestResultListener listener) {
+        runWithUserIds(targetUser, listener, (streamId, targetId) -> {
+            requests.warn(streamId, targetId, reason, listener);
         });
     }
     
