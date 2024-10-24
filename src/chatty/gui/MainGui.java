@@ -124,6 +124,7 @@ import chatty.util.gif.GifUtil;
 import chatty.util.history.HistoryUtil;
 import chatty.util.seventv.WebPUtil;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import org.json.simple.JSONValue;
 
 /**
@@ -2589,6 +2590,9 @@ public class MainGui extends JFrame implements Runnable {
             else if (e.getActionCommand().equals("badgeImage")) {
                 UrlOpener.openUrlPrompt(getActiveWindow(), usericonImage.getSourceUrl(), true);
             }
+            else if (e.getActionCommand().equals("hideChannelLogo")) {
+                JOptionPane.showMessageDialog(getActiveWindow(), "Custom Tabs/Stream Chat: Right-click on empty space to open context menu.");
+            }
         }
         
         @Override
@@ -3617,6 +3621,7 @@ public class MainGui extends JFrame implements Runnable {
                                 || highlighter.getLastMatchItem().overrideIgnored()) {
                             ignored = false;
                         }
+                        tags = MsgTags.addTag(tags, MsgTags.IS_HIGHLIGHTED, "true");
                     }
                 }
                 
@@ -4111,6 +4116,7 @@ public class MainGui extends JFrame implements Runnable {
                         || highlighter.getLastMatchItem().overrideIgnored()) {
                     ignored = false;
                 }
+                tags = MsgTags.addTag(tags, MsgTags.IS_HIGHLIGHTED, "true");
             }
         }
         if (!ignored) {
@@ -5955,6 +5961,11 @@ public class MainGui extends JFrame implements Runnable {
 
             @Override
             public void run() {
+                String ignore = client.settings.getString("ignoreError");
+                if (!ignore.isEmpty()
+                        && Pattern.compile(ignore).matcher(ErrorMessage.makeErrorText(error, previous)).find()) {
+                    return;
+                }
                 int result = errorMessage.show(error, previous, client.getOpenChannels().size());
                 if (result == ErrorMessage.QUIT) {
                     exit();

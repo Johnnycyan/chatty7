@@ -374,7 +374,7 @@ public class Highlighter {
         }
         
         // Then see if there is a recent match ("Highlight follow-up")
-        if (highlightNextMessages && user != null && hasRecentMatch(user.getName())) {
+        if (user != null && hasRecentMatch(user.getName())) {
             fillLastMatchVariables(lastHighlightedItem.get(user.getName()), null, -1, -1, null);
             return true;
         }
@@ -412,16 +412,27 @@ public class Highlighter {
     }
     
     private void addMatch(User user, HighlightItem item) {
-        if (highlightNextMessages && user != null) {
-            String username = user.getName();
-            lastHighlighted.put(username, MiscUtil.ems());
-            lastHighlightedItem.put(username, item);
+        if (user == null) {
+            return;
         }
+        if (item.followUp == 0) {
+            return;
+        }
+        if (!highlightNextMessages && item.followUp <= 0) {
+            return;
+        }
+        String username = user.getName();
+        lastHighlighted.put(username, MiscUtil.ems());
+        lastHighlightedItem.put(username, item);
     }
     
     private boolean hasRecentMatch(String fromUsername) {
         clearRecentMatches();
-        return lastHighlighted.containsKey(fromUsername);
+        HighlightItem item = lastHighlightedItem.get(fromUsername);
+        if (item == null) {
+            return false;
+        }
+        return highlightNextMessages || item.followUp > 0;
     }
     
     private void clearRecentMatches() {
@@ -592,6 +603,7 @@ public class Highlighter {
         private boolean noSound;
         private boolean hide;
         private boolean noLog;
+        private int followUp = -1;
         
         /**
          * Replacement string for filtering parts of a message
@@ -1021,6 +1033,14 @@ public class Highlighter {
                         else if (part.equals("!log")) {
                             noLog = true;
                         }
+                        else if (part.startsWith("followup")) {
+                            if (part.equals("followup")) {
+                                followUp = 10;
+                            }
+                            else if (part.equals("followup|0")) {
+                                followUp = 0;
+                            }
+                        }
                         else if (part.equals("block")) {
                             blacklistBlock = true;
                         }
@@ -1114,6 +1134,11 @@ public class Highlighter {
                             });
                         } else if (part.equals(chatty.util.ForkUtil.FILTER_FORK_PREFIX)) {
                             // Do nothing.
+                        }
+                        else if (part.equals("highlighted")) {
+                            addTagsItem("Highlighted by highlight list", null, t -> {
+                                return t.isChattyHighlighted();
+                            });
                         }
                         else if (part.equals("url") || part.equals("msgurl")) {
                             matchItems.add(new Item("Contains URL"+(part.startsWith("msg") ? " (msg)" : ""), null, true) {
@@ -1958,6 +1983,35 @@ public class Highlighter {
             if (routingTargets != null) {
                 result.append("Copy message to: ").append(routingTargets);
                 result.append("\n");
+            }
+            StringBuilder behaviour = new StringBuilder();
+            if (color != null) {
+                behaviour.append("Foreground: ").append(HtmlColors.getNamedColorString(color, true)).append("\n");
+            }
+            if (backgroundColor != null) {
+                behaviour.append("Background: ").append(HtmlColors.getNamedColorString(backgroundColor, true)).append("\n");
+            }
+            if (noNotification) {
+                behaviour.append("Don't show notification\n");
+            }
+            if (noSound) {
+                behaviour.append("Don't play sound\n");
+            }
+            if (hide) {
+                behaviour.append("Don't add to Highlighted/Ignored panel\n");
+            }
+            if (noLog) {
+                behaviour.append("Don't add to Highlighted/Ignored log file\n");
+            }
+            if (followUp == 0) {
+                behaviour.append("Don't highlight follow-up messages\n");
+            }
+            if (followUp > 0) {
+                behaviour.append("Highlight follow-up messages\n");
+            }
+            if (behaviour.length() > 0) {
+                result.append("\nIf message is matched:\n");
+                result.append(behaviour);
             }
             return result.toString();
         }
