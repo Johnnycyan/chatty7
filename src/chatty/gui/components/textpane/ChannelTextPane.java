@@ -4,6 +4,7 @@ package chatty.gui.components.textpane;
 import chatty.Chatty;
 import chatty.gui.components.ChannelEditBox;
 import chatty.Helper;
+import chatty.Room;
 import chatty.SettingsManager;
 import chatty.gui.MouseClickedListener;
 import chatty.gui.UserListener;
@@ -77,6 +78,7 @@ import chatty.util.api.usericons.UsericonFactory;
 import chatty.util.api.usericons.UsericonManager;
 import java.util.function.Function;
 import chatty.gui.transparency.TransparencyComponent;
+import chatty.util.irc.IrcBadges;
 import chatty.util.irc.MsgTags.Link;
 import java.util.function.Consumer;
 
@@ -189,7 +191,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         
         DISPLAY_NAMES_MODE,
         MENTIONS, MENTIONS_INFO, MENTION_MESSAGES,
-        HIGHLIGHT_HOVERED_USER, HIGHLIGHT_MATCHES_ALL, USERCOLOR_BACKGROUND
+        HIGHLIGHT_HOVERED_USER, HIGHLIGHT_MATCHES_ALL, USERCOLOR_BACKGROUND,
+        SHARED_BADGES, SHARED_LOGO_SIZE
     }
     
     private static final long DELETED_MESSAGES_KEEP = 0;
@@ -555,6 +558,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
     private void printUsernotice(UserNotice message, MutableAttributeSet style) {
         closeCompactMode();
         printTimestamp(style);
+        printSharedInfo(message.user, message.localUser, message.tags);
         printChannelIcon(null, message.localUser);
         
         MutableAttributeSet userStyle;
@@ -2237,6 +2241,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
      * @param user 
      */
     private void printUserIcons(User user, User localUser, MsgTags tags) {
+        printSharedInfo(user, localUser, tags);
+        
         boolean botBadgeEnabled = styles.isEnabled(Setting.BOT_BADGE_ENABLED);
         java.util.List<Usericon> badges = user.getBadges(botBadgeEnabled, tags, localUser, styles.getInt(Setting.CHANNEL_LOGO_SIZE));
         if (badges != null) {
@@ -2253,10 +2259,46 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             user = localUser;
         }
         if (user != null && user.getUsericonManager() != null) {
-            Usericon icon = user.getUsericonManager().getChannelIcon(user, styles.getInt(Setting.CHANNEL_LOGO_SIZE));
+            Usericon icon = user.getUsericonManager().getChannelIcon(user.getChannel(), styles.getInt(Setting.CHANNEL_LOGO_SIZE));
             if (icon != null) {
                 print(icon.getSymbol(), styles.makeIconStyle(icon, user));
             }
+        }
+    }
+    
+    private void printSharedInfo(User user, User localUser, MsgTags tags) {
+        if (tags != null && tags.isSharedMessage()) {
+            
+            // Channel Logo
+            if (styles.getInt(Setting.SHARED_LOGO_SIZE) > 0) {
+                Usericon icon = user.getUsericonManager().getSourceChannelIcon(tags.getSourceChannel(), tags.getId(), styles.getInt(Setting.SHARED_LOGO_SIZE));
+                if (icon != null) {
+                    print(icon.getSymbol(), styles.makeIconStyle(icon, user));
+                }
+            }
+            
+            // Badges
+            if (styles.getInt(Setting.SHARED_BADGES) > 0) {
+                // Create new user with the other channel, so sub badges are correct (could cause issues)
+                IrcBadges sourceBadges = IrcBadges.parse(tags.get("source-badges"));
+                // Source channel could be null if channel name could not be resolved (still output "something" though)
+                User sourceUser = new User(user.getName(), Room.createRegular(tags.getSourceChannel() != null ? tags.getSourceChannel() : user.getChannel()));
+                sourceUser.setTwitchBadges(sourceBadges);
+                java.util.List<Usericon> badges = user.getUsericonManager().getBadges(sourceBadges, sourceUser, localUser, false, tags, 0);
+                if (badges != null) {
+                    for (Usericon badge : badges) {
+                        boolean selectBadges = styles.getInt(Setting.SHARED_BADGES) == 1
+                                ? Arrays.asList(new String[]{"moderator", "broadcaster", "staff", "subscriber", "vip"}).contains(badge.badgeType.id)
+                                : true;
+                        if (!badge.removeBadge && selectBadges) {
+                            print(badge.getSymbol(), styles.makeIconStyle(badge, user));
+                        }
+                    }
+                }
+            }
+            
+            // Separator
+            print("|", styles.standard());
         }
     }
     
@@ -3952,6 +3994,8 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             addNumericSetting(Setting.BOTTOM_MARGIN, -1, -1, 100);
             addNumericSetting(Setting.HIGHLIGHT_HOVERED_USER, 0, 0, 4);
             addNumericSetting(Setting.CHANNEL_LOGO_SIZE, -1, -1, 100);
+            addNumericSetting(Setting.SHARED_BADGES, 0, 0, 2);
+            addNumericSetting(Setting.SHARED_LOGO_SIZE, 22, 0, 60);
             timestampFormat = styleServer.getTimestampFormat();
             linkController.setPopupEnabled(settings.get(Setting.SHOW_TOOLTIPS));
             linkController.setPopupImagesEnabled(settings.get(Setting.SHOW_TOOLTIP_IMAGES));

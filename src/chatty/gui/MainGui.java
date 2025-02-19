@@ -26,6 +26,7 @@ import chatty.util.irc.MsgTags;
 
 import java.util.List;
 import chatty.Chatty;
+import chatty.Commands;
 import chatty.TwitchClient;
 import chatty.Helper;
 import chatty.User;
@@ -2479,9 +2480,9 @@ public class MainGui extends JFrame implements Runnable {
             Emoticon emote = emoteImage.getObject();
             String url = null;
             if (e.getActionCommand().equals("code")) {
-                channels.getActiveChannel().insertText(emote.code, true);
+                channels.getActiveChannel().insertText(emote.code, "s");
             } else if (e.getActionCommand().equals("codeEmoji")) {
-                channels.getActiveChannel().insertText(emote.stringId, true);
+                channels.getActiveChannel().insertText(emote.stringId, "s");
             } else if (e.getActionCommand().equals("cheer")) {
                 url = "https://help.twitch.tv/customer/portal/articles/2449458";
             } else if (e.getActionCommand().equals("emoteImage")) {
@@ -2667,7 +2668,7 @@ public class MainGui extends JFrame implements Runnable {
                 SwingUtilities.invokeLater(() -> {
                     channels.getActiveChannel().insertText(
                         at + n + ", ",
-                        true);
+                        "s");
                 });
                 return;
             }
@@ -2886,10 +2887,19 @@ public class MainGui extends JFrame implements Runnable {
             openSearchDialog();
         });
         client.commands.addEdt("insert", p -> {
-            insert(p.getArgs(), false);
+            insert(p.getRoom(), p.getArgs(), false);
         });
         client.commands.addEdt("insertWord", p -> {
-            insert(p.getArgs(), true);
+            insert(p.getRoom(), p.getArgs(), true);
+        });
+        client.commands.addEdt("insert2", "[-options] <text>", p -> {
+            Commands.CommandParsedArgs args = p.parsedArgs(1, 1);
+            if (args == null) {
+                printLine(p.getCommand().getUsage());
+            }
+            else {
+                insert(p.getRoom(), args.get(0), args.options);
+            }
         });
         client.commands.addEdt("openUrl", p -> {
             if (!UrlOpener.openUrl(p.getArgs())) {
@@ -3037,20 +3047,51 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     public void insert(final String text, final boolean spaces) {
-        insert(text, spaces, false);
+        insert(channels.getLastActiveChannel().getRoom(), text, spaces, false);
     }
     
     public void insert(final String text, final boolean spaces, boolean focus) {
-        SwingUtilities.invokeLater(new Runnable() {
-
-            @Override
-            public void run() {
-                if (text != null) {
-                    channels.getLastActiveChannel().insertText(text, spaces);
-                    if (focus) {
-                        channels.getLastActiveChannel().requestFocus();
-                        channels.getLastActiveChannel().getInput().requestFocusInWindow();
-                    }
+        insert(channels.getLastActiveChannel().getRoom(), text, spaces, focus);
+    }
+    
+    public void insert(final Room room, final String text, final boolean spaces) {
+        insert(room, text, spaces, false);
+    }
+    
+    public void insert(final Room room, final String text, final boolean spaces, boolean focus) {
+        String options = spaces ? "s" : "";
+        options += focus ? "f" : "";
+        insert(room, text, options);
+    }
+    
+    /**
+     * 
+     * c - Current channel
+     * f - Focus input
+     * p - Prepend
+     * a - Append
+     * b - Set caret to beginning after inserting
+     * e - Set caret to end after inserting
+     * s - Add space if necessary
+     * 
+     * @param room
+     * @param text
+     * @param options 
+     */
+    public void insert(final Room room, final String text, final String options) {
+        SwingUtilities.invokeLater(() -> {
+            if (text != null) {
+                Channel chan;
+                if (options.contains("c")) {
+                    chan = channels.getLastActiveChannel();
+                }
+                else {
+                    chan = channels.getChannel(room);
+                }
+                chan.insertText(text, options);
+                if (options.contains("f")) {
+                    chan.requestFocus();
+                    chan.getInput().requestFocusInWindow();
                 }
             }
         });
@@ -3533,6 +3574,9 @@ public class MainGui extends JFrame implements Runnable {
     //For timestamp
 
     public void printMessage(User user, String text2, boolean action, MsgTags tags0, final String timestamp) {
+        client.resolveSourceData(user, tags0, tags1 -> {
+
+
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -3546,7 +3590,7 @@ public class MainGui extends JFrame implements Runnable {
                 boolean decodeZWF = client.settings.getLong("emojiZWJ") > 0;
                 String text = decodeZWF ? EmojiUtil.decodeZWJ(text2) : text2;
                 
-                MsgTags tags = tags0;
+                MsgTags tags = tags1;
                 Channel chan;
                 String channel = user.getChannel();
                 boolean whisper = false;
@@ -3776,12 +3820,12 @@ public class MainGui extends JFrame implements Runnable {
                 // Update User
                 String hypeChatAmount = tags.getHypeChatAmountText();
                 if (hypeChatAmount != null) {
-                    user.addSub(processMessage(text), tags.getHypeChatInfo(), tags.getId());
+                    user.addSub(processMessage(text), tags.getHypeChatInfo(), tags.getId(), tags.getSourceId(), tags.getSourceChannel());
                 }
                 else {
                     // Stuff independent of highlight/ignore
                     if (timestamp == null) {
-                        user.addMessage(processMessage(text), action, tags.getId(), tags.getHistoricTimeStamp());
+                        user.addMessage(processMessage(text), action, tags.getId(), tags.getSourceId(), tags.getSourceChannel(), tags.getHistoricTimeStamp());
                     } else {
                         user.addMessage(processMessage(text), action, tags.getId(), timestamp);
                     }
@@ -3792,10 +3836,16 @@ public class MainGui extends JFrame implements Runnable {
                 updateUserInfoDialog(user);
             }
         });
+        
+        
+        });
     }
     
     public void printSubscriberMessage(final User user, final String text,
-            final String message, final MsgTags tags) {
+            final String message, final MsgTags tags0) {
+        client.resolveSourceData(user, tags0, tags -> {
+            
+            
         SwingUtilities.invokeLater(() -> {
             SubscriberMessage m = new SubscriberMessage(user, text, message, tags);
 
@@ -3803,6 +3853,9 @@ public class MainGui extends JFrame implements Runnable {
             if (printed) {
                 notificationManager.newSubscriber(user, client.getLocalUser(user.getChannel()), text, message);
             }
+        });
+        
+        
         });
     }
     
@@ -3833,10 +3886,16 @@ public class MainGui extends JFrame implements Runnable {
     }
     
     public void printUsernotice(final String type, final User user, final String text,
-            final String message, final MsgTags tags) {
-        SwingUtilities.invokeLater(() -> {
-            UserNotice m = new UserNotice(type, user, text, message, tags);
-            printUsernotice(m);
+            final String message, final MsgTags tags0) {
+        client.resolveSourceData(user, tags0, tags -> {
+            
+            
+            SwingUtilities.invokeLater(() -> {
+                UserNotice m = new UserNotice(type, user, text, message, tags);
+                printUsernotice(m);
+            });
+            
+            
         });
     }
     
@@ -3848,9 +3907,9 @@ public class MainGui extends JFrame implements Runnable {
             String message = m.attachedMessage != null ? processMessage(m.attachedMessage) : "";
             String text = m.infoText;
             if (m instanceof SubscriberMessage) {
-                m.user.addSub(message, text, m.tags.getId());
+                m.user.addSub(message, text, m.tags.getId(), m.tags.getSourceId(), m.tags.getSourceChannel());
             } else {
-                m.user.addInfo(message, m.text);
+                m.user.addInfo(message, m.text, m.tags.isSharedMessage(), m.tags.getSourceChannel());
             }
             updateUserInfoDialog(m.user);
         }
