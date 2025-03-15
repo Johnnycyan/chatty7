@@ -8,7 +8,6 @@ import chatty.Room;
 import chatty.SettingsManager;
 import chatty.gui.MouseClickedListener;
 import chatty.gui.UserListener;
-import chatty.util.api.pubsub.LowTrustUserMessageData;
 import chatty.util.colors.HtmlColors;
 import chatty.gui.LinkListener;
 import chatty.gui.StyleServer;
@@ -39,7 +38,6 @@ import chatty.util.api.Emoticons;
 import chatty.util.api.Emoticons.TagEmotes;
 import chatty.util.api.CachedImage;
 import chatty.util.api.CachedImage.ImageType;
-import chatty.util.api.pubsub.ModeratorActionData;
 import chatty.util.colors.ColorCorrectionNew;
 import chatty.util.colors.ColorCorrector;
 import chatty.util.irc.MsgTags;
@@ -78,6 +76,8 @@ import chatty.util.api.usericons.UsericonFactory;
 import chatty.util.api.usericons.UsericonManager;
 import java.util.function.Function;
 import chatty.gui.transparency.TransparencyComponent;
+import chatty.util.api.eventsub.payloads.ModActionPayload;
+import chatty.util.api.eventsub.payloads.SuspiciousMessagePayload;
 import chatty.util.irc.IrcBadges;
 import chatty.util.irc.MsgTags.Link;
 import java.util.function.Consumer;
@@ -214,7 +214,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
     
     public final Type type;
     
-    private final Map<User, LowTrustUserMessageData> pendingLowTrustInfoCache = new HashMap<>();
+    private final Map<User, SuspiciousMessagePayload> pendingLowTrustInfoCache = new HashMap<>();
 
     public ChannelTextPane(MainGui main, StyleServer styleServer) {
         this(main, styleServer, Type.REGULAR, true);
@@ -711,7 +711,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
             });
         }
         
-        LowTrustUserMessageData pendingLowTrust = pendingLowTrustInfoCache.remove(user);
+        SuspiciousMessagePayload pendingLowTrust = pendingLowTrustInfoCache.remove(user);
         if (pendingLowTrust != null) {
             printLowTrustInfo(user, pendingLowTrust);
         }
@@ -912,11 +912,12 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
                  */
                 Element userElement = getUserElementFromLine(line, false);
                 if (userElement != null) {
-                    if (userElement.getAttributes().containsAttribute(Attribute.ID_AUTOMOD, info.data.msgId)) {
+                    String msgId = ((ModActionPayload.AutoModMessageUpdate) info.data.action).getMsgId();
+                    if (userElement.getAttributes().containsAttribute(Attribute.ID_AUTOMOD, msgId)) {
                         changeInfo(line, attr -> {
                             String existing = (String) attr.getAttribute(Attribute.AUTOMOD_ACTION);
                             String action = "approved";
-                            if (info.data.type == ModeratorActionData.Type.AUTOMOD_DENIED) {
+                            if (info.data.type == ModActionPayload.Type.AUTOMOD_DENIED) {
                                 action = "denied";
                             }
                             /**
@@ -1102,7 +1103,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
                 text = StringUtil.append(text, " ", "(@"+StringUtil.join(actionBy, ", ")+")");
             }
 
-            LowTrustUserMessageData lowTrustData = (LowTrustUserMessageData) attributes.getAttribute(Attribute.LOW_TRUST_INFO);
+            SuspiciousMessagePayload lowTrustData = (SuspiciousMessagePayload) attributes.getAttribute(Attribute.LOW_TRUST_INFO);
             if (lowTrustData != null) {
                 text = StringUtil.append(text, " ", "(" + lowTrustData.makeInfo() + ")");
             }
@@ -1154,7 +1155,7 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         return "";
     }
 
-    public void printLowTrustInfo(User user, LowTrustUserMessageData data) {        
+    public void printLowTrustInfo(User user, SuspiciousMessagePayload data) {        
         for (Userline userLine : getUserLines(user)) {
             String elementId = getIdFromElement(userLine.userElement);
             if (elementId != null && elementId.equals(data.aboutMessageId)) {
