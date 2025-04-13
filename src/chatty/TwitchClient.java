@@ -33,6 +33,7 @@ import chatty.gui.components.updating.Stuff;
 import chatty.gui.defaults.DefaultsDialog;
 import chatty.splash.Splash;
 import chatty.util.BTTVEmotes;
+import chatty.util.BatchAction;
 import chatty.util.BotNameManager;
 import chatty.util.DateTime;
 import chatty.util.Debugging;
@@ -2004,6 +2005,15 @@ public class TwitchClient {
             eventSub.reconnect();
         } else if (command.equals("simulateeventsub")) {
             eventSub.simulate(parameter);
+        } else if (command.equals("es_s")) {
+            api.getEventSubSubs(s -> {
+                LOGGER.info(s.total+" "+s.getCountBySession());
+                LOGGER.info(s.toString());
+            });
+        } else if (command.equals("es_t")) {
+            LOGGER.info(eventSub.getTopics());
+        } else if (command.equals("es_lt")) {
+            eventSub.logActiveTopics();
         } else if (command.equals("repeat")) {
             String[] split = parameter.split(" ", 2);
             int count = Integer.parseInt(split[0]);
@@ -2594,7 +2604,8 @@ public class TwitchClient {
     }
     
     private void handleModAction(ModActionPayload data) {
-        if (data.stream != null && data.source_stream == null) {
+        if (data.stream != null
+                && (data.stream.equals(data.source_stream) || data.source_stream == null)) {
             String channel = Helper.toChannel(data.stream);
             g.printModerationAction(data, data.created_by.equals(c.getUsername()));
             chatLog.modAction(data);
@@ -2734,6 +2745,12 @@ public class TwitchClient {
                 User user = c.getUser(Helper.toChannel(data.stream), data.username);
                 user.addWarningAcknowledged();
                 g.updateUserinfo(user);
+                g.printModerationAction(
+                        new ModActionPayload(
+                                "acknowledge_warning", 
+                                data.username, null, 
+                                data.stream, null),
+                        false);
             }
             if (message.data instanceof UserMessageHeldPayload) {
                 UserMessageHeldPayload data = (UserMessageHeldPayload) message.data;
@@ -2746,6 +2763,7 @@ public class TwitchClient {
         @Override
         public void info(String info) {
             g.printDebugEventSub(info);
+            Logging.logEventSub(info);
         }
         
     }
@@ -3397,57 +3415,58 @@ public class TwitchClient {
                     || user.getStream() == null) {
                 return;
             }
+            
+            Debugging.println("es", "Check %s (mod: %s)", user.getChannel(), user.hasChannelModeratorRights());
+            
+            // Mainly for listen/unlisten message held
+            BatchAction.queue(eventSub, 100, false, true, () -> {
+                checkEventSubListenInternal(user);
+            });
+        }
+        
+        private void checkEventSubListenInternal(User user) {
             eventSub.setLocalUsername(c.getUsername());
             eventSub.listenRaid(user.getStream());
-            if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_POLLS.scope)
-                    && user.isBroadcaster()) {
+            if (AccessChecker.isBroadcaster(user, TokenInfo.Scope.MANAGE_POLLS)) {
                 eventSub.listenPoll(user.getStream());
             }
-            if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_SHIELD.scope)
-                    && (user.isModerator() || user.isBroadcaster())) {
+            if (AccessChecker.isModerator(user, TokenInfo.Scope.MANAGE_SHIELD)) {
                 eventSub.listenShield(user.getStream());
                 api.getShieldMode(user.getRoom(), true);
             }
-            if (settings.listContains("scopes", TokenInfo.Scope.MANAGE_SHOUTOUTS.scope)
-                    && (user.isModerator() || user.isBroadcaster())) {
+            if (AccessChecker.isModerator(user, TokenInfo.Scope.MANAGE_SHOUTOUTS)) {
                 eventSub.listenShoutouts(user.getStream());
             }
-            if (settings.listContainsAll("scopes",
-                                         TokenInfo.Scope.BLOCKED_READ.scope,
-                                         TokenInfo.Scope.MANAGE_CHAT.scope,
-                                         TokenInfo.Scope.MANAGE_UNBAN_REQUESTS.scope,
-                                         TokenInfo.Scope.MANAGE_BANS.scope,
-                                         TokenInfo.Scope.MANAGE_MSGS.scope,
-                                         TokenInfo.Scope.MANAGE_WARNINGS.scope,
-                                         TokenInfo.Scope.READ_MODS.scope,
-                                         TokenInfo.Scope.READ_VIPS.scope)
-                    && (user.isModerator() || user.isBroadcaster())) {
+            if (AccessChecker.isModerator("modActions", user,
+                                          TokenInfo.Scope.BLOCKED_READ,
+                                          TokenInfo.Scope.MANAGE_CHAT,
+                                          TokenInfo.Scope.MANAGE_UNBAN_REQUESTS,
+                                          TokenInfo.Scope.MANAGE_BANS,
+                                          TokenInfo.Scope.MANAGE_MSGS,
+                                          TokenInfo.Scope.MANAGE_WARNINGS,
+                                          TokenInfo.Scope.READ_MODS,
+                                          TokenInfo.Scope.READ_VIPS)) {
                 eventSub.listenModActions(user.getStream());
             }
-            if (settings.listContainsAll("scopes",
-                                         TokenInfo.Scope.AUTOMOD.scope)
-                    && (user.isModerator() || user.isBroadcaster())) {
+            if (AccessChecker.isModerator(user, TokenInfo.Scope.AUTOMOD)) {
                 eventSub.listenAutoMod(user.getStream());
             }
-            if (settings.listContainsAll("scopes",
-                                         TokenInfo.Scope.READ_SUSPICIOUS_USERS.scope)
-                    && (user.isModerator() || user.isBroadcaster())) {
+            if (AccessChecker.isModerator(user, TokenInfo.Scope.READ_SUSPICIOUS_USERS)) {
                 eventSub.listenSuspiciousMessage(user.getStream());
             }
-            if (settings.listContainsAll("scopes",
-                                         TokenInfo.Scope.MANAGE_WARNINGS.scope)
-                    && (user.isModerator() || user.isBroadcaster())) {
+            if (AccessChecker.isModerator(user, TokenInfo.Scope.MANAGE_WARNINGS)) {
                 eventSub.listenWarnings(user.getStream());
             }
             
             if (!user.hasChannelModeratorRights()) {
-                if (settings.listContains("scopes", TokenInfo.Scope.USER_READ_CHAT.scope)) {
+                if (AccessChecker.hasScope(TokenInfo.Scope.USER_READ_CHAT)) {
                     eventSub.listenMessageHeld(user.getStream());
                 }
             }
             else {
                 eventSub.unlistenMessageHeld(user.getStream());
             }
+            
         }
         
         @Override
