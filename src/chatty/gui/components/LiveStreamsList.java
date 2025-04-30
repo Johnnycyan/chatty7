@@ -70,6 +70,7 @@ public class LiveStreamsList extends JList<StreamInfo> {
      */
     private final Set<String> favs = new HashSet<>();
     private final Set<String> gameFavs = new HashSet<>();
+    private final Set<String> manualChannels = new HashSet<>();
     
     /**
      * How long after the last stream status change, that it uses the TITLE_NEW

@@ -838,6 +838,7 @@ public class SettingsManager {
         settings.addBoolean("addAtToMentions", false);
         settings.addBoolean("replacementUnderline", false);
         settings.addBoolean("skipFullFiltered", false);
+        settings.addString("manualLiveCheckChannels", "");
     }
     
     private boolean loadSuccess;

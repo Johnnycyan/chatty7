@@ -317,7 +317,7 @@ public class TwitchClient {
 
         createTestUser("tduva", "");
         
-        api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener());
+        api = new TwitchApi(new TwitchApiResults(), new MyStreamInfoListener(settings));
         addTwitchApiResultListeners();
         bttvEmotes = new BTTVEmotes(new EmoteListener(), api);
         TwitchEmotesApi.api.setTwitchApi(api);
@@ -3065,6 +3065,24 @@ public class TwitchClient {
         
         private final ConcurrentMap<StreamInfo, Object> notFoundInfoDone
                 = new ConcurrentHashMap<>();
+
+        private Set<String> manualChannels = new HashSet<>();
+
+        public MyStreamInfoListener(Settings settings) {
+            SwingUtilities.invokeLater(() -> {
+                manualChannels.clear();
+                String channelsString = settings.getString("manualLiveCheckChannels");
+                if (channelsString != null && !channelsString.isEmpty()) {
+                    String[] channels = channelsString.split(",");
+                    for (String channel : channels) {
+                        String trimmedChannel = channel.trim();
+                        if (!trimmedChannel.isEmpty()) {
+                            manualChannels.add(Helper.toStream(trimmedChannel));
+                        }
+                    }
+                }
+            });
+        }
         
         /**
          * The StreamInfo has been updated with new data from the API.
@@ -3117,6 +3135,11 @@ public class TwitchClient {
                 g.setChannelNewStatus(channel, newStatus);
             }
             g.statusNotification(channel, info);
+        }
+
+        @Override
+        public Set<String> manualChannels() {
+            return manualChannels;
         }
     }
     

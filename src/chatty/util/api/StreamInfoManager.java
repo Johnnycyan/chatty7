@@ -271,6 +271,16 @@ public class StreamInfoManager {
                 break;
             }
         }
+        for (String stream : listener.manualChannels()) {
+            if (!streamsForRequest.contains(stream) && streamsForRequest.size() <= 90) {
+                StreamInfo cached = getStreamInfo(stream);
+                if (!cached.isRequested() && (!special || cached.recheckOffline())) {
+                    streamsForRequest.add(stream);
+                    streamInfosForRequest.add(cached);
+                    cached.setRequested();
+                }
+            }
+        }
         if (special) {
             specialCheckDoneET.set();
         }

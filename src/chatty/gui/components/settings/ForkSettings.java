@@ -3,13 +3,16 @@ package chatty.gui.components.settings;
 
 import chatty.Chatty;
 import chatty.lang.Language;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSeparator;
 import javax.swing.JTextField;
-import java.util.HashMap;
-import java.util.Map;
+import javax.swing.SwingConstants;
 
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
@@ -141,6 +144,19 @@ public class ForkSettings extends SettingsPanel {
             "");
         fork.add(coloredNamesInUserlist,
             d.makeGbc(0, 20, 3, 1, GridBagConstraints.WEST));
+
+        {
+            JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
+            separator.setPreferredSize(new Dimension(1, 1));
+            fork.add(separator, d.makeGbc(0, 21, 1, 1, GridBagConstraints.WEST));
+        }
+
+        fork.add(new JLabel("Custom channel for Live Check (comma-separated) (better < 100) (restart required):"),
+        d.makeGbc(0, 22, 1, 1, GridBagConstraints.WEST));
+
+        fork.add(d.addSimpleStringSetting(
+            "manualLiveCheckChannels", 30, true),
+            d.makeGbc(0, 23, 1, 1, GridBagConstraints.WEST));
 
 
     }
