@@ -1,12 +1,15 @@
 import re
+import sys
 
-file = open('ch.txt','r');
-str = file.readlines()[1];
-sub = str[45:48];
-print(sub);
+# Check if at least one argument is provided
+if len(sys.argv) > 1:
+    first_argument = sys.argv[1]
+    print(f"First argument: {first_argument}")
+else:
+    print("No arguments provided.")
 
 partVersion = '0.28.0';
-finalVersion = f"{partVersion}.{sub}";
+finalVersion = f"{partVersion}.{first_argument}";
 
 path = "src/chatty/Chatty.java";
 chatty = open(path, 'r');
@@ -27,3 +30,6 @@ chatty.write(line);
 chatty.close();
 
 open('final_version.txt', 'w').write(finalVersion);
+
+#alias b='./gradlew build && ./gradlew packageAppArm'
+#alias o='open ./build/jpackage-mac/Chatty-arm64.app'

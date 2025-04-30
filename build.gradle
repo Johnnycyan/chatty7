@@ -315,6 +315,124 @@ task releaseWinSetups(group: 'build') {
     dependsOn releaseWindows, innosetup, innosetupStandalone, build
 }
 
+//--------
+// macOS
+//--------
+
+def macBundleTarget = new File(buildDir, 'jpackage-mac')
+
+def prepareMacVersionAndInput(macBundleTarget) {
+    delete macBundleTarget
+    copy {
+        from tasks.shadowJar.archivePath
+        into new File(macBundleTarget, 'input')
+    }
+    
+    def rawVersion = project.version.replaceAll(/[^0-9.]/, '')
+    def versionWithoutLeadingZero = rawVersion.startsWith('0.') ? rawVersion.substring(2) : rawVersion
+    
+    return versionWithoutLeadingZero
+}
+
+def buildMacJpackageCommand(arch, macVersion, macBundleTarget, bundleType = 'app-image') {
+    def jpackageExec = project.hasProperty('jpackagePath') ? jpackagePath : 'jpackage'
+    def archName = arch == 'arm64' ? 'arm64' : 'x64'
+    def identifierSuffix = arch == 'arm64' ? 'arm64' : 'x64'
+    
+    def command = [jpackageExec,
+        '--type', bundleType,
+        '--name', "Chatty-${archName}",
+        '--input', new File(macBundleTarget, 'input'),
+        '--main-jar', 'Chatty.jar',
+        '--main-class', 'chatty.Chatty',
+        '--dest', macBundleTarget,
+        '--description', "Chatty - Twitch Chat Client (${arch == 'arm64' ? 'ARM64' : 'Intel'})",
+        '--java-options', '-Xmx600M',
+        '--icon', 'assets-bundle/Chatty.icns',
+        '--app-version', macVersion,
+        '--vendor', 'Chatty',
+        '--mac-package-identifier', "chatty.client.${identifierSuffix}"]
+    
+    if (bundleType == 'dmg') {
+        command << '--mac-package-name' << "Chatty-${archName}"
+    }
+    
+    return command
+}
+
+task jpackageMacArm(type: Exec, group: 'build') {
+    dependsOn shadowJar
+    
+    doFirst {
+        def macVersion = prepareMacVersionAndInput(macBundleTarget)
+        commandLine buildMacJpackageCommand('arm64', macVersion, macBundleTarget, 'app-image')
+    }
+}
+
+task jpackageMacIntel(type: Exec, group: 'build') {
+    dependsOn shadowJar
+    
+    doFirst {
+        def macVersion = prepareMacVersionAndInput(macBundleTarget)
+        commandLine buildMacJpackageCommand('x64', macVersion, macBundleTarget, 'app-image')
+    }
+}
+
+task dmgMacArm(type: Exec, group: 'build') {
+    dependsOn shadowJar
+    
+    doFirst {
+        def macVersion = prepareMacVersionAndInput(macBundleTarget)
+        commandLine buildMacJpackageCommand('arm64', macVersion, macBundleTarget, 'dmg')
+    }
+}
+
+task dmgMacIntel(type: Exec, group: 'build') {
+    dependsOn shadowJar
+    
+    doFirst {
+        def macVersion = prepareMacVersionAndInput(macBundleTarget)
+        commandLine buildMacJpackageCommand('x64', macVersion, macBundleTarget, 'dmg')
+    }
+}
+
+// Задачи для упаковки app-image в zip (локальные тесты)
+task packageAppArm(type: Zip) {
+    dependsOn jpackageMacArm
+    from("${macBundleTarget}/Chatty-arm64.app")
+    archiveFileName = "Chatty_${version}_mac_arm64.app.zip"
+    destinationDirectory = releasesDir
+}
+
+task packageAppIntel(type: Zip) {
+    dependsOn jpackageMacIntel
+    from("${macBundleTarget}/Chatty-x64.app")
+    archiveFileName = "Chatty_${version}_mac_x64.app.zip"
+    destinationDirectory = releasesDir
+}
+
+task releaseMacDmgArm(type: Copy) {
+    dependsOn dmgMacArm
+    from("${macBundleTarget}") {
+        include "Chatty-arm64-${version}.dmg"
+        rename "Chatty-arm64-${version}.dmg", "Chatty_${version}_mac_arm64.dmg"
+    }
+    into releasesDir
+}
+
+task releaseMacDmgIntel(type: Copy) {
+    dependsOn dmgMacIntel
+    from("${macBundleTarget}") {
+        include "Chatty-x64-${version}.dmg"
+        rename "Chatty-x64-${version}.dmg", "Chatty_${version}_mac_x64.dmg"
+    }
+    into releasesDir
+}
+
+task releaseMacSetups(group: 'build') {
+    dependsOn packageAppArm, packageAppIntel, releaseMacDmgArm, releaseMacDmgIntel
+}
+
 //---------
 // Checksum
 //---------

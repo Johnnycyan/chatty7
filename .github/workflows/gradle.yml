@@ -3,56 +3,51 @@ name: Java CI
 on: [push]
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      DIFF_COMMITS: ${{ steps.prepare_ch.outputs.DIFF_COMMITS }}
+    
+    steps:
+    - name: Clone
+      uses: actions/checkout@v1
+
+    - name: Prepare commits diff content
+      id: prepare_ch
+      run: |
+        cur_branch="${{ github.ref_name }}"
+        git checkout $cur_branch
+        git remote add upstream https://github.com/chatty/chatty
+        git fetch --all
+        git branch $cur_branch --set-upstream-to upstream/master
+        status_output=$(git rev-list --count upstream/master..origin/${cur_branch})
+        echo "DIFF_COMMITS=$status_output" >> $GITHUB_OUTPUT
+
   build:
-
+    needs: prepare
     runs-on: windows-latest
-
     defaults:
       run:
         shell: cmd
+    
+    outputs:
+      new_tag_text: ${{ steps.set_version.outputs.NEW_TAG_TEXT }}
 
     steps:
-    - name: Clone.
+    - name: Clone
       uses: actions/checkout@v1
 
     - uses: actions/setup-java@main
-      name: Install Java 17.
+      name: Install Java 17
       with:
         distribution: 'adopt'
         java-version: '17'
-    - name: Set up version of Chatty.
+
+    - name: Run version.py
       run: |
-        git checkout master
-        git remote add upstream https://github.com/chatty/chatty
-        git fetch --all
-        git branch master --set-upstream-to upstream/master
-        git status
-        git status > ch.txt
-        python version.py
-    - name: Latest chatty tag.
-      shell: bash
-      run: |
-        curl \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/chatty/chatty/releases > latest_chatty.json
-    - name: Parse JSON.
-      shell: python
-      run: |
-        import json
-        import os
-        def writeEnv(key, value):
-          open(os.environ['GITHUB_ENV'], "a").write(key + '=' + value + '\n');
-        with open('latest_chatty.json') as json_data:
-          data = json.load(json_data)[0];
-          tag_name = str(data['tag_name']);
-          writeEnv('CHATTY_TAG', tag_name);
-          tag_text = tag_name.replace('-b', ' Beta ').replace('v', '');
-          writeEnv('CHATTY_TAG_TEXT', tag_text);
-          print(tag_name);
-          print(tag_text);
-        with open('final_version.txt') as ver_data:
-          writeEnv('NEW_TAG_TEXT', str(ver_data.read()));
-    - name: Build with Gradle.
+        python version.py "${{ needs.prepare.outputs.DIFF_COMMITS }}"
+
+    - name: Build with Gradle
       run: |
         gradlew build ^
         && gradlew release ^
@@ -61,13 +56,139 @@ jobs:
         -PjpackagePath="%java_home%\bin\jpackage.exe" ^
         -PinnosetupPath="%programfiles(x86)%\Inno Setup 6\ISCC.exe" ^
         -PmtPath="%programfiles(x86)%\Windows Kits\10\bin\10.0.22000.0\x64\mt.exe"
-    - name: Draft release.
+
+    - name: Upload Windows Artifacts
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        name: windows-artifacts
+        path: build/releases/*
+
+    - name: Get new tag text
+      id: set_version
+      run: |
+        set /p new_tag_text=<final_version.txt
+        echo "NEW_TAG_TEXT=%new_tag_text%" >> $GITHUB_OUTPUT
+
+  build_mac_arm:
+    needs: prepare
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+    - name: Clone
+      uses: actions/checkout@v1
+
+    - name: Set up JDK (ARM64)
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        architecture: arm64
+
+    - name: Run version.py
+      run: |
+        python version.py "${{ needs.prepare.outputs.DIFF_COMMITS }}"
+
+    - name: Build with Gradle (ARM64)
+      run: |
+        ./gradlew build && \
+        ./gradlew release && \
+        ./gradlew releaseMacDmgArm -PjpackagePath=`which jpackage`
+
+    - name: Upload Mac ARM Artifacts
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        name: mac-arm-artifacts
+        path: build/jpackage-mac/*
+
+  build_mac_intel:
+    needs: prepare
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    
+    steps:
+    - name: Clone
+      uses: actions/checkout@v1
+
+    - name: Set up JDK (x64)
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        architecture: x64
+
+    - name: Run version.py
+      run: |
+        python version.py "${{ needs.prepare.outputs.DIFF_COMMITS }}"
+
+    - name: Build with Gradle (x64)
+      run: |
+        ./gradlew build && \
+        ./gradlew release && \
+        ./gradlew releaseMacDmgIntel -PjpackagePath=`which jpackage`
+
+    - name: Upload Mac Intel Artifacts
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        name: mac-intel-artifacts
+        path: build/jpackage-mac/*
+
+  create_release:
+    needs: [build, build_mac_arm, build_mac_intel]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download Windows Artifacts
+      uses: actions/download-artifact@v4.3.0
+      with:
+        name: windows-artifacts
+        path: artifacts/windows
+
+    - name: Download Mac ARM Artifacts
+      uses: actions/download-artifact@v4.3.0
+      with:
+        name: mac-arm-artifacts
+        path: artifacts/mac-arm
+
+    - name: Download Mac Intel Artifacts
+      uses: actions/download-artifact@v4.3.0
+      with:
+        name: mac-intel-artifacts
+        path: artifacts/mac-intel
+
+    - name: Fetch latest Chatty tag
+      id: fetch_tag
+      run: |
+        curl \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/chatty/chatty/releases > latest_chatty.json
+        tag_name=$(jq -r '.[0].tag_name' latest_chatty.json)
+        tag_text=$(echo $tag_name | sed 's/-b/ Beta /' | sed 's/v//')
+        echo "CHATTY_TAG=$tag_name" >> $GITHUB_ENV
+        echo "CHATTY_TAG_TEXT=$tag_text" >> $GITHUB_ENV
+        
+        # Create release body content
+        release_body="
+        - Updated version to official [$tag_text](https://github.com/chatty/chatty/releases/tag/$tag_name)."
+        echo "$release_body" > release_body.md
+        echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+        echo "$release_body" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Create Release
       uses: softprops/action-gh-release@v0.1.15
       with:
         draft: true
-        files: build/releases/*
-        tag_name: v${{ env.NEW_TAG_TEXT }}
-        name: "Chatty Fork ${{ env.NEW_TAG_TEXT }}"
-        body: "- Updated version to official [${{ env.CHATTY_TAG_TEXT }}](https://github.com/chatty/chatty/releases/tag/${{ env.CHATTY_TAG }})."
+        files: |
+          artifacts/windows/*
+          artifacts/mac-arm/*
+          artifacts/mac-intel/*
+        tag_name: v${{ needs.build.outputs.new_tag_text }}
+        name: "Chatty Fork ${{ needs.build.outputs.new_tag_text }}"
+        body: ${{ env.RELEASE_BODY }}
       env:
         GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
