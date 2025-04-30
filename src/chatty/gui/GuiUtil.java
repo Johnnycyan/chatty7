@@ -123,6 +123,22 @@ public class GuiUtil {
                 CLOSE_DIALOG_ACTION_MAP_KEY);
         root.getActionMap().put(CLOSE_DIALOG_ACTION_MAP_KEY, closingAction);
     }
+
+    public static void installEscapeCloseOperation(final JFrame frame) {
+        Action closingAction = new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                frame.dispatchEvent(
+                        new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
+            }
+        };
+
+        JRootPane root = frame.getRootPane();
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                ESCAPE_STROKE,
+                CLOSE_DIALOG_ACTION_MAP_KEY);
+        root.getActionMap().put(CLOSE_DIALOG_ACTION_MAP_KEY, closingAction);
+    }
     
     /**
      * Shows a JOptionPane that doesn't steal focus when opened, but is

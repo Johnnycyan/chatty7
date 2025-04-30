@@ -173,6 +173,8 @@ public class LiveStreamsDialog extends JFrame {
         
         setTitle("Live Streams");
         setPreferredSize(new Dimension(280,350));
+
+        GuiUtil.installEscapeCloseOperation(this);
         
         this.listener = listener;
         this.settings = settings;
