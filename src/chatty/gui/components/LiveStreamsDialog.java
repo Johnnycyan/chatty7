@@ -35,6 +35,19 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ScrollPaneConstants;
 
+// Fork Thumbnails.
+import java.awt.BorderLayout;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+
 /**
  *
  * @author tduva
@@ -149,6 +162,10 @@ public class LiveStreamsDialog extends JFrame {
     private final DockedDialogHelper helper;
     private final ContextMenuListener listener;
     private final Settings settings;
+
+    private final Map<String, ImageIcon> thumbnailCache = new HashMap<>();
+    private JLabel thumbnailLabel;
+    private Timer thumbnailUpdateTimer;
     
     public LiveStreamsDialog(MainGui g, ContextMenuListener listener,
             ChannelFavorites favs, Settings settings,
@@ -180,7 +197,12 @@ public class LiveStreamsDialog extends JFrame {
             }
         };
         // Create list
-        list = new LiveStreamsList(localLiveStreamListener, favs, settings);
+        list = new LiveStreamsList(localLiveStreamListener, favs, settings) {
+            @Override
+            protected ImageIcon getThumbnailForStream(StreamInfo streamInfo) {
+                return thumbnailCache.get(streamInfo.getStream());
+            }
+        };
         list.addContextMenuListener(listener);
         list.addContextMenuListener(localCml);
         setSorting(Sorting.RECENT, true);
@@ -201,6 +223,14 @@ public class LiveStreamsDialog extends JFrame {
                 removedList.removeStreamInfo(item);
             }
         });
+
+        thumbnailUpdateTimer = new Timer(5 * 60 * 1000, e -> {
+            if (isVisible()) {
+                refreshAllThumbnails();
+            }
+        });
+        thumbnailUpdateTimer.setRepeats(true);
+        thumbnailUpdateTimer.start();
         
         removedList = new LiveStreamsRemovedList(localLiveStreamListener);
         removedList.addContextMenuListener(localCml);
@@ -303,7 +333,67 @@ public class LiveStreamsDialog extends JFrame {
     
     @Override
     public void setVisible(boolean visible) {
-        helper.setVisible(visible, true);
+        super.setVisible(visible);
+        if (visible) {
+            thumbnailUpdateTimer.start();
+            refreshAllThumbnails();
+        } else {
+            thumbnailUpdateTimer.stop();
+        }
+    }
+
+    private ImageIcon getThumbnail(StreamInfo streamInfo) {
+        String streamName = streamInfo.getStream();
+        if (thumbnailCache.containsKey(streamName)) {
+            return thumbnailCache.get(streamName);
+        }
+        
+        loadThumbnail(streamInfo);
+        return null;
+    }
+
+    private void loadThumbnail(StreamInfo streamInfo) {
+        new Thread(() -> {
+            try {
+                String thumbnailUrl = streamInfo.getThumbnailUrl(1280, 720);
+                if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+                    URL url = new URL(thumbnailUrl);
+                    BufferedImage image = ImageIO.read(url);
+                    if (image != null) {
+                        int width = 320;
+                        int height = (int) (image.getHeight() * ((double) width / image.getWidth()));
+                        BufferedImage scaledImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+                        scaledImage.createGraphics().drawImage(
+                            image.getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH),
+                            0, 0, null
+                        );
+                        
+                        ImageIcon icon = new ImageIcon(scaledImage);
+                        thumbnailCache.put(streamInfo.getStream(), icon);
+                        
+                        SwingUtilities.invokeLater(() -> {
+                            list.invalidate();
+                            list.revalidate();
+                            list.repaint();
+                        });
+                    }
+                }
+            } catch (IOException ex) {
+            }
+        }).start();
+    }
+
+    private void refreshAllThumbnails() {
+        thumbnailCache.clear();
+        for (int i = 0; i < list.getModel().getSize(); i++) {
+            StreamInfo streamInfo = (StreamInfo) list.getModel().getElementAt(i);
+            loadThumbnail(streamInfo);
+        }
+        SwingUtilities.invokeLater(() -> {
+            list.invalidate();
+            list.revalidate();
+            list.repaint();
+        });
     }
     
     @Override

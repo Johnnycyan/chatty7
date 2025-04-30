@@ -38,6 +38,16 @@ import javax.swing.Timer;
 import javax.swing.border.Border;
 import javax.swing.border.TitledBorder;
 
+// Fork Thumbnails.
+import java.awt.BorderLayout;
+import java.awt.Dimension;
+import java.awt.Font;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.ListCellRenderer;
+
 /**
  *
  * @author tduva
@@ -526,6 +536,126 @@ public class LiveStreamsList extends JList<StreamInfo> {
         void listDataChanged();
         void itemRemoved(StreamInfo item);
         void itemAdded(StreamInfo item);
+    }
+
+    // Fork Thumbnails.
+
+    @Override
+    public ListCellRenderer<? super StreamInfo> getCellRenderer() {
+        return new StreamInfoCellRenderer();
+    }
+
+    protected ImageIcon getThumbnailForStream(StreamInfo streamInfo) {
+        return null;
+    }
+
+    private class StreamInfoCellRenderer extends JPanel implements ListCellRenderer<StreamInfo> {
+        private final JLabel thumbnailLabel = new JLabel();
+        private final JLabel textLabel = new JLabel();
+        private final JLabel detailsLabel = new JLabel();
+
+        public StreamInfoCellRenderer() {
+            setLayout(new BorderLayout());
+            setOpaque(true);
+            
+            thumbnailLabel.setHorizontalAlignment(JLabel.CENTER);
+            
+            JPanel textPanel = new JPanel();
+            textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+            textPanel.setOpaque(false);
+            textPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            
+            Font baseFont = textLabel.getFont();
+            Font largerFont = baseFont.deriveFont(Font.BOLD, baseFont.getSize() + 4);
+            Font largerDetailsFont = baseFont.deriveFont(Font.PLAIN, baseFont.getSize() + 3);
+            
+            textLabel.setFont(largerFont);
+            textLabel.setHorizontalAlignment(JLabel.CENTER);
+            detailsLabel.setFont(largerDetailsFont);
+            detailsLabel.setHorizontalAlignment(JLabel.CENTER);
+            
+            JPanel centerTextPanel = new JPanel(new BorderLayout());
+            centerTextPanel.setOpaque(false);
+            centerTextPanel.add(textLabel, BorderLayout.CENTER);
+            
+            JPanel centerDetailsPanel = new JPanel(new BorderLayout());
+            centerDetailsPanel.setOpaque(false);
+            centerDetailsPanel.add(detailsLabel, BorderLayout.CENTER);
+            
+            textPanel.add(Box.createVerticalGlue());
+            textPanel.add(centerTextPanel);
+            textPanel.add(Box.createVerticalStrut(2));
+            textPanel.add(centerDetailsPanel);
+            textPanel.add(Box.createVerticalGlue());
+            
+            add(textPanel, BorderLayout.CENTER);
+            add(thumbnailLabel, BorderLayout.SOUTH);
+            
+            setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        }
+
+        private int calculatePreferredHeight(StreamInfo stream, int width) {
+            int height = 0;
+            
+            textLabel.setText(stream.getStream() + (stream.getDisplayName() != null ? " (" + stream.getDisplayName() + ")" : ""));
+            detailsLabel.setText(stream.getGame() + " | " + stream.getViewers() + " viewers");
+            
+            Dimension textSize = textLabel.getPreferredSize();
+            Dimension detailsSize = detailsLabel.getPreferredSize();
+            
+            height += textSize.height + detailsSize.height + 20;
+            
+            ImageIcon thumbnail = getThumbnailForStream(stream);
+            if (thumbnail != null) {
+                height += (int)(thumbnail.getIconHeight() * ((double)width / thumbnail.getIconWidth()));
+            }
+            
+            return height;
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends StreamInfo> list, 
+                StreamInfo stream, int index, boolean isSelected, boolean cellHasFocus) {
+            
+            ImageIcon thumbnail = getThumbnailForStream(stream);
+            if (thumbnail != null) {
+                int width = list.getWidth() - 10;
+                if (width > 0) {
+                    int height = (int) (thumbnail.getIconHeight() * ((double) width / thumbnail.getIconWidth()));
+                    thumbnail = new ImageIcon(thumbnail.getImage().getScaledInstance(width, height, java.awt.Image.SCALE_SMOOTH));
+                }
+                thumbnailLabel.setText(null);
+                thumbnailLabel.setIcon(thumbnail);
+                thumbnailLabel.setIcon(thumbnail);
+            } else {
+                thumbnailLabel.setText("No preview available");
+                thumbnailLabel.setIcon(null);
+                thumbnailLabel.setHorizontalAlignment(JLabel.CENTER);
+            }
+
+            textLabel.setText(stream.getStream() + (stream.getDisplayName() != null ? " (" + stream.getDisplayName() + ")" : ""));
+            detailsLabel.setText(stream.getGame() + " | " + stream.getViewers() + " viewers");
+
+            if (isSelected) {
+                setBackground(list.getSelectionBackground());
+                setForeground(list.getSelectionForeground());
+                textLabel.setForeground(list.getSelectionForeground());
+                detailsLabel.setForeground(list.getSelectionForeground());
+            } else {
+                setBackground(list.getBackground());
+                setForeground(list.getForeground());
+                textLabel.setForeground(list.getForeground());
+                detailsLabel.setForeground(list.getForeground());
+            }
+
+            int width = list.getWidth() - 10;
+            if (width > 0) {
+                int height = calculatePreferredHeight(stream, width);
+                setPreferredSize(new Dimension(width, height));
+            }
+            
+            return this;
+        }
     }
     
 }
