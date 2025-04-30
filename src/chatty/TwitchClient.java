@@ -81,6 +81,7 @@ import chatty.util.api.TwitchApi.RequestResultCode;
 import chatty.util.api.UserInfo;
 import chatty.util.api.eventsub.EventSubListener;
 import chatty.util.api.eventsub.EventSubManager;
+import chatty.util.api.eventsub.payloads.ChannelPointsRedemptionPayload;
 import chatty.util.api.eventsub.payloads.ModActionPayload;
 import chatty.util.api.eventsub.payloads.PollPayload;
 import chatty.util.api.eventsub.payloads.RaidPayload;
@@ -2604,8 +2605,7 @@ public class TwitchClient {
     }
     
     private void handleModAction(ModActionPayload data) {
-        if (data.stream != null
-                && (data.stream.equals(data.source_stream) || data.source_stream == null)) {
+        if (data.stream != null) {
             String channel = Helper.toChannel(data.stream);
             g.printModerationAction(data, data.created_by.equals(c.getUsername()));
             chatLog.modAction(data);
@@ -2629,7 +2629,7 @@ public class TwitchClient {
                 // Add info to unbanned user
                 User unbannedUser = c.getUser(channel, unbannedUsername);
                 int type = User.UnbanMessage.getType(data.moderation_action);
-                unbannedUser.addUnban(type, data.created_by);
+                unbannedUser.addUnban(type, data.created_by, data.getSourceChannel());
                 g.updateUserinfo(unbannedUser);
                 addedTargetUserInfo = true;
             }
@@ -2756,6 +2756,19 @@ public class TwitchClient {
                 UserMessageHeldPayload data = (UserMessageHeldPayload) message.data;
                 if (c.isChannelOpen(Helper.toChannel(data.stream))) {
                     g.printLine(c.getRoomByChannel(Helper.toChannel(data.stream)), data.info);
+                }
+            }
+            if (message.data instanceof ChannelPointsRedemptionPayload) {
+                ChannelPointsRedemptionPayload data = (ChannelPointsRedemptionPayload) message.data;
+                if (c.isChannelOpen(Helper.toChannel(data.stream))) {
+                    User user = c.getUser(Helper.toChannel(data.stream), data.redeemedByUsername);
+                    // Uses added source and reward id for merging
+                    String text = String.format("%s redeemed %s (%,d)",
+                                                data.redeemedByUsername, data.rewardTitle, data.rewardCost);
+                    g.printPointsNotice(user, text, data.attachedMsg,
+                                        MsgTags.create("chatty-source", "eventsub",
+                                                       "custom-reward-id", data.rewardId),
+                                        data.redemptionId, data.isUpdate, data.status);
                 }
             }
         }
@@ -3467,6 +3480,9 @@ public class TwitchClient {
                 eventSub.unlistenMessageHeld(user.getStream());
             }
             
+            if (AccessChecker.isBroadcaster(user, TokenInfo.Scope.READ_POINTS)) {
+                eventSub.listenPoints(user.getStream());
+            }
         }
         
         @Override
@@ -3541,7 +3557,7 @@ public class TwitchClient {
                 String info = String.format("%s redeemed a custom reward (%s)",
                                             user.getDisplayNick(),
                                             rewardInfo != null ? rewardInfo : "unknown");
-                g.printPointsNotice(user, info, text, tags);
+                g.printPointsNotice(user, info, text, tags, null, false, null);
             }
             else {
                 if (!historyManager.addQueueMessage(user, text, tags, action)) {

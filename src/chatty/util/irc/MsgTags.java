@@ -53,8 +53,8 @@ public class MsgTags extends IrcMsgTags {
         return get("custom-reward-id");
     }
     
-    public boolean isFromPubSub() {
-        return isValue("chatty-source", "pubsub");
+    public boolean isFromEventSub() {
+        return isValue("chatty-source", "eventsub");
     }
 
     public boolean isHistoricMsg() {
@@ -137,6 +137,10 @@ public class MsgTags extends IrcMsgTags {
     
     public boolean isSharedMessage() {
         return hasValue("source-room-id") && !get("source-room-id").equals(get("room-id"));
+    }
+    
+    public boolean isSharedChatActive() {
+        return hasValue("source-room-id");
     }
     
     public static final String SHARED_MESSAGE_SOURCE_CHANNEL = "chatty-source-channel";
