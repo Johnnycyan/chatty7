@@ -21,6 +21,10 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 
 /**
  *
@@ -45,6 +49,34 @@ public class JoinDialog extends JDialog {
         
         setLayout(new GridBagLayout());
         
+        GuiUtil.installLengthLimitDocumentFilter(channels, 80000, false);
+        
+        ((AbstractDocument)channels.getDocument()).setDocumentFilter(new DocumentFilter() {
+            private final DocumentFilter defaultFilter = ((AbstractDocument)channels.getDocument()).getDocumentFilter();
+            
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) 
+                    throws BadLocationException {
+                String processed = chatty.util.ForkUtil.replaceWrongLanguage(string, "ru", "en");
+                if (defaultFilter != null && !processed.isEmpty()) {
+                    defaultFilter.insertString(fb, offset, processed, attr);
+                } else {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+            
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) 
+                    throws BadLocationException {
+                String processed = chatty.util.ForkUtil.replaceWrongLanguage(text, "ru", "en");
+                if (defaultFilter != null && !processed.isEmpty()) {
+                    defaultFilter.replace(fb, offset, length, processed, attrs);
+                } else {
+                    super.replace(fb, offset, length, text, attrs);
+                }
+            }
+        });
+        
         channels.getDocument().addDocumentListener(new DocumentListener() {
 
             @Override
@@ -62,7 +94,7 @@ public class JoinDialog extends JDialog {
                 changed();
             }
         });
-        GuiUtil.installLengthLimitDocumentFilter(channels, 80000, false);
+        
         TextSelectionMenu.install(channels);
         
         GridBagConstraints gbc;
