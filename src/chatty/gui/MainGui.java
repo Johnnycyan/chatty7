@@ -3841,12 +3841,6 @@ public class MainGui extends JFrame implements Runnable {
                 
                 CopyMessages.copyMessage(client.settings, user, text, highlighted);
                 
-                // Stuff independent of highlight/ignore
-                if (timestamp == null) {
-                    user.addMessage(processMessage(text), action, tags.getId());
-                } else {
-                    user.addMessage(processMessage(text), action, tags.getId(), timestamp);
-                }
                 // Update User
                 String hypeChatAmount = tags.getHypeChatAmountText();
                 if (hypeChatAmount != null) {
