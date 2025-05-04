@@ -101,18 +101,50 @@ public class ForkUtil {
 
     public static String getTooltip(String url) {
         try {
-            String taks = "https://api.betterttv.net/2/link_resolver/" + URLEncoder.encode(url, "ISO-8859-1");
-            taks = taks.replaceAll("\\+", "");
+            String apiUrl = "https://braize.pajlada.com/chatterino/link_resolver/" +
+                           URLEncoder.encode(url, "UTF-8").replaceAll("\\+", "%20");
+            
+            String response = getUrl(apiUrl);
             JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(getUrl(taks));
-            String tooltip = (String)json.get("tooltip");
-            tooltip = tooltip.replaceAll("\n", "<br />");
-            tooltip = chatty.Helper.htmlspecialchars_decode(tooltip);
-            return tooltip;
-        } catch (org.json.simple.parser.ParseException | java.io.UnsupportedEncodingException ee) {
+            JSONObject json = (JSONObject) parser.parse(response);
+            
+            int status = ((Number)json.get("status")).intValue();
+            if (status == 200) {
+                String tooltip = (String)json.get("tooltip");
+                // URL decode the response
+                tooltip = java.net.URLDecoder.decode(tooltip, "UTF-8");
+                
+                // Check for thumbnail
+                String thumbnailUrl = (String)json.get("thumbnail");
+                if (thumbnailUrl != null && !thumbnailUrl.isEmpty()) {
+                    // Create centered image with fixed width 320px and auto height
+                    tooltip = "<div style='text-align:center;margin-top:10px;'>" +
+                             "<img src='" + thumbnailUrl + "' width='320' style='height:auto;'><br><br></div>" +
+                             "<div style='text-align:left;'>" + tooltip + "</div>";
+                } else {
+                    // Regular formatting without thumbnail
+                    tooltip = "<div style='text-align:left;'>" + tooltip + "</div>";
+                }
+                
+                // Convert newlines to <br> and handle HTML special chars
+                tooltip = tooltip.replaceAll("\n", "<br />");
+                tooltip = chatty.Helper.htmlspecialchars_decode(tooltip);
+                return tooltip;
+            } else {
+                String message = (String)json.get("message");
+                // return "Error: " + (message != null ? message : "Unknown error");
+                return "";
+            }
+        } catch (org.json.simple.parser.ParseException e) {
+            // return "Error parsing response";
+            return "";
+        } catch (java.io.UnsupportedEncodingException e) {
+            // return "Error encoding/decoding URL";
+            return "";
         } catch (Exception e) {
+            // return "Error fetching link info";
+            return "";
         }
-        return "";
     }
 
     public static String getIdChannel(String channel) {

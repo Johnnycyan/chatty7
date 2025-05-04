@@ -230,14 +230,14 @@ public class UrlOpener {
             if (ForkUtil.SHOW_TITLE) {
                 String tooltip = ForkUtil.getTooltip(url);
                 if (tooltip.indexOf("URL:") == -1) {
-                    text += url + "<br />";
+                    text += "<b>" + url + "</b><br />";
                 } else {
                     String newUrl = tooltip.split("URL:</b> ")[1].split("</div>")[0];
                     urls.set(counterUrls, newUrl);
                 }
                 text += tooltip;
             } else {
-                text += url + "<br />";
+                text += "<b>" + url + "</b><br />";
             }
             counterUrls++;
         }
