@@ -60,6 +60,8 @@ public class About extends JFrame implements ActionListener {
     
     public About() {
         setTitle("About/Help - Chatty");
+
+        chatty.gui.GuiUtil.installEscapeCloseOperation(this);
         
         // Text pane
         JScrollPane scroll = new JScrollPane(textPane);

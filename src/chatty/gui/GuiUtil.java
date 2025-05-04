@@ -97,6 +97,7 @@ public class GuiUtil {
     
     private static final String CLOSE_DIALOG_ACTION_MAP_KEY = "CLOSE_DIALOG_ACTION_MAP_KEY";
     private static final KeyStroke ESCAPE_STROKE = KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0);
+    private static final KeyStroke CMD_W_STROKE = KeyStroke.getKeyStroke("meta W");
     
     public static void smallButtonInsets(AbstractButton button) {
         button.setMargin(LaF.defaultButtonInsets() ? null : new Insets(-1, 10, -1, 10));
@@ -121,6 +122,9 @@ public class GuiUtil {
         root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
                 ESCAPE_STROKE,
                 CLOSE_DIALOG_ACTION_MAP_KEY);
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                CMD_W_STROKE,
+                CLOSE_DIALOG_ACTION_MAP_KEY);
         root.getActionMap().put(CLOSE_DIALOG_ACTION_MAP_KEY, closingAction);
     }
 
@@ -136,6 +140,9 @@ public class GuiUtil {
         JRootPane root = frame.getRootPane();
         root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
                 ESCAPE_STROKE,
+                CLOSE_DIALOG_ACTION_MAP_KEY);
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                CMD_W_STROKE,
                 CLOSE_DIALOG_ACTION_MAP_KEY);
         root.getActionMap().put(CLOSE_DIALOG_ACTION_MAP_KEY, closingAction);
     }
