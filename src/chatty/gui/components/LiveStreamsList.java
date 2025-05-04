@@ -140,6 +140,15 @@ public class LiveStreamsList extends JList<StreamInfo> {
         updateGameFavs(settings);
         renderer.setShowIsOpen(settings.getBoolean("liveStreamsChatIcon"));
     }
+
+    public void updateCellSizes() {
+        setFixedCellHeight(-1);
+        setFixedCellHeight(0);
+        setFixedCellHeight(-1);
+        invalidate();
+        revalidate();
+        repaint();
+    }
     
     public void setDockedDialogHelper(DockedDialogHelper helper) {
         this.dockedHelper = helper;

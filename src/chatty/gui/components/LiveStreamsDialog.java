@@ -377,6 +377,9 @@ public class LiveStreamsDialog extends JFrame {
                             list.invalidate();
                             list.revalidate();
                             list.repaint();
+                            list.setFixedCellHeight(-1);
+                            list.setFixedCellHeight(0);
+                            list.setFixedCellHeight(-1);
                         });
                     }
                 }
@@ -395,6 +398,7 @@ public class LiveStreamsDialog extends JFrame {
             list.invalidate();
             list.revalidate();
             list.repaint();
+            list.updateCellSizes();
         });
     }
     
