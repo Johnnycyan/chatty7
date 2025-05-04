@@ -225,6 +225,14 @@ public class LiveStreamsDialog extends JFrame {
                 removedList.removeStreamInfo(item);
             }
         });
+        list.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getButton() == java.awt.event.MouseEvent.BUTTON2) {
+                    setVisible(false);
+                }
+            }
+        });
 
         thumbnailUpdateTimer = new Timer(5 * 60 * 1000, e -> {
             if (isVisible()) {
@@ -242,6 +250,14 @@ public class LiveStreamsDialog extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 switchList();
+            }
+        });
+        removedList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getButton() == java.awt.event.MouseEvent.BUTTON2) {
+                    setVisible(false);
+                }
             }
         });
         
