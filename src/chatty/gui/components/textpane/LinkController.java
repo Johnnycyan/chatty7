@@ -239,6 +239,7 @@ public class LinkController extends MouseAdapter {
         User user;
         CachedImage<Emoticon> emoteImage;
         CachedImage<Usericon> usericonImage;
+        String replyMsgId;
 
         if ((url = getUrl(element)) != null && !isUrlDeleted(element)) {
             if (linkListener != null) {
@@ -247,6 +248,11 @@ public class LinkController extends MouseAdapter {
         } else if ((link = getGeneralLink(element)) != null) {
             for (UserListener listener : userListener) {
                 listener.linkClicked(channel, link);
+            }
+        } else if ((replyMsgId = getReplyText(element)) != null) {
+            // Handle reply thread click
+            for (UserListener listener : userListener) {
+                listener.replyThreadClicked(channel, replyMsgId);
             }
         } else if ((user = getUser(element)) != null
                 || (user = getMention(element)) != null) {

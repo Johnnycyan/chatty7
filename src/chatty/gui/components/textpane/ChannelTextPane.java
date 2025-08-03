@@ -1988,6 +1988,10 @@ public class ChannelTextPane extends JTextPane implements LinkListener, CachedIm
         @Override
         public void imageClicked(String url) {
         }
+
+        @Override
+        public void replyThreadClicked(Channel channel, String parentMsgId) {
+        }
         
     }
     

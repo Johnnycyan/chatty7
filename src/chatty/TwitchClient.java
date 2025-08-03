@@ -3603,7 +3603,23 @@ public class TwitchClient {
                     g.printMessage(user, text, action, tags);
                 }
                 if (tags.isReply() && tags.hasReplyUserMsg() && tags.hasId()) {
-                    ReplyManager.addReply(tags.getReplyParentMsgId(), tags.getId(), String.format("<%s> %s", user.getName(), text), tags.getReplyUserMsg());
+                    // Create a basic parent user from the available information
+                    chatty.User parentUser = null;
+                    chatty.util.irc.MsgTags parentTags = null;
+                    if (tags.hasValue("reply-parent-display-name")) {
+                        String parentDisplayName = tags.get("reply-parent-display-name");
+                        parentUser = new chatty.User(parentDisplayName, user.getRoom());
+                        // Create basic parent tags
+                        java.util.Map<String, String> parentTagsMap = new java.util.HashMap<>();
+                        parentTagsMap.put("display-name", parentDisplayName);
+                        parentTagsMap.put("id", tags.getReplyParentMsgId());
+                        parentTags = new chatty.util.irc.MsgTags(parentTagsMap, null);
+                    }
+                    
+                    ReplyManager.addReply(tags.getReplyParentMsgId(), tags.getId(), 
+                                        String.format("<%s> %s", user.getName(), text), 
+                                        tags.getReplyUserMsg(), 
+                                        tags, user, parentTags, parentUser);
                 }
                 if (!action) {
                     addressbookCommands(user.getChannel(), user, text);

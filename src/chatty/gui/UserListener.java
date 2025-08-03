@@ -24,5 +24,6 @@ public interface UserListener {
     public void usericonClicked(Usericon usericon, MouseEvent e);
     public void linkClicked(Channel channel, MsgTags.Link link);
     public void imageClicked(String url);
+    public void replyThreadClicked(Channel channel, String parentMsgId);
 
 }

@@ -16,9 +16,11 @@ import chatty.gui.components.TokenDialog;
 import chatty.gui.components.admin.AdminDialog;
 import chatty.gui.components.ConnectionDialog;
 import chatty.gui.components.Channel;
+import chatty.gui.components.ReplyThreadWindow;
 import chatty.gui.components.TokenGetDialog;
 import chatty.gui.components.FavoritesDialog;
 import chatty.gui.components.JoinDialog;
+import chatty.gui.components.ReplyThreadWindow;
 import chatty.util.*;
 import chatty.util.api.*;
 import chatty.util.irc.MsgTags;
@@ -177,6 +179,7 @@ public class MainGui extends JFrame implements Runnable {
     private ModerationLog moderationLog;
     private AutoModDialog autoModDialog;
     private EventLog eventLog;
+    private ReplyThreadWindow replyThreadWindow;
     
     // Helpers
     private final Highlighter highlighter = new Highlighter("highlight");
@@ -2847,6 +2850,51 @@ public class MainGui extends JFrame implements Runnable {
         
         public void imageClicked(String url) {
             ImageDialog.showImageDialog(getActiveWindow(), url);
+        }
+        
+        @Override
+        public void replyThreadClicked(Channel channel, String parentMsgId) {
+            if (replyThreadWindow == null) {
+                replyThreadWindow = new ReplyThreadWindow(MainGui.this, styleManager, dockedDialogs);
+            }
+            replyThreadWindow.showThread(parentMsgId, channel.getName());
+        }
+    }
+    
+    /**
+     * Send a reply message to a thread.
+     * 
+     * @param channelName The channel name to send to
+     * @param parentMsgId The parent message ID for the thread
+     * @param text The message text to send
+     */
+    public void sendReplyToThread(String channelName, String parentMsgId, String text) {
+        Channel channel = channels.getExistingChannel(channelName);
+        if (channel != null) {
+            // Get the original parent message from the reply manager
+            java.util.List<chatty.util.ReplyManager.Reply> replies = chatty.util.ReplyManager.getReplies(parentMsgId);
+            String parentMessageText = "";
+            String parentUsername = "";
+            
+            if (replies != null && !replies.isEmpty()) {
+                // The first reply is the parent message
+                chatty.util.ReplyManager.Reply parentReply = replies.get(0);
+                String userMsg = parentReply.userMsg;
+                if (userMsg != null && userMsg.startsWith("<") && userMsg.contains(">")) {
+                    // Extract username and message from format "<username> message text"
+                    int endOfUsername = userMsg.indexOf(">");
+                    if (endOfUsername > 1) {
+                        parentUsername = userMsg.substring(1, endOfUsername);
+                        parentMessageText = userMsg.substring(endOfUsername + 2); // +2 to skip "> "
+                    }
+                }
+            }
+            
+            Parameters parameters = Parameters.create(text);
+            parameters.put("msg-id", parentMsgId);
+            parameters.put("nick", parentUsername);
+            parameters.put("msg", parentMessageText);
+            client.command(channel.getRoom(), "msgreplythread", parameters);
         }
     }
     
