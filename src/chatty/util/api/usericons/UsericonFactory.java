@@ -242,4 +242,25 @@ public class UsericonFactory {
         return null;
     }
     
+    public static Usericon createSevenTV(String badgeId, String name, String urlString, String url2String, String tooltip) {
+        try {
+            URL url = new URL(Helper.checkHttpUrl(urlString));
+            URL url2 = Helper.createUrlNoError(Helper.checkHttpUrl(url2String));
+            Usericon.Builder b = new Usericon.Builder(Usericon.Type.OTHER, SOURCE_OTHER);
+            b.setBadgeType(badgeId, "1"); // 7TV badges typically don't have versions
+            b.setUrl(url);
+            b.setUrl2(url2);
+            b.setMetaTitle(name);
+            b.setMetaDescription(tooltip);
+            Dimension size = getSize(url);
+            if (size != null) {
+                b.setBaseImageSize(size.width, size.height);
+            }
+            return b.build();
+        } catch (MalformedURLException ex) {
+            LOGGER.warning("Invalid 7TV badge URL: " + urlString);
+        }
+        return null;
+    }
+    
 }

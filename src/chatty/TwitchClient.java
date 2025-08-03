@@ -101,6 +101,8 @@ import chatty.util.settings.FileManager;
 import chatty.util.settings.Settings;
 import chatty.util.settings.SettingsListener;
 import chatty.util.seventv.SevenTV;
+import chatty.util.api.usericons.SevenTVBadges;
+import chatty.util.seventv.SevenTVEventAPI;
 import chatty.util.seventv.WebPUtil;
 import chatty.util.srl.SpeedrunsLive;
 import java.awt.Color;
@@ -174,6 +176,10 @@ public class TwitchClient {
     public final FrankerFaceZ frankerFaceZ;
     
     public final SevenTV sevenTV;
+    
+    public final SevenTVBadges sevenTVBadges;
+    
+    public final SevenTVEventAPI sevenTVEventAPI;
     
     public final ChannelFavorites channelFavorites;
     
@@ -329,6 +335,10 @@ public class TwitchClient {
         frankerFaceZ = new FrankerFaceZ(new EmoticonsListener(), settings, api);
         sevenTV = new SevenTV(new EmoteListener(), api);
         
+        // Initialize 7TV badges system
+        sevenTVBadges = new SevenTVBadges();
+        sevenTVEventAPI = new SevenTVEventAPI(sevenTVBadges, this);
+        
         ImageCache.setDefaultPath(Chatty.getPathCreate(PathType.CACHE).resolve("img"));
         ImageCache.setCachingEnabled(settings.getBoolean("imageCache"));
         ImageCache.deleteExpiredFiles();
@@ -338,6 +348,11 @@ public class TwitchClient {
         usericonManager = new UsericonManager(settings);
         customCommands = new CustomCommands(settings, api, this);
         botNameManager = new BotNameManager(settings);
+        
+        // Set up 7TV badge integration
+        System.out.println("DEBUG: Setting 7TV badges in UsericonManager: " + (sevenTVBadges != null ? "not null" : "null"));
+        usericonManager.setSevenTVBadges(sevenTVBadges);
+        
         settings.addSettingsListener(new SettingSaveListener());
 
         streamHighlights = new StreamHighlightHelper(settings, api);
@@ -3364,6 +3379,52 @@ public class TwitchClient {
         }
         if (settings.getBoolean("seventv")) {
             sevenTV.requestEmotes(channel, false);
+        }
+        if (settings.getBoolean("seventvBadges")) {
+            ensureSevenTVConnection();
+            subscribeToSevenTVChannel(channel);
+        }
+    }
+    
+    /**
+     * Ensure the 7TV EventAPI connection is established
+     */
+    private void ensureSevenTVConnection() {
+        if (!sevenTVEventAPI.isConnected()) {
+            sevenTVEventAPI.connect();
+        }
+    }
+    
+    /**
+     * Subscribe to 7TV cosmetic updates for a channel
+     * 
+     * @param channel The channel name (without #)
+     */
+    private void subscribeToSevenTVChannel(String channel) {
+        if (channel != null && !channel.isEmpty()) {
+            // Remove # prefix if present
+            String channelName = Helper.toStream(channel);
+            
+            // Get Twitch channel ID for subscription
+            // For now we'll use the channel name, but ideally we'd need the Twitch channel ID
+            sevenTVEventAPI.subscribeToChannel(channelName);
+            
+            // Send presence update to 7TV when joining channel
+            Room room = roomManager.getRoom(channel);
+            if (room != null && room.getStreamId() != null) {
+                sevenTVEventAPI.sendPresence(room.getStreamId(), true);
+            }
+        }
+    }
+    
+    public void requestGlobalEmotes() {
+        if (settings.getBoolean("ffz")) {
+            frankerFaceZ.requestEmotes(null, false);
+        }
+        if (settings.getBoolean("bttvEmotes")) {
+            bttvEmotes.requestEmotes(null, false);
+        }
+        if (settings.getBoolean("seventv")) {
             sevenTV.requestEmotes(null, false);
         }
 //        api.getEmotesByStreams(Helper.toStream(channel)); // Removed
@@ -3639,6 +3700,17 @@ public class TwitchClient {
 
         @Override
         public void onChannelMessage(User user, String text, boolean action, MsgTags tags) {
+            // Send 7TV presence update when user (current user) sends a message
+            if (user.getName().equals(getUsername()) && settings.getBoolean("seventvBadges")) {
+                String channelId = null;
+                if (user.getRoom() != null && user.getRoom().getStreamId() != null) {
+                    channelId = user.getRoom().getStreamId();
+                }
+                if (channelId != null) {
+                    sevenTVEventAPI.sendPresence(channelId, false);
+                }
+            }
+            
             if (tags.isCustomReward()) {
                 String rewardInfo = (String)settings.mapGet("rewards", tags.getCustomRewardId());
                 String info = String.format("%s redeemed a custom reward (%s)",

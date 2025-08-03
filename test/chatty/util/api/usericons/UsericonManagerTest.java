@@ -26,6 +26,7 @@ public class UsericonManagerTest {
         Settings settings = new Settings(null, null);
         settings.addBoolean("ffzModIcon", false);
         settings.addBoolean("customUsericonsEnabled", false);
+        settings.addBoolean("seventvBadges", false);
         settings.addList("customUsericons", new ArrayList<>(), Setting.LIST);
         UsericonManager m = new UsericonManager(settings);
         Set<String> usernames = new HashSet<>();

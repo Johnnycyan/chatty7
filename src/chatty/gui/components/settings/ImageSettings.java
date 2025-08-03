@@ -39,6 +39,7 @@ public class ImageSettings extends SettingsPanel {
 
         JCheckBox usericonsEnabled = d.addSimpleBooleanSetting("usericonsEnabled");
         JCheckBox botBadgeEnabled = d.addSimpleBooleanSetting("botBadgeEnabled");
+        JCheckBox seventvBadges = d.addSimpleBooleanSetting("seventvBadges");
         JCheckBox customUsericonsEnabled = d.addSimpleBooleanSetting("customUsericonsEnabled");
         
         //==================
@@ -50,16 +51,19 @@ public class ImageSettings extends SettingsPanel {
         gbc = d.makeGbc(2, 0, 1, 1, GridBagConstraints.WEST);
         usericons.add(botBadgeEnabled, gbc);
         
-        gbc = d.makeGbc(0, 1, 4, 1, GridBagConstraints.CENTER);
+        gbc = d.makeGbc(0, 1, 2, 1, GridBagConstraints.WEST);
+        usericons.add(seventvBadges, gbc);
+        
+        gbc = d.makeGbc(0, 2, 4, 1, GridBagConstraints.CENTER);
         usericons.add(new JLabel(Language.getString("settings.ffzBadgesInfo")), gbc);
         
         ComboLongSetting usericonScale = new ComboLongSetting(makeScaleValues());
         d.addLongSetting("usericonScale", usericonScale);
-        SettingsUtil.addLabeledComponent(usericons, "usericonScale", 0, 2, 2, GridBagConstraints.WEST, usericonScale);
+        SettingsUtil.addLabeledComponent(usericons, "usericonScale", 0, 3, 2, GridBagConstraints.WEST, usericonScale);
         
         ComboLongSetting customUsericonScaleMode = d.addComboLongSetting("customUsericonScaleMode", 0, 1, 2);
         d.addLongSetting("customUsericonScaleMode", customUsericonScaleMode);
-        SettingsUtil.addLabeledComponent(usericons, "customUsericonScaleMode", 0, 3, 2, GridBagConstraints.WEST, customUsericonScaleMode);
+        SettingsUtil.addLabeledComponent(usericons, "customUsericonScaleMode", 0, 4, 2, GridBagConstraints.WEST, customUsericonScaleMode);
         
         hiddenBadgesDialog = new HiddenBadgesDialog(d);
         JButton hiddenBadgesButton = new JButton("View Hidden Badges");
@@ -87,7 +91,7 @@ public class ImageSettings extends SettingsPanel {
         gbc = d.makeGbc(0, 3, 2, 1, GridBagConstraints.WEST);
         custom.add(new JLabel(Language.getString("settings.customUsericons.info")), gbc);
         
-        SettingsUtil.addSubsettings(usericonsEnabled, customUsericonsEnabled, botBadgeEnabled);
+        SettingsUtil.addSubsettings(usericonsEnabled, customUsericonsEnabled, botBadgeEnabled, seventvBadges);
         SettingsUtil.addSubsettings(customUsericonsEnabled, usericonsData);
     }
     

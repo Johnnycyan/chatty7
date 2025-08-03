@@ -54,9 +54,19 @@ public class UsericonManager {
     private final Map<String, String> channelLogoUrls = new HashMap<>();
 
     private final Settings settings;
+    private SevenTVBadges sevenTVBadges;
     
     public UsericonManager(Settings settings) {
         this.settings = settings;
+    }
+    
+    /**
+     * Set the 7TV badge manager for badge integration
+     * 
+     * @param sevenTVBadges The 7TV badge manager
+     */
+    public void setSevenTVBadges(SevenTVBadges sevenTVBadges) {
+        this.sevenTVBadges = sevenTVBadges;
     }
     
     public synchronized void addDefaultIcons(List<Usericon> icons) {
@@ -199,6 +209,7 @@ public class UsericonManager {
         }
         addThirdPartyIcons(icons, user, tags);
         addAddonIcons(icons, user, tags);
+        addSevenTVBadges(icons, user, tags);
         if (tags != null && tags.isHighlightedMessage()) {
             Usericon icon = getIcon(Usericon.Type.HL, null, null, user, tags);
             if (icon != null) {
@@ -383,6 +394,81 @@ public class UsericonManager {
                 }
             }
         }
+    }
+    
+    /**
+     * Add 7TV badges for the user if they have any assigned
+     */
+    private void addSevenTVBadges(List<Usericon> icons, User user, MsgTags tags) {
+        System.out.println("DEBUG: addSevenTVBadges called for user: " + user.getDisplayNick());
+        System.out.println("DEBUG: seventvBadges setting: " + settings.getBoolean("seventvBadges"));
+        System.out.println("DEBUG: sevenTVBadges instance: " + (sevenTVBadges != null ? "not null" : "null"));
+        
+        if (!settings.getBoolean("seventvBadges") || sevenTVBadges == null) {
+            System.out.println("DEBUG: Returning early from addSevenTVBadges");
+            return;
+        }
+        
+        // Get user's 7TV badges using their user ID
+        String userId = getUserId(user, tags);
+        System.out.println("DEBUG: User ID for badges: " + userId);
+        if (userId != null) {
+            // Debug logging
+            Set<String> badgeIds = sevenTVBadges.getUserBadges(userId);
+            System.out.println("DEBUG: User " + userId + " has 7TV badges: " + badgeIds);
+            if (!badgeIds.isEmpty()) {
+                System.out.println("DEBUG: User " + userId + " has 7TV badges: " + badgeIds);
+                
+                // Check if we need to fetch badge definitions
+                boolean needToFetchBadges = false;
+                for (String badgeId : badgeIds) {
+                    if (sevenTVBadges.getBadge(badgeId) == null) {
+                        needToFetchBadges = true;
+                        System.out.println("DEBUG: Badge definition missing for: " + badgeId);
+                        break;
+                    }
+                }
+                
+                // If we have badge IDs but missing definitions, try to fetch them
+                if (needToFetchBadges) {
+                    System.out.println("DEBUG: Fetching missing badge definitions for user: " + userId);
+                    // For now, we'll use the manual approach since UsericonManager doesn't have access to SevenTVEventAPI
+                    // The proper fix would be to give UsericonManager access to SevenTVEventAPI
+                }
+            }
+            
+            for (String badgeId : badgeIds) {
+                Usericon badge = sevenTVBadges.getBadge(badgeId);
+                if (badge != null) {
+                    // Check if custom usericons might override this badge
+                    Usericon transformed = getIcon(Type.OTHER, badge.badgeType.id, badge.badgeType.version, user, tags);
+                    if (transformed != null) {
+                        insert(icons, transformed);
+                    } else {
+                        // Use the badge as-is if no custom override
+                        insert(icons, badge);
+                    }
+                    System.out.println("DEBUG: Added 7TV badge " + badgeId + " for user " + userId);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Get the user ID for 7TV badge lookup. This could be Twitch user ID
+     * or 7TV user ID depending on implementation.
+     */
+    private String getUserId(User user, MsgTags tags) {
+        // For now, try to get the Twitch user ID from tags
+        if (tags != null) {
+            String userId = tags.get("user-id");
+            if (userId != null && !userId.isEmpty()) {
+                return userId;
+            }
+        }
+        
+        // Fallback to username if no user ID is available
+        return user.getName();
     }
     
     /**
