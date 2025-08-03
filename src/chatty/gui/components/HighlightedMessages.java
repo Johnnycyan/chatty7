@@ -178,7 +178,7 @@ public class HighlightedMessages extends JDialog {
         
         add(scroll);
         content = dockedDialogs.createStyledContent(scroll, shortTitle,
-                settingName.equals("highlightDock") ? "highlights" : "ignoredMessages");
+                settingName.equals("highlightDock") ? "-highlight-" : "-ignore-");
         
         helper = dockedDialogs.createHelper(new DockedDialogHelper.DockedDialog() {
             

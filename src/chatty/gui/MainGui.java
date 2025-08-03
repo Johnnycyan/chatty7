@@ -2219,8 +2219,14 @@ public class MainGui extends JFrame implements Runnable {
                 channel = ((Channels.DockChannelContainer) content).getContent();
                 entityName = channel.getChannel();
             } else {
-                // For non-channel tabs (like Highlights), use the content ID
-                entityName = contentId;
+                // For non-channel tabs (like Highlights), map dock content ID to display name entity
+                if (contentId.equals("-highlight-")) {
+                    entityName = "highlights";
+                } else if (contentId.equals("-ignore-")) {
+                    entityName = "ignoredMessages";
+                } else {
+                    entityName = contentId;
+                }
             }
             
             if (entityName != null) {

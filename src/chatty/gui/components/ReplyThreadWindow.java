@@ -296,7 +296,6 @@ public class ReplyThreadWindow extends JDialog implements ReplyManager.ReplyList
         // Only refresh if this is for our current thread and we haven't displayed this reply yet
         String replyKey = reply.msgId != null ? reply.msgId : reply.userMsg;
         if (parentMsgId != null && parentMsgId.equals(threadParentMsgId) && !displayedReplies.contains(replyKey)) {
-            System.out.println("ReplyThreadWindow: Adding new reply " + reply.msgId + " to thread " + threadParentMsgId);
             SwingUtilities.invokeLater(() -> {
                 // Add only the new reply, not reload everything
                 addReplyToDisplay(reply);

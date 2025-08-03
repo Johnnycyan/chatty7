@@ -102,8 +102,16 @@ public class DockedDialogManager {
             
             @Override
             public void setTitle(String title) {
+                // Map dock content ID to display name entity
+                String entityName = getId();
+                if (entityName.equals("-highlight-")) {
+                    entityName = "highlights";
+                } else if (entityName.equals("-ignore-")) {
+                    entityName = "ignoredMessages";
+                }
+                
                 // Use effective display name for all docked dialog tabs
-                String effectiveTitle = channels.getChannelDisplayNames().getEffectiveDisplayName(getId());
+                String effectiveTitle = channels.getChannelDisplayNames().getEffectiveDisplayName(entityName);
                 super.setTitle(effectiveTitle);
             }
             
