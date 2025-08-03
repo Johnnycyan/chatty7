@@ -390,6 +390,7 @@ public class NotificationManager {
         if (!settings.getBoolean("sounds")) {
             return false;
         }
+        
         if (n.lastPlayedAgo() < n.soundCooldown*1000) {
             return false;
         }

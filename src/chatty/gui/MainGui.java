@@ -3833,24 +3833,31 @@ public class MainGui extends JFrame implements Runnable {
                 // Do stuff if highlighted, without printing message
                 if (highlighted) {
                     highlightMatches = highlighter.getLastTextMatches();
-                    if (!highlighter.getLastMatchNoNotification()) {
-                        channels.setChannelHighlighted(chan);
-                    } else {
-                        channels.setChannelNewMessage(chan);
+                    // Only update channel state for live messages, not historic ones
+                    if (!tags.isHistoricMsg()) {
+                        if (!highlighter.getLastMatchNoNotification()) {
+                            channels.setChannelHighlighted(chan);
+                        } else {
+                            channels.setChannelNewMessage(chan);
+                        }
+                        // Only trigger notifications for live messages, not historic ones
+                        notificationManager.highlight(user, localUser, text, tags,
+                                highlighter.getLastMatchNoNotification(),
+                                highlighter.getLastMatchNoSound(),
+                                isOwnMessage, whisper, bitsAmount > 0);
                     }
-                    notificationManager.highlight(user, localUser, text, tags,
-                            highlighter.getLastMatchNoNotification(),
-                            highlighter.getLastMatchNoSound(),
-                            isOwnMessage, whisper, bitsAmount > 0);
                 } else if (!ignored) {
-                    if (whisper) {
-                        notificationManager.whisper(user, localUser, text, isOwnMessage);
-                    } else {
-                        notificationManager.message(user, localUser, text, tags, isOwnMessage,
-                                bitsAmount > 0);
-                    }
-                    if (!isOwnMessage) {
-                        channels.setChannelNewMessage(chan);
+                    // Only trigger notifications and channel state updates for live messages, not historic ones
+                    if (!tags.isHistoricMsg()) {
+                        if (whisper) {
+                            notificationManager.whisper(user, localUser, text, isOwnMessage);
+                        } else {
+                            notificationManager.message(user, localUser, text, tags, isOwnMessage,
+                                    bitsAmount > 0);
+                        }
+                        if (!isOwnMessage) {
+                            channels.setChannelNewMessage(chan);
+                        }
                     }
                 }
                 
@@ -4354,16 +4361,22 @@ public class MainGui extends JFrame implements Runnable {
                     message.highlightSource = highlighter.getLastMatchItems();
                     routingTargets.add(highlighter.getLastMatchItem());
 
-                    if (!highlighter.getLastMatchNoNotification()) {
-                        channels.setChannelHighlighted(channel);
-                    } else {
-                        channels.setChannelNewMessage(channel);
+                    // Only update channel state and trigger notifications for live messages, not historic ones
+                    if (tags == null || !tags.isHistoricMsg()) {
+                        if (!highlighter.getLastMatchNoNotification()) {
+                            channels.setChannelHighlighted(channel);
+                        } else {
+                            channels.setChannelNewMessage(channel);
+                        }
+                        notificationManager.infoHighlight(channel.getRoom(), message.text,
+                                highlighter.getLastMatchNoNotification(),
+                                highlighter.getLastMatchNoSound(), localUser);
                     }
-                    notificationManager.infoHighlight(channel.getRoom(), message.text,
-                            highlighter.getLastMatchNoNotification(),
-                            highlighter.getLastMatchNoSound(), localUser);
                 } else {
-                    notificationManager.info(channel.getRoom(), message.text, localUser);
+                    // Only trigger notifications for live messages, not historic ones
+                    if (tags == null || !tags.isHistoricMsg()) {
+                        notificationManager.info(channel.getRoom(), message.text, localUser);
+                    }
                 }
                 if (!highlighted || client.settings.getBoolean("msgColorsPrefer")) {
                     MsgColorItem colorItem = msgColorManager.getInfoColor(
@@ -5999,7 +6012,10 @@ public class MainGui extends JFrame implements Runnable {
             printLine(room, "[Begin of recent messages.]");
         }
 
-        this.printMessage(user, textMsg, action, tags, tmi);
+        // Mark as historic message to prevent notifications
+        MsgTags historicTags = MsgTags.addTag(tags, "historic-timestamp", tmi);
+        
+        this.printMessage(user, textMsg, action, historicTags, tmi);
         return true;
     }
     

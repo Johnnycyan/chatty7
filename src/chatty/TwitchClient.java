@@ -43,6 +43,7 @@ import chatty.util.ffz.FrankerFaceZ;
 import chatty.util.ffz.FrankerFaceZListener;
 import chatty.util.history.HistoryManager;
 import chatty.util.history.HistoryMessage;
+import chatty.util.history.QueuedMessage;
 import chatty.util.ImageCache;
 import chatty.util.LogUtil;
 import chatty.util.MacAwtOptions;
@@ -94,7 +95,6 @@ import chatty.util.api.eventsub.payloads.WarningAcknowledgePayload;
 import chatty.util.chatlog.ChatLog;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
-import chatty.util.history.QueuedMessage;
 import chatty.util.irc.MsgTags;
 import chatty.util.irc.UserTagsUtil;
 import chatty.util.settings.FileManager;
@@ -3398,9 +3398,10 @@ public class TwitchClient {
             g.printSystem(room, "### Finished with history logs. ###");
             historyManager.setMessageSeen(stream);
 
-            // Output messages that arrived live while loading the history
-            for (QueuedMessage msg : historyManager.getQueuedMessages(stream)) {
-                g.printMessage(msg.user, msg.text, msg.action, msg.tags);
+            // Get and display any messages that were queued during history loading
+            List<QueuedMessage> queuedMessages = historyManager.getQueuedMessages(stream);
+            for (QueuedMessage queuedMsg : queuedMessages) {
+                g.printMessage(queuedMsg.user, queuedMsg.text, queuedMsg.action, queuedMsg.tags);
             }
         });
     }
