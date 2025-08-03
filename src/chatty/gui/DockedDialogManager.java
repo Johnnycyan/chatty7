@@ -47,6 +47,41 @@ public class DockedDialogManager {
                 SwingUtilities.invokeLater(() -> updateNonChannelTabTitle(entityId));
             }
         });
+        
+        // Initial refresh of all non-channel tab titles to apply custom names on startup
+        SwingUtilities.invokeLater(() -> refreshAllNonChannelTabTitles());
+    }
+    
+    /**
+     * Refresh titles for all non-channel tabs to ensure custom display names are applied.
+     * This is especially important during startup to apply saved custom names.
+     */
+    private void refreshAllNonChannelTabTitles() {
+        DockManager dock = getDockManager();
+        
+        // Check main content
+        for (DockContent content : dock.getContents()) {
+            if (content instanceof DockStyledTabContainer) {
+                DockStyledTabContainer<?> container = (DockStyledTabContainer<?>) content;
+                String id = container.getId();
+                if (id != null && (id.equals("-highlight-") || id.equals("-ignore-") || 
+                                   !id.startsWith("#"))) { // Non-channel tabs typically don't start with #
+                    container.setTitle("");
+                }
+            }
+        }
+        
+        // Check popout content
+        for (DockContent content : dock.getPopoutContents()) {
+            if (content instanceof DockStyledTabContainer) {
+                DockStyledTabContainer<?> container = (DockStyledTabContainer<?>) content;
+                String id = container.getId();
+                if (id != null && (id.equals("-highlight-") || id.equals("-ignore-") || 
+                                   !id.startsWith("#"))) { // Non-channel tabs typically don't start with #
+                    container.setTitle("");
+                }
+            }
+        }
     }
     
     /**
