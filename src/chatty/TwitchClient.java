@@ -1288,7 +1288,23 @@ public class TwitchClient {
                     sendReply(p.getChannel(), msg, atUsername, atMsgId, atMsg);
             }
             else {
-                g.printLine("Invalid reply parameters");
+                // Provide more detailed error information
+                String nick = p.getParameters().get("nick");
+                String msgId = p.getParameters().get("msg-id");
+                String msg = p.getParameters().get("msg");
+                boolean hasArgs = p.hasArgs();
+                
+                if (!hasArgs) {
+                    g.printLine("Cannot reply: No reply message text provided");
+                } else if (StringUtil.isNullOrEmpty(msgId)) {
+                    g.printLine("Cannot reply: Message ID not available (try replying to messages from other users or wait for your message to be processed by the server)");
+                } else if (StringUtil.isNullOrEmpty(nick)) {
+                    g.printLine("Cannot reply: Username not available");
+                } else if (StringUtil.isNullOrEmpty(msg)) {
+                    g.printLine("Cannot reply: Original message text not available");
+                } else {
+                    g.printLine("Invalid reply parameters");
+                }
             }
         }, "msgreplythread");
         commands.add("w", p -> {
