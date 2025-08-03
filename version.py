@@ -8,7 +8,7 @@ if len(sys.argv) > 1:
 else:
     print("No arguments provided.")
 
-partVersion = '0.28.0';
+partVersion = '7.28.0';
 finalVersion = f"{partVersion}.{first_argument}";
 
 path = "src/chatty/Chatty.java";
