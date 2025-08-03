@@ -31,7 +31,7 @@ import java.lang.OutOfMemoryError;
 /**
  * Dialog to see image in the chat.
  * 
- * @author 23rd
+ * @author Johnnycyan
  */
 public class ImageDialog extends JDialog {
 

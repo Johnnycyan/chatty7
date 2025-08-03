@@ -63,7 +63,7 @@ public class Chatty {
      * Enable Version Checker (if you compile and distribute this yourself, you
      * may want to disable this)
      */
-    public static final boolean VERSION_CHECK_ENABLED = true;
+    public static final boolean VERSION_CHECK_ENABLED = false;
     
     /**
      * The regular URL of the textfile where the most recent version is stored.
@@ -92,7 +92,7 @@ public class Chatty {
 
     /**
      * If path is setted, then links from Youtube will open in external videoplayer.
-     * @author 23rd
+     * @author Johnnycyan
      */
     public static String PLAYER_PATH = "";
     

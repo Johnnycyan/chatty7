@@ -20,7 +20,7 @@ import java.awt.event.ItemListener;
 /**
  * Fork settings..
  * 
- * @author 23rd
+ * @author Johnnycyan
  */
 public class ForkSettings extends SettingsPanel {
     

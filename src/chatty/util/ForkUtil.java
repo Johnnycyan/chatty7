@@ -37,7 +37,7 @@ import chatty.gui.components.Channel;
 
 /**
  * 01.10.17
- * @author 23rd
+ * @author Johnnycyan
  */
 public class ForkUtil {
 
