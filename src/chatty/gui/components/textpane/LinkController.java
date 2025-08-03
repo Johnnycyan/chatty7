@@ -79,6 +79,7 @@ import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
+import javax.swing.text.Document;
 import javax.swing.text.html.HTML;
 import org.json.simple.JSONArray;
 
@@ -415,7 +416,129 @@ public class LinkController extends MouseAdapter {
     }
     
     private String getMsgId(Element e) {
-        return (String) e.getAttributes().getAttribute(ChannelTextPane.Attribute.ID);
+        // First check the element itself
+        String msgId = (String) e.getAttributes().getAttribute(ChannelTextPane.Attribute.ID);
+        if (msgId != null) {
+            return msgId;
+        }
+        
+        // If not found, search in the same line for a username element with message ID
+        return findMessageIdInLine(e);
+    }
+    
+    private String findMessageIdInLine(Element element) {
+        try {
+            // Get the document from the element directly
+            Document doc = element.getDocument();
+            int pos = element.getStartOffset();
+            
+            // Find the start and end of the current line
+            Element root = doc.getDefaultRootElement();
+            int lineIndex = root.getElementIndex(pos);
+            Element line = root.getElement(lineIndex);
+            
+            if (line != null) {
+                // Search all elements in this line for a message ID
+                return searchElementsForMsgId(line);
+            }
+        } catch (Exception ex) {
+            System.out.println("DEBUG: Error finding message ID in line: " + ex.getMessage());
+        }
+        return null;
+    }
+    
+    private String searchElementsForMsgId(Element element) {
+        // Check current element
+        String msgId = (String) element.getAttributes().getAttribute(ChannelTextPane.Attribute.ID);
+        if (msgId != null) {
+            System.out.println("DEBUG: Found msgId: " + msgId + " in element");
+            return msgId;
+        }
+        
+        // Recursively search child elements
+        for (int i = 0; i < element.getElementCount(); i++) {
+            Element child = element.getElement(i);
+            msgId = searchElementsForMsgId(child);
+            if (msgId != null) {
+                return msgId;
+            }
+        }
+        
+        return null;
+    }
+    
+    private User findUserInLine(Element element) {
+        try {
+            // Get the document from the element directly
+            Document doc = element.getDocument();
+            int pos = element.getStartOffset();
+            
+            // Find the start and end of the current line
+            Element root = doc.getDefaultRootElement();
+            int lineIndex = root.getElementIndex(pos);
+            Element line = root.getElement(lineIndex);
+            
+            if (line != null) {
+                // Search all elements in this line for a User object
+                return searchElementsForUser(line);
+            }
+        } catch (Exception ex) {
+            System.out.println("DEBUG: Error finding user in line: " + ex.getMessage());
+        }
+        return null;
+    }
+    
+    private User searchElementsForUser(Element element) {
+        // Check current element for User attribute
+        User user = (User) element.getAttributes().getAttribute(ChannelTextPane.Attribute.USER);
+        if (user != null) {
+            System.out.println("DEBUG: Found user: " + user.getName() + " in element");
+            return user;
+        }
+        
+        // Recursively search child elements
+        for (int i = 0; i < element.getElementCount(); i++) {
+            Element child = element.getElement(i);
+            user = searchElementsForUser(child);
+            if (user != null) {
+                return user;
+            }
+        }
+        
+        return null;
+    }
+    
+    private String getMessageTextForReply(Element element, String msgId) {
+        // If we can't find the user, try to extract message text as fallback
+        try {
+            Document doc = element.getDocument();
+            int pos = element.getStartOffset();
+            Element root = doc.getDefaultRootElement();
+            int lineIndex = root.getElementIndex(pos);
+            Element line = root.getElement(lineIndex);
+            
+            if (line != null) {
+                // Get the text content of the entire line and try to extract username
+                String lineText = doc.getText(line.getStartOffset(), line.getEndOffset() - line.getStartOffset());
+                // Simple regex to extract username from patterns like "username:" or "* username"
+                if (lineText.contains(":")) {
+                    String[] parts = lineText.split(":", 2);
+                    if (parts.length > 0) {
+                        String possibleUsername = parts[0].trim();
+                        // Remove common prefixes like timestamp, etc.
+                        possibleUsername = possibleUsername.replaceAll("^\\[\\d+:\\d+:\\d+\\]\\s*", "");
+                        possibleUsername = possibleUsername.replaceAll("^\\*\\s*", ""); // action messages
+                        possibleUsername = possibleUsername.trim();
+                        if (!possibleUsername.isEmpty() && possibleUsername.length() < 50) { // reasonable username length
+                            return possibleUsername;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            System.out.println("DEBUG: Error extracting message text: " + ex.getMessage());
+        }
+        return "unknown";
     }
     
     private String getAutoModMsgId(Element e) {
@@ -555,6 +678,7 @@ public class LinkController extends MouseAdapter {
         JPopupMenu m = null;
         Element element = getElement(e);
         if (element == null) {
+            System.out.println("DEBUG: openContextMenu - element is null, creating default menu");
             m = createDefaultMenu(element);
         }
         else {
@@ -568,13 +692,16 @@ public class LinkController extends MouseAdapter {
             CachedImage<Emoticon> emoteImage = getEmoticonImage(element);
             CachedImage<Usericon> usericonImage = getUsericonImage(element);
             if (user != null) {
+                System.out.println("DEBUG: openContextMenu - creating UserContextMenu for user: " + user.getName());
                 m = new UserContextMenu(user, getMsgId(element),
                                         getAutoModMsgId(element), contextMenuListener);
             }
             else if (url != null) {
+                System.out.println("DEBUG: openContextMenu - creating UrlContextMenu");
                 m = new UrlContextMenu(url, isUrlDeleted(element), contextMenuListener);
             }
             else if (link != null) {
+                System.out.println("DEBUG: openContextMenu - creating link menu");
                 switch (link.type) {
                     case JOIN:
                         String c = Helper.toStream(link.target);
@@ -586,9 +713,11 @@ public class LinkController extends MouseAdapter {
                 }
             }
             else if (emoteImage != null) {
+                System.out.println("DEBUG: openContextMenu - creating EmoteContextMenu");
                 m = new EmoteContextMenu(emoteImage, contextMenuListener);
             }
             else if (usericonImage != null) {
+                System.out.println("DEBUG: openContextMenu - creating UsericonContextMenu");
                 m = new UsericonContextMenu(usericonImage, contextMenuListener);
             }
             else if (!StringUtil.isNullOrEmpty(selectedText) && ((JTextPane) e.getSource()).hasFocus()) {
@@ -599,9 +728,11 @@ public class LinkController extends MouseAdapter {
                  * there won't be any text visibly selected but still open this
                  * menu. So check focus first.
                  */
+                System.out.println("DEBUG: openContextMenu - creating TextSelectionMenu");
                 m = new TextSelectionMenu((JTextComponent) e.getSource(), false);
             }
             else {
+                System.out.println("DEBUG: openContextMenu - creating default menu with element (msgId: " + getMsgId(element) + ")");
                 m = createDefaultMenu(element);
             }
         }
@@ -1132,7 +1263,10 @@ public class LinkController extends MouseAdapter {
         }
         // Add additional entries to menu if possible
         if (element != null && m != null) {
+            System.out.println("DEBUG: Adding message info items - element exists");
             addMessageInfoItems(m, element);
+        } else {
+            System.out.println("DEBUG: Not adding message info items - element: " + (element != null) + ", menu: " + (m != null));
         }
         return m;
     }
@@ -1146,6 +1280,41 @@ public class LinkController extends MouseAdapter {
      * @param element 
      */
     private void addMessageInfoItems(JPopupMenu m, Element element) {
+        // Check if we can add a reply option FIRST
+        String msgId = getMsgId(element);
+        User messageUser = getUser(element);
+        
+        // If we don't have a user from the current element, try to find it in the message line
+        if (messageUser == null && msgId != null) {
+            messageUser = findUserInLine(element);
+        }
+        
+        // Make it final for use in lambda
+        final User finalMessageUser = messageUser;
+        
+        System.out.println("DEBUG: addMessageInfoItems - msgId: " + msgId + ", user: " + (finalMessageUser != null ? finalMessageUser.getName() : "null"));
+        
+        // Add reply option FIRST if we have a message ID
+        boolean replyItemAdded = false;
+        if (msgId != null && !StringUtil.isNullOrEmpty(msgId)) {
+            System.out.println("DEBUG: Adding reply menu item at position 0");
+            JMenuItem replyItem = new JMenuItem(Language.getString("messageCm.reply"));
+            replyItem.setActionCommand("replyToMessage");
+            replyItem.addActionListener(e -> {
+                if (contextMenuListener != null) {
+                    // Use message user if available, otherwise try to get from element context
+                    String username = finalMessageUser != null ? finalMessageUser.getName() : getMessageTextForReply(element, msgId);
+                    ActionEvent replyEvent = new ActionEvent(replyItem, ActionEvent.ACTION_PERFORMED, 
+                            "replyToMessage:" + msgId + ":" + username);
+                    contextMenuListener.menuItemClicked(replyEvent);
+                }
+            });
+            m.insert(replyItem, 0); // Insert at the beginning
+            replyItemAdded = true;
+        } else {
+            System.out.println("DEBUG: Not adding reply menu item - no msgId or empty");
+        }
+        
         Object highlightSource = getSource(Attribute.HIGHLIGHT_SOURCE, element);
         Object ignoreSource = getSource(Attribute.IGNORE_SOURCE, element);
         Object colorSource = getSource(Attribute.CUSTOM_COLOR_SOURCE, element);
@@ -1155,6 +1324,12 @@ public class LinkController extends MouseAdapter {
                 || ignoreSource != null
                 || colorSource != null
                 || routingSource != null) {
+            
+            // Add separator after reply item if it was added
+            if (replyItemAdded) {
+                m.insert(new JPopupMenu.Separator(), 1);
+            }
+            
             JMenu menu = new JMenu("Message Info");
             
             addMessageInfoItem(menu, "Highlight Source", highlightSource);
@@ -1162,7 +1337,9 @@ public class LinkController extends MouseAdapter {
             addMessageInfoItem(menu, "Custom Color Source", colorSource);
             addMessageInfoItem(menu, "Routing Source", routingSource);
             
-            m.addSeparator();
+            if (!replyItemAdded) {
+                m.addSeparator();
+            }
             m.add(menu);
         }
     }

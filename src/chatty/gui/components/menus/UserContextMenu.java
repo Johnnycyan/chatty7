@@ -5,6 +5,7 @@ import chatty.Helper;
 import chatty.TwitchClient;
 import chatty.User;
 import chatty.lang.Language;
+import chatty.util.StringUtil;
 import chatty.util.UserRoom;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
@@ -75,6 +76,12 @@ public class UserContextMenu extends ContextMenu {
         if (autoModMsgId != null) {
             addItem("autoModApprove", "Approve");
             addItem("autoModDeny", "Deny");
+            addSeparator();
+        }
+        
+        // Add reply option if we have a message ID
+        if (msgId != null && !StringUtil.isNullOrEmpty(msgId)) {
+            addItem("replyToMessage", Language.getString("messageCm.reply"));
             addSeparator();
         }
         

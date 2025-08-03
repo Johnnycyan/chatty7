@@ -2071,6 +2071,8 @@ public class MainGui extends JFrame implements Runnable {
                 client.command(user.getRoom(), "automod_approve", autoModMsgId);
             } else if (cmd.equals("autoModDeny")) {
                 client.command(user.getRoom(), "automod_deny", autoModMsgId);
+            } else if (cmd.equals("replyToMessage")) {
+                handleReplyToUser(user, msgId);
             } else {
                 nameBasedStuff(e, user.getName());
             }
@@ -2138,6 +2140,9 @@ public class MainGui extends JFrame implements Runnable {
             }
             else if (cmd.startsWith("notificationSource.")) {
                 getSettingsDialog(s -> s.showSettings("selectNotification", cmd.substring("notificationSource.".length())));
+            }
+            else if (cmd.startsWith("replyToMessage:")) {
+                handleReplyToMessage(cmd);
             }
             else {
                 nameBasedStuff(e, channels.getActiveChannel().getStreamName());
@@ -2717,6 +2722,66 @@ public class MainGui extends JFrame implements Runnable {
             CommandActionEvent ce = (CommandActionEvent)e;
             CustomCommand command = ce.getCommand();
             client.anonCustomCommand(room, command, parameters);
+        }
+        
+        /**
+         * Handle reply to message action from context menu.
+         * Action command format: "replyToMessage:msgId:username"
+         */
+        private void handleReplyToMessage(String actionCommand) {
+            try {
+                String[] parts = actionCommand.split(":", 3);
+                if (parts.length >= 3) {
+                    String msgId = parts[1];
+                    String username = parts[2];
+                    
+                    // Prompt user for reply message
+                    String replyText = JOptionPane.showInputDialog(
+                            getActiveWindow(),
+                            "Reply to @" + username + ":",
+                            "Reply to Message",
+                            JOptionPane.PLAIN_MESSAGE);
+                    
+                    if (replyText != null && !replyText.trim().isEmpty()) {
+                        // Get the current channel
+                        Channel activeChannel = channels.getActiveChannel();
+                        if (activeChannel != null) {
+                            // Create parameters with the reply text as args
+                            Parameters parameters = Parameters.create(replyText);
+                            parameters.put("nick", username);
+                            parameters.put("msg-id", msgId);
+                            parameters.put("msg", "Reply"); // Use placeholder text since original message text extraction is complex
+                            client.command(activeChannel.getRoom(), "msgreply", parameters);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                // Handle any parsing errors gracefully
+                System.err.println("Error handling reply to message: " + ex.getMessage());
+            }
+        }
+        
+        /**
+         * Handle reply to user from user context menu.
+         */
+        private void handleReplyToUser(User user, String msgId) {
+            if (msgId != null && !StringUtil.isNullOrEmpty(msgId)) {
+                // Prompt user for reply message
+                String replyText = JOptionPane.showInputDialog(
+                        getActiveWindow(),
+                        "Reply to @" + user.getName() + ":",
+                        "Reply to Message",
+                        JOptionPane.PLAIN_MESSAGE);
+                
+                if (replyText != null && !replyText.trim().isEmpty()) {
+                    // Create parameters with the reply text as args
+                    Parameters parameters = Parameters.create(replyText);
+                    parameters.put("nick", user.getName());
+                    parameters.put("msg-id", msgId);
+                    parameters.put("msg", ""); // Original message text not needed for reply
+                    client.command(user.getRoom(), "msgreply", parameters);
+                }
+            }
         }
 
     }

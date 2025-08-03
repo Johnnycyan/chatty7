@@ -234,15 +234,7 @@ public class ReplyThreadWindow extends JDialog implements ReplyManager.ReplyList
         // Clear input field
         messageInput.setText("");
         
-        // Refresh thread to show new reply after a small delay
-        SwingUtilities.invokeLater(() -> {
-            try {
-                Thread.sleep(500); // Give some time for the message to be processed
-            } catch (InterruptedException e) {
-                // Ignore
-            }
-            loadThreadMessages();
-        });
+        // No need to manually refresh - the replyAdded() callback will handle it
     }
     
     @Override
