@@ -1,6 +1,7 @@
 
 package chatty.gui;
 
+import chatty.ChannelDisplayNames;
 import chatty.Helper;
 import chatty.Helper.IntegerPair;
 import chatty.Room;
@@ -86,6 +87,11 @@ public class Channels {
      */
     private final List<LocationAndSize> dialogsAttributes = new ArrayList<>();
     private final DockManager dock;
+    
+    /**
+     * Manages custom display names for channels in tabs.
+     */
+    private ChannelDisplayNames channelDisplayNames;
     
     /**
      * The default channel does not represent an actual channel, but is just a
@@ -224,6 +230,16 @@ public class Channels {
         this.styleManager = styleManager;
         this.contextMenuListener = contextMenuListener;
         this.gui = gui;
+        
+        // Initialize channel display names manager
+        this.channelDisplayNames = new ChannelDisplayNames(gui.getSettings());
+        this.channelDisplayNames.addListener(new ChannelDisplayNames.ChannelDisplayNamesListener() {
+            @Override
+            public void setChannelDisplayName(String channel, String displayName) {
+                updateChannelTabTitle(channel);
+            }
+        });
+        
         updateSettings();
         gui.getSettings().addSettingChangeListener((setting, type, value) -> {
             if (setting.startsWith("tab") || setting.equals("laf")) {
@@ -242,6 +258,9 @@ public class Channels {
             loadLastSessionLayout();
         }
         checkDefaultChannel();
+        
+        // Ensure all existing channels use their custom display names
+        updateAllChannelTitles();
     }
     
     public DockManager getDock() {
@@ -250,6 +269,35 @@ public class Channels {
     
     public Component getComponent() {
         return dock.getBase();
+    }
+    
+    public ChannelDisplayNames getChannelDisplayNames() {
+        return channelDisplayNames;
+    }
+    
+    /**
+     * Update the tab title for a specific channel when its display name changes.
+     */
+    private void updateChannelTabTitle(String channelName) {
+        Channel channel = channels.get(channelName);
+        if (channel != null && channel.getDockContent() != null) {
+            String displayName = channelDisplayNames.getEffectiveDisplayName(channelName);
+            channel.getDockContent().setTitle(displayName);
+        }
+    }
+    
+    /**
+     * Update all channel tab titles to use their effective display names.
+     * This should be called after loading layouts or when display names change.
+     */
+    private void updateAllChannelTitles() {
+        for (Channel channel : channels.values()) {
+            if (channel.getDockContent() != null) {
+                String channelName = channel.getChannel();
+                String displayName = channelDisplayNames.getEffectiveDisplayName(channelName);
+                channel.getDockContent().setTitle(displayName);
+            }
+        }
     }
     
     private void channelTabClosed(Channel channel) {
@@ -535,6 +583,9 @@ public class Channels {
         loadingLayout = false;
         checkDefaultChannel();
         setActiveTabs(layout);
+        
+        // Update all channel titles to use custom display names
+        updateAllChannelTitles();
         
         Debugging.println("layout", "Finished loading layout. Add: %s Join: %s Closing: %s Channels: %s", d.getAddChannels(), d.getJoinChannels(), closingChannels, channels);
     }
@@ -949,7 +1000,14 @@ public class Channels {
         channel.setUserlistEnabled(defaultUserlistVisibleState);
         channel.getDockContent().setLive(liveStreams.contains(room.getStream()));
         channel.getDockContent().setId(room.getChannel());
+        
         updateSettings(channel);
+        
+        // Update title to use custom display name if one exists
+        // This must be done AFTER setDockContent() which calls updateContentData()
+        String effectiveDisplayName = channelDisplayNames.getEffectiveDisplayName(room.getChannel());
+        channel.getDockContent().setTitle(effectiveDisplayName);
+        
         if (type == Channel.Type.SPECIAL || type == Channel.Type.WHISPER) {
             channel.setUserlistEnabled(false);
         }
@@ -1717,7 +1775,7 @@ public class Channels {
         private final Channels channels;
         
         public DockChannelContainer(Channel channel, DockManager m, Channels channels, ContextMenuListener listener) {
-            super(channel, channel.getName(), m);
+            super(channel, channels.getChannelDisplayNames().getEffectiveDisplayName(channel.getChannel()), m);
             this.listener = listener;
             this.channels = channels;
         }
@@ -1748,10 +1806,14 @@ public class Channels {
         
         @Override
         public void setTitle(String title) {
-            if (title.isEmpty()) {
-                title = Language.getString("tabs.noChannel");
+            // Always use the effective display name instead of the raw channel name
+            Channel channel = (Channel) getComponent();
+            String effectiveTitle = channels.getChannelDisplayNames().getEffectiveDisplayName(channel.getChannel());
+            
+            if (effectiveTitle.isEmpty()) {
+                effectiveTitle = Language.getString("tabs.noChannel");
             }
-            super.setTitle(title);
+            super.setTitle(effectiveTitle);
         }
 
     }

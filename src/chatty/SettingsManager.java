@@ -506,6 +506,7 @@ public class SettingsManager {
         tabsPos.put("-", 1L);
         settings.addMap("tabsPos", tabsPos, Setting.LONG);
         settings.addBoolean("tabsAutoSort", true);
+        settings.addMap("channelDisplayNames", new HashMap<String, String>(), Setting.STRING);
         settings.addString("tabsOpen", "activeChan");
         settings.addBoolean("tabsMwheelScrolling", false);
         settings.addBoolean("tabsMwheelScrollingAnywhere", true);

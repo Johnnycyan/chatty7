@@ -39,6 +39,40 @@ public class DockedDialogManager {
                 SwingUtilities.invokeLater(() -> loadTabSettings());
             }
         });
+        
+        // Listen for channel display name changes to update non-channel tabs
+        channels.getChannelDisplayNames().addListener(new chatty.ChannelDisplayNames.ChannelDisplayNamesListener() {
+            @Override
+            public void setChannelDisplayName(String entityId, String displayName) {
+                SwingUtilities.invokeLater(() -> updateNonChannelTabTitle(entityId));
+            }
+        });
+    }
+    
+    /**
+     * Update the title of a non-channel tab when its display name changes.
+     */
+    private void updateNonChannelTabTitle(String entityId) {
+        // Find any docked content with this ID and update its title
+        DockManager dock = getDockManager();
+        
+        // Check main content
+        for (DockContent content : dock.getContents()) {
+            if (entityId.equals(content.getId()) && content instanceof DockStyledTabContainer) {
+                // The setTitle override will handle using the effective display name
+                ((DockStyledTabContainer<?>) content).setTitle("");
+                break;
+            }
+        }
+        
+        // Check popout content
+        for (DockContent content : dock.getPopoutContents()) {
+            if (entityId.equals(content.getId()) && content instanceof DockStyledTabContainer) {
+                // The setTitle override will handle using the effective display name
+                ((DockStyledTabContainer<?>) content).setTitle("");
+                break;
+            }
+        }
     }
     
     public DockManager getDockManager() {
@@ -64,6 +98,13 @@ public class DockedDialogManager {
             @Override
             public JPopupMenu getContextMenu() {
                 return getPopupMenu(this);
+            }
+            
+            @Override
+            public void setTitle(String title) {
+                // Use effective display name for all docked dialog tabs
+                String effectiveTitle = channels.getChannelDisplayNames().getEffectiveDisplayName(getId());
+                super.setTitle(effectiveTitle);
             }
             
         };

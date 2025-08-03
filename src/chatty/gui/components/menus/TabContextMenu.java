@@ -44,6 +44,13 @@ public class TabContextMenu extends ContextMenu {
         // Close Tabs
         //--------------------------
         addItem("closeChannel", "Close");
+        addSeparator();
+        
+        //--------------------------
+        // Rename Tab
+        //--------------------------
+        addItem("renameTab", "Rename Tab");
+        addSeparator();
         
         String closeTabsMenu = "This tab pane";
         String closeAllMenu = "All tabs";

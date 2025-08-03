@@ -93,6 +93,7 @@ import chatty.util.api.eventsub.payloads.SuspiciousMessagePayload;
 import chatty.util.commands.CustomCommand;
 import chatty.util.commands.Parameters;
 import chatty.util.dnd.DockContent;
+import chatty.util.dnd.DockContentContainer;
 import chatty.util.dnd.DockLayout;
 import chatty.util.hotkeys.HotkeyManager;
 import chatty.util.irc.MsgTags;
@@ -2146,6 +2147,9 @@ public class MainGui extends JFrame implements Runnable {
             if (cmd.equals("closeChannel")) {
                 content.remove();
             }
+            else if (cmd.equals("renameTab")) {
+                handleRenameTab(content);
+            }
             else if (cmd.startsWith("tabsPosTab")) {
                 long pos = Long.parseLong(cmd.substring("tabsPosTab".length()));
                 getSettings().mapPut("tabsPos", content.getId(), pos);
@@ -2195,6 +2199,70 @@ public class MainGui extends JFrame implements Runnable {
                         nameBasedStuff(e, channel.getStreamName());
                     }
                 }
+            }
+        }
+        
+        /**
+         * Handle the "Rename Tab" context menu action.
+         */
+        private void handleRenameTab(DockContent content) {
+            String contentId = content.getId();
+            String currentTitle = content.getTitle();
+            String entityName = null;
+            
+            // Get the channel from the content if it's a channel tab
+            Channel channel = null;
+            if (content instanceof Channels.DockChannelContainer) {
+                channel = ((Channels.DockChannelContainer) content).getContent();
+                entityName = channel.getChannel();
+            } else {
+                // For non-channel tabs (like Highlights), use the content ID
+                entityName = contentId;
+            }
+            
+            if (entityName != null) {
+                String currentDisplayName = channels.getChannelDisplayNames().getChannelDisplayName(entityName);
+                
+                // Show input dialog for new display name
+                String defaultValue = currentDisplayName != null ? currentDisplayName : currentTitle;
+                String newDisplayName = JOptionPane.showInputDialog(
+                    MainGui.this,
+                    "Enter new display name for " + currentTitle + ":",
+                    defaultValue
+                );
+                
+                if (newDisplayName != null && !newDisplayName.trim().isEmpty()) {
+                    String trimmedName = newDisplayName.trim();
+                    if (trimmedName.equals(currentTitle) || trimmedName.equals(entityName)) {
+                        // If same as original name, remove custom name
+                        channels.getChannelDisplayNames().setChannelDisplayName(entityName, null);
+                    } else {
+                        // Set new custom display name
+                        channels.getChannelDisplayNames().setChannelDisplayName(entityName, trimmedName);
+                    }
+                    
+                    // Update the tab title directly for non-channel tabs
+                    if (channel == null) {
+                        String effectiveDisplayName = channels.getChannelDisplayNames().getEffectiveDisplayName(entityName);
+                        if (content instanceof DockStyledTabContainer<?>) {
+                            ((DockStyledTabContainer<?>) content).setTitle(effectiveDisplayName);
+                        } else if (content instanceof DockContentContainer<?>) {
+                            ((DockContentContainer<?>) content).setTitle(effectiveDisplayName);
+                        }
+                    }
+                    // For channel tabs, the listener system will handle the update
+                }
+            }
+        }
+        
+        /**
+         * Update the display name for a channel tab.
+         */
+        private void updateChannelDisplayName(DockContent content, Channel channel) {
+            String channelName = channel.getChannel();
+            String displayName = channels.getChannelDisplayNames().getEffectiveDisplayName(channelName);
+            if (content instanceof Channels.DockChannelContainer) {
+                ((Channels.DockChannelContainer) content).setTitle(displayName);
             }
         }
         
