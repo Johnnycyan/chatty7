@@ -772,6 +772,15 @@ public class TwitchApi {
         requests.addEventSub(body, listener);
     }
     
+    /**
+     * Send a chat message via Helix API and get the message ID
+     */
+    public void sendHelixChatMessage(String broadcasterID, String senderID, String message, 
+                                   String replyParentMessageID,
+                                   Consumer<String> successCallback, Consumer<String> errorCallback) {
+        requests.sendHelixChatMessage(broadcasterID, senderID, message, replyParentMessageID, successCallback, errorCallback);
+    }
+
     public void removeEventSub(String id, Consumer<Integer> listener) {
         requests.removeEventSub(id, listener);
     }

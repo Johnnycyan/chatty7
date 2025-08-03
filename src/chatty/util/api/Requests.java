@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import chatty.util.api.ResultManager.CategoryResult;
 import chatty.util.api.ResultManager.CreateClipResult;
@@ -886,6 +887,72 @@ public class Requests {
         });
     }
     
+    /**
+     * Send a chat message via Helix API and get the message ID
+     * 
+     * @param broadcasterID The broadcaster's user ID
+     * @param senderID The sender's user ID  
+     * @param message The message text
+     * @param replyParentMessageID The parent message ID to reply to (null for regular message)
+     * @param successCallback Called with message ID if successful
+     * @param errorCallback Called with error message if failed
+     */
+    @SuppressWarnings("unchecked")
+    public void sendHelixChatMessage(String broadcasterID, String senderID, String message, 
+                                   String replyParentMessageID,
+                                   Consumer<String> successCallback, Consumer<String> errorCallback) {
+        
+        JSONObject data = new JSONObject();
+        data.put("broadcaster_id", broadcasterID);
+        data.put("sender_id", senderID);
+        data.put("message", message);
+        
+        if (replyParentMessageID != null && !replyParentMessageID.isEmpty()) {
+            data.put("reply_parent_message_id", replyParentMessageID);
+        }
+        
+        String url = "https://api.twitch.tv/helix/chat/messages";
+        
+        newApi.add(url, "POST", data.toJSONString(), api.defaultToken, result -> {
+            if (result.responseCode >= 200 && result.responseCode < 300) {
+                try {
+                    JSONParser parser = new JSONParser();
+                    JSONObject responseData = (JSONObject) parser.parse(result.text);
+                    JSONArray dataArray = (JSONArray) responseData.get("data");
+                    
+                    if (dataArray != null && dataArray.size() > 0) {
+                        JSONObject firstMessage = (JSONObject) dataArray.get(0);
+                        String messageId = (String) firstMessage.get("message_id");
+                        Boolean isSent = (Boolean) firstMessage.get("is_sent");
+                        
+                        if (isSent != null && isSent && messageId != null && !messageId.isEmpty()) {
+                            successCallback.accept(messageId);
+                        } else {
+                            String dropReason = "Message was not sent";
+                            if (firstMessage.containsKey("drop_reason")) {
+                                JSONObject dropReasonObj = (JSONObject) firstMessage.get("drop_reason");
+                                if (dropReasonObj != null && dropReasonObj.containsKey("message")) {
+                                    dropReason = (String) dropReasonObj.get("message");
+                                }
+                            }
+                            errorCallback.accept(dropReason);
+                        }
+                    } else {
+                        errorCallback.accept("No response data received");
+                    }
+                } catch (Exception e) {
+                    errorCallback.accept("Failed to parse response: " + e.getMessage());
+                }
+            } else {
+                String error = result.errorText;
+                if (error == null || error.isEmpty()) {
+                    error = "HTTP " + result.responseCode + ": Unknown error occurred";
+                }
+                errorCallback.accept(error);
+            }
+        });
+    }
+
     public void addEventSub(String body, Consumer<EventSubAddResult> listener) {
         newApi.add("https://api.twitch.tv/helix/eventsub/subscriptions", "POST", body, api.defaultToken, r -> {
             listener.accept(EventSubAddResult.decode(r));

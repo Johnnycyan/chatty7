@@ -1017,15 +1017,75 @@ public class TwitchClient {
         if (sendAsReply(channel, text)) {
             return;
         }
-        if (c.sendSpamProtectedMessage(channel, text, false)) {
-            User user = c.localUserJoined(channel);
-            g.printMessage(user, text, false);
-            if (allowCommandMessageLocally) {
-                modCommandAddStreamHighlight(user, text, MsgTags.EMPTY);
-            }
-        } else {
-            g.printLine("# Message not sent to prevent ban: " + text);
+        
+        // Use Helix Chat API for proper message ID tracking
+        sendMessageViaHelix(channel, text, null, allowCommandMessageLocally);
+    }
+    
+    /**
+     * Send a message via Twitch Helix Chat API to get real message IDs
+     */
+    private void sendMessageViaHelix(String channel, String text, String replyParentMessageID, boolean allowCommandMessageLocally) {
+        sendMessageViaHelix(channel, text, replyParentMessageID, allowCommandMessageLocally, false);
+    }
+    
+    /**
+     * Send a message via Twitch Helix Chat API to get real message IDs
+     */
+    private void sendMessageViaHelix(String channel, String text, String replyParentMessageID, boolean allowCommandMessageLocally, boolean isAction) {
+        // Check if user has required scope for Helix Chat API
+        if (!AccessChecker.hasScope(TokenInfo.Scope.USER_WRITE_CHAT)) {
+            g.printLine("# Cannot send message: Missing 'user:write:chat' scope. Please re-authenticate with required permissions.");
+            return;
         }
+        
+        Room room = roomManager.getRoom(channel);
+        if (room == null) {
+            g.printLine("# Cannot send message: room not found");
+            return;
+        }
+        
+        String broadcasterID = room.getStreamId();
+        if (broadcasterID == null || broadcasterID.isEmpty()) {
+            g.printLine("# Cannot send message: broadcaster ID not available");
+            return;
+        }
+        
+        User localUser = c.localUserJoined(channel);
+        if (localUser == null) {
+            g.printLine("# Cannot send message: local user not found");
+            return;
+        }
+        
+        String senderID = localUser.getId();
+        if (senderID == null || senderID.isEmpty()) {
+            g.printLine("# Cannot send message: sender ID not available");
+            return;
+        }
+        
+        // For action messages, prepend /me to the text
+        String messageText = isAction ? "/me " + text : text;
+        
+        // Send via Helix API
+        api.sendHelixChatMessage(broadcasterID, senderID, messageText, replyParentMessageID,
+            messageId -> {
+                // Success: Message sent successfully, IRC will handle displaying it
+                // No need to display locally - IRC will provide the message with full context
+                
+                if (allowCommandMessageLocally) {
+                    // Create tags for stream highlight processing
+                    MsgTags realTags = MsgTags.create("id", messageId);
+                    if (replyParentMessageID != null) {
+                        realTags = MsgTags.create("id", messageId, "reply-parent-msg-id", replyParentMessageID);
+                    }
+                    modCommandAddStreamHighlight(localUser, text, realTags);
+                }
+            },
+            error -> {
+                // Error: Show error message
+                g.printLine("# Message not sent: " + error);
+            }
+        );
     }
     
     /**
@@ -1077,22 +1137,8 @@ public class TwitchClient {
      * parent id of a thread, not as a first response)
      */
     private void sendReply(String channel, String text, String atUsername, String atMsgId, String atMsg) {
-        MsgTags tags = MsgTags.create("reply-parent-msg-id", atMsgId);
-        if (c.sendSpamProtectedMessage(channel, text, false, tags)) {
-            User user = c.localUserJoined(channel);
-            String localOutputText = text;
-            if (!text.startsWith("@")) {
-                localOutputText = String.format("@%s %s",
-                        atUsername, text);
-            }
-            ReplyManager.addReply(atMsgId, null,
-                    String.format("<%s> %s", user.getName(), localOutputText),
-                    atMsg != null ? String.format("<%s> %s", atUsername, atMsg) : null);
-            g.printMessage(user, localOutputText, false, tags);
-        }
-        else {
-            g.printLine("# Message not sent to prevent ban: " + text);
-        }
+        // Use Helix Chat API for proper message ID tracking
+        sendMessageViaHelix(channel, text, atMsgId, false);
     }
     
     private boolean checkRejectTimedMessage(Room room, Parameters parameters) {
@@ -2317,7 +2363,8 @@ public class TwitchClient {
     public void sendActionMessage(String channel, String message) {
         if (c.onChannel(channel, true)) {
             if (c.sendSpamProtectedMessage(channel, message, true)) {
-                g.printMessage(c.localUserJoined(channel), message, true);
+                // Send via Helix API to get real message ID
+                sendMessageViaHelix(channel, message, null, false, true);
             } else {
                 g.printLine("# Action Message not sent to prevent ban: " + message);
             }
